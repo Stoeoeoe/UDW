@@ -412,7 +412,8 @@ namespace Core.Scripting.Editor
             map.transform.position = new Vector3(7, -3, 0);
             map.transform.rotation = Quaternion.Euler(0, 0, 15);
             map.transform.localScale = new Vector3(1.5f, 1.5f, 1);
-            var expected = map.transform.TransformPoint(new Vector3((float)(x / map.TileSize), (float)(map.Height - y / map.TileSize), 0));
+            var expected = map.transform.TransformPoint(new Vector3((float)(x / map.TileSize), (float)(map.Height - y / map.TileSize), 0)
+                + (Vector3)Core.Tile.MapManager.TileVisualOffset);
             _actor.Orientation.ForceDirection(Vector2.right);
             var before = _actor.transform.position;
             var lua = CutsceneSequenceCompiler.Compile(PlaceStep(new JObject { ["x"] = x, ["y"] = y }), "place.json", out var steps);

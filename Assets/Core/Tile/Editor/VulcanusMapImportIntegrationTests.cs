@@ -577,7 +577,7 @@ namespace Core.Tile.Editor
             var tileset = AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(_tilesetPath);
             var definition = tileset.ObjectDefinitions.Single();
             Assert.That(objects.childCount, Is.EqualTo(2));
-            Assert.That(objects.GetChild(0).localPosition, Is.EqualTo(new Vector3(1.5f, 2f, 0f)));
+            Assert.That(objects.GetChild(0).localPosition, Is.EqualTo(new Vector3(1.5f, 2f, 0f) + (Vector3)Core.Tile.MapManager.TileVisualOffset));
             foreach (Transform obj in objects)
             {
                 Assert.That(obj.GetComponent<SpriteRenderer>().sprite, Is.SameAs(definition.sprite));
@@ -670,7 +670,7 @@ namespace Core.Tile.Editor
             Assert.That(placement.template.gameObject.activeSelf, Is.True);
             Assert.That(placement.template.transform.parent.gameObject.activeSelf, Is.False);
             Assert.That(placement.template.State, Is.Null);
-            Assert.That(placement.template.transform.localPosition, Is.EqualTo(new Vector3(1, 2, 0)));
+            Assert.That(placement.template.transform.localPosition, Is.EqualTo(new Vector3(1, 2, 0) + (Vector3)Core.Tile.MapManager.TileVisualOffset));
             Assert.That(Quaternion.Angle(placement.template.transform.localRotation, Quaternion.Euler(0, 0, -90)), Is.LessThan(0.01f));
         }
 
@@ -702,7 +702,7 @@ namespace Core.Tile.Editor
             Assert.That(link.TargetEntryKey, Is.EqualTo("spawn"));
             Assert.That(link.RequiresButtonPress, Is.True, "Links default to doors.");
             var anchor = map.GetComponentInChildren<VulcanusMapAnchor>(true);
-            Assert.That(anchor.transform.localPosition, Is.EqualTo(new Vector3(1, 3, 0)));
+            Assert.That(anchor.transform.localPosition, Is.EqualTo(new Vector3(1, 3, 0) + (Vector3)Core.Tile.MapManager.TileVisualOffset));
         }
 
         [Test]

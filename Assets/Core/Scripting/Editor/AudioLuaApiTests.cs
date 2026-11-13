@@ -64,7 +64,7 @@ namespace Core.Scripting.Editor
             Assert.That(_manager.Clip, Is.SameAs(_clip));
             Assert.That(_manager.FirstOptions.SpatialBlend, Is.Zero);
             Assert.That(_manager.Options.SpatialBlend, Is.EqualTo(1));
-            Assert.That(_manager.Options.Location, Is.EqualTo(new Vector3(13.5f, 21.5f, 0)));
+            Assert.That(_manager.Options.Location, Is.EqualTo(new Vector3(13.5f, 21.5f, 0) + (Vector3)Core.Tile.MapManager.TileVisualOffset));
             Assert.That(_manager.Options.MmSoundManagerTrack, Is.EqualTo(MMSoundManager.MMSoundManagerTracks.Sfx));
             Assert.That(_manager.Options.Loop, Is.False);
         }

@@ -112,6 +112,8 @@ namespace Core.Dialogue.Vulcanus.Editor
         public void ExportedManifestMatchesTheValidatedLuaApi()
         {
             var expected = VulcanusLuaEngine.DescribeBindings();
+            expected.clock = Core.Scripting.Editor.LuaBindingManifestExporter.DescribeClock(
+                UnityEditor.AssetDatabase.LoadAssetAtPath<Core.SystemRoot>(Core.SystemRoot.PrefabPath).Clock);
             var path = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? string.Empty, "Generated/Scripting/bindings.json");
 
             Assert.That(File.Exists(path), Is.True);

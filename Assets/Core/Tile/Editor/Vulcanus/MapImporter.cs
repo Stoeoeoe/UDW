@@ -369,8 +369,7 @@ namespace Core.Tile.Editor.Vulcanus
                 propertiesJson = JsonConvert.SerializeObject(dto.Properties ?? new JObject())
             };
 
-            var ts = Mathf.Max(1, tileSize);
-            var worldPos = new Vector3(px / ts, (mapHeight * ts - py) / ts, 0f);
+            var worldPos = VulcanusMapTriggerImporter.PixelToLocalPosition(px, py, mapHeight, tileSize);
             var worldRot = Quaternion.Euler(0f, 0f, -entityData.rotationDegrees);
 
             // Persistent type IDs resolve from the same catalog used after a restart.
@@ -455,9 +454,9 @@ namespace Core.Tile.Editor.Vulcanus
 
                 var instance = Object.Instantiate(def.prefab, group.transform);
                 instance.name = $"{def.id}_{inst.Id}";
-                instance.transform.localPosition = new Vector3(
-                    inst.X / (float)tileSize + def.widthTiles * 0.5f,
-                    mapHeight - inst.Y / (float)tileSize - def.heightTiles, 0f);
+                // The object's bottom-centre, lined up with the drawn tiles like every pixel-placed item.
+                instance.transform.localPosition = VulcanusMapTriggerImporter.PixelToLocalPosition(
+                    inst.X + def.widthTiles * 0.5f * tileSize, inst.Y + def.heightTiles * tileSize, mapHeight, tileSize);
                 ApplyObjectSorting(instance, layer.ZOrder);
             }
         }

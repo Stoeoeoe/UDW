@@ -46,7 +46,9 @@ namespace Core.Scripting
             }
             if (x > (double)map.Width * map.TileSize || y > (double)map.Height * map.TileSize)
                 throw new ArgumentOutOfRangeException(nameof(map), $"Position ({x}, {y}) is outside map '{map.MapId}'.");
-            return map.transform.TransformPoint(new Vector3((float)(x / map.TileSize), (float)(map.Height - y / map.TileSize), 0));
+            // Lined up with the drawn tiles, like anchors and other pixel-placed map content.
+            return map.transform.TransformPoint(new Vector3((float)(x / map.TileSize), (float)(map.Height - y / map.TileSize), 0)
+                + (Vector3)Core.Tile.MapManager.TileVisualOffset);
         }
     }
 }

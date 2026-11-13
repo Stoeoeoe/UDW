@@ -309,10 +309,14 @@ namespace Core.Tile.Editor.Vulcanus
             return value == Vector2.zero ? Vector2.zero : value.normalized;
         }
 
-        private static Vector3 PixelToLocalPosition(float pixelX, float pixelY, int mapHeight, int tileSize)
+        /// <summary>
+        /// A Vulcanus map pixel in the map's local space, lined up with the drawn tiles: tile sprites are drawn half a
+        /// cell below their grid cell (<see cref="MapManager.TileVisualOffset"/>), so pixel-placed content moves with them.
+        /// </summary>
+        internal static Vector3 PixelToLocalPosition(float pixelX, float pixelY, int mapHeight, int tileSize)
         {
             var ts = Mathf.Max(1, tileSize);
-            return new Vector3(pixelX / ts, (mapHeight * ts - pixelY) / ts, 0f);
+            return new Vector3(pixelX / ts, (mapHeight * ts - pixelY) / ts, 0f) + (Vector3)MapManager.TileVisualOffset;
         }
 
         private static void ApplyTriggerGeometry(GameObject go, MapTriggerDto trigger, int tileSize)
