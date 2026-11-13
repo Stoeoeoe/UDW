@@ -12,6 +12,8 @@ interface CreateDialogueDialogProps {
   mode: 'create' | 'edit';
   initialValues: MetadataDraft;
   onApply: (values: MetadataDraft) => void;
+  /** When set, offers "Create and open" next to "Create". */
+  onApplyAndOpen?: (values: MetadataDraft) => void;
   dialogueTypes: DialogueType[];
 }
 
@@ -21,6 +23,7 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
   mode,
   initialValues,
   onApply,
+  onApplyAndOpen,
   dialogueTypes,
 }) => {
   const [draft, setDraft] = useState<MetadataDraft>(initialValues);
@@ -44,6 +47,11 @@ export const CreateDialogueDialog: React.FC<CreateDialogueDialogProps> = ({
         submitLabel={mode === 'create' ? 'Create' : 'Save'}
         isSubmitDisabled={!draft.name.trim()}
         minWidth="420px"
+        secondaryAction={
+          mode === 'create' && onApplyAndOpen
+            ? { label: 'Create and open', onClick: () => onApplyAndOpen(draft) }
+            : undefined
+        }
       >
         <FormControl isRequired>
           <FormLabel>Name</FormLabel>

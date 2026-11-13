@@ -15,6 +15,8 @@ export interface EntityFormDialogProps {
   minWidth?: string;
   /** Allow the content area to scroll when the dialog is tall */
   scrollable?: boolean;
+  /** A second way to submit, shown before the main button, such as "Create and open". */
+  secondaryAction?: { label: string; onClick: () => void };
 }
 
 /**
@@ -36,6 +38,7 @@ export const EntityFormDialog: React.FC<EntityFormDialogProps> = ({
   cancelLabel = 'Cancel',
   minWidth = '380px',
   scrollable = false,
+  secondaryAction,
 }) => {
   return (
     <EditorCard
@@ -79,6 +82,11 @@ export const EntityFormDialog: React.FC<EntityFormDialogProps> = ({
         <Button variant="ghost" onClick={onCancel}>
           {onSubmit ? cancelLabel : 'Close'}
         </Button>
+        {onSubmit && secondaryAction && (
+          <Button variant="outline" isDisabled={isSubmitDisabled} onClick={secondaryAction.onClick}>
+            {secondaryAction.label}
+          </Button>
+        )}
         {onSubmit && (
           <Button colorScheme="blue" isDisabled={isSubmitDisabled} onClick={onSubmit}>
             {submitLabel}

@@ -1,5 +1,3 @@
-import { resourceFileKey, resourceRegistry } from '../../lib/resourceRegistry';
-import { qualifyResourceId } from '../../lib/resourceIds';
 import React from 'react';
 import { useToast } from '@chakra-ui/react';
 import { WorkspaceDocument, WorkspaceTreeNode } from '../../types/workspace';
@@ -8,20 +6,12 @@ import {
   getEditorResourceCreateFlow,
   createEditorResourceDocument,
 } from '../../lib/editorResourceTypes';
-import { fileSystem } from '../../lib/fileSystem';
 import { useEditorStore } from '../../store/useEditorStore';
-import { saveDialogueImmediate } from '../../lib/saveManager';
-import {
-  buildI18nExport,
-  createEmptyDialogue,
-  nextDialogueId,
-  slugify,
-  toRuntimeDialogue,
-  type MetadataDraft,
-} from '../screens/dialogue/dialogueUtils';
+import type { MetadataDraft } from '../screens/dialogue/dialogueUtils';
 import { GuidedMapCreationDialog } from '../dialogs/GuidedMapCreationDialog';
 import { CreateTilesetDialog } from '../screens/tileset/CreateTilesetDialog';
 import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
+import { createDialogue } from '../screens/dialogue/createDialogue';
 import { CreateRoutineDialog } from '../screens/routine/CreateRoutineDialog';
 
 export type CreateDialogState = {
@@ -40,40 +30,11 @@ export const WorkspaceCreateDialog: React.FC<{
 
   const handleCreateDialogue = React.useCallback(
     async (values: MetadataDraft, folderPath: string) => {
-      const state = useEditorStore.getState();
-      const derived = slugify(values.name);
-      const candidateId = qualifyResourceId(
-        derived ? `dlg_${derived}` : nextDialogueId(state.dialogues.values()),
-        state.project?.idPrefix,
-      );
-      const dialogueId = state.dialogues.has(candidateId)
-        ? qualifyResourceId(nextDialogueId(state.dialogues.values()), state.project?.idPrefix)
-        : candidateId;
-      const dialogue = createEmptyDialogue(
-        dialogueId,
-        values.name.trim(),
-        values.oneShot,
-        values.dialogueTypeId,
-      );
-      dialogue.folderPath = folderPath || undefined;
-
+      const dialogue = await createDialogue(values, folderPath);
       useEditorStore.setState((draft) => {
-        draft.dialogues.set(dialogue.id, dialogue);
         draft.selectedDialogueId = dialogue.id;
         draft.selectedDialogueNodeId = dialogue.startNodeId;
       });
-
-      await saveDialogueImmediate(dialogue);
-      await fileSystem.saveJson(
-        resourceRegistry.dialogue.folder,
-        resourceFileKey('dialogue-runtime', dialogue.id),
-        toRuntimeDialogue(dialogue),
-      );
-      await fileSystem.saveJson(
-        resourceRegistry.dialogue.folder,
-        resourceFileKey('dialogue-i18n', dialogue.id),
-        buildI18nExport(dialogue),
-      );
       onOpenDocument(
         createEditorResourceDocument({ type: 'dialogue', id: dialogue.id, name: dialogue.name }),
         { pin: true },
