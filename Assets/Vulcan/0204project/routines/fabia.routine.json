@@ -3,7 +3,10 @@
   "formatVersion": 1,
   "id": "base:fabia_routine",
   "character": "base:fabia",
-  "home": { "map": "base:map-1", "anchor": "right-sie" },
+  "home": {
+    "map": "base:map-1",
+    "anchor": "right-sie"
+  },
   "variants": [
     {
       "id": "default",
@@ -11,10 +14,20 @@
         {
           "id": "visit",
           "departAt": "06:10",
-          "destination": { "map": "base:map-1", "anchor": "fabia-destination" },
-          "activity": { "animation": "base:wave2" }
+          "destination": {
+            "map": "base:map-1",
+            "anchor": "fabia-destination"
+          },
+          "activity": {
+            "animation": "base:wave"
+          }
         },
-        { "id": "back_home", "departAt": "07:00", "destination": "home" }
+        {
+          "id": "back_home",
+          "departAt": "07:00",
+          "destination": "home",
+          "condition": "DivineFavour.GetFavour(\"mars\")"
+        }
       ]
     }
   ]

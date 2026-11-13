@@ -19,5 +19,6 @@
   "emotionTypewriterSounds": {
     "base:happy": "base:fabia_happy",
     "base:angry": "base:fabia_angry"
-  }
+  },
+  "walkSpeed": 12
 }
