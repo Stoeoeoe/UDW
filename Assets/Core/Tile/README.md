@@ -86,7 +86,15 @@ import (`VulcanusImportedMap.NavigationCosts`), in Unity cell coordinates (`y = 
   the same one `MapImporter` uses as the terrain tilemap, and is always the base regardless of zOrder.
 - Every other visible tile or object layer, in ascending `zOrder`, overrides the cost where its tile has a cost. Tiles
   without a cost are transparent. Object layers contribute their placed instances' object tiles (first instance wins).
-- Invisible layers are ignored. Blocking is not baked; it is decided at runtime with Physics2D.
+- Invisible layers are ignored.
+
+The grid also bakes which cells static collision blocks (`NavigationCostGrid.IsBlocked`, built by
+`NavigationBlockedCellsBuilder`), so routes on maps that aren't loaded can be planned later (STO-70). A cell is blocked
+when collision covers its middle half: tile collisions on visible visual and terrain layers ("full" fills the cell,
+"complex" uses its polygon and rectangle shapes), placed objects at their exact position, drawn water covering more than
+half the cell, and map collision shapes. `NavigationBakeMatchesPhysicsTests` checks the bake against Physics2D on map-1;
+Vulcanus' route preview (`computeBlockedGrid`) follows the same rules. Placed entities are not baked, and live walking
+still asks Physics2D, so dynamic obstacles keep blocking.
 
 The scene-independent weighted A* is `Assets/Character/GridPathfinder.cs`. The importer revision was bumped so existing
 maps reimport and gain a grid.

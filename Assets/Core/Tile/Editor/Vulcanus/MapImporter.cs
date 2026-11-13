@@ -132,7 +132,8 @@ namespace Core.Tile.Editor.Vulcanus
                 }
 
                 mapComponent.SetNavigationCostGrid(
-                    NavigationCostGridBuilder.Build(dto.Layers, tilesetsByIndex, width, height, tileSize));
+                    NavigationCostGridBuilder.Build(dto.Layers, tilesetsByIndex,
+                        dto.SpatialPrimitives?.Collisions ?? new List<MapCollisionDto>(), width, height, tileSize));
 
                 WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels, drawnWater,
                     WaterTilemapImporter.ParseSwellDirection(dto.Metadata?.SwellDirection));

@@ -17,6 +17,7 @@ namespace Core.Tile.Editor.Vulcanus
         public static NavigationCostGrid Build(
             IReadOnlyList<LayerDto> layers,
             IList<VulcanusTilesetAsset> tilesetsByIndex,
+            IReadOnlyList<MapCollisionDto> collisions,
             int width,
             int height,
             int tileSize)
@@ -34,7 +35,8 @@ namespace Core.Tile.Editor.Vulcanus
                 else if (layer.Data != null) ApplyTileLayer(layer, tilesetsByIndex, costs, width, height);
             }
 
-            return new NavigationCostGrid(width, height, costs);
+            return new NavigationCostGrid(width, height, costs,
+                NavigationBlockedCellsBuilder.Build(layers, tilesetsByIndex, collisions, width, height, tileSize));
         }
 
         private static bool IsKind(LayerDto layer, params string[] kinds) =>

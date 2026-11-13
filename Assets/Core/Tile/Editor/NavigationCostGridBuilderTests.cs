@@ -133,7 +133,7 @@ namespace Core.Tile.Editor
         }
 
         private NavigationCostGrid Build(params LayerDto[] layers) =>
-            NavigationCostGridBuilder.Build(layers, new[] { _tileset }, Width, Height, TileSize);
+            NavigationCostGridBuilder.Build(layers, new[] { _tileset }, new List<MapCollisionDto>(), Width, Height, TileSize);
 
         private static LayerDto Layer(string kind, int zOrder, JArray data) =>
             new() { Kind = kind, ZOrder = zOrder, Data = data };

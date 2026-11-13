@@ -48,7 +48,7 @@ namespace Character.Editor
             map.SetTerrainCells(Array.Empty<VulcanusImportedMap.TerrainCell>());
             var costs = new byte[MapWidth * MapHeight];
             Array.Fill(costs, (byte)NavigationCostGrid.DefaultCost);
-            map.SetNavigationCostGrid(new NavigationCostGrid(MapWidth, MapHeight, costs));
+            map.SetNavigationCostGrid(new NavigationCostGrid(MapWidth, MapHeight, costs, new bool[MapWidth * MapHeight]));
             Set(_maps, "_currentMap", map);
             Set(_maps, "_terrainTilemap", terrain);
             Game.Ready = true;
