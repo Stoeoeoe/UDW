@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "routine.schema.json",
+  "title": "Routine",
+  "description": "An NPC's daily routine (*.routine.json). One file per character. Each morning the first matching entry of 'overrides', otherwise of 'variants', decides the day's goals.",
+  "type": "object",
+  "required": ["formatVersion", "id", "character", "home", "variants"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "formatVersion": { "type": "integer", "enum": [1] },
+    "id": {
+      "type": "string",
+      "description": "Stable identifier for this routine, with a required namespace (for example base:fabia_routine).",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "character": {
+      "type": "string",
+      "description": "ID of the character who follows this routine. A character has at most one routine.",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "home": {
+      "$ref": "#/definitions/place",
+      "description": "Where the character starts every morning and returns to overnight. Goals can use the destination \"home\"."
+    },
+    "overrides": {
+      "type": "array",
+      "description": "Days that must win, such as festivals. Checked before 'variants'; the first entry whose condition is true wins.",
+      "items": { "$ref": "#/definitions/entry" }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordinary days. The first entry whose condition is true wins. At least one entry needs no condition; entries after it can never be chosen.",
+      "items": { "$ref": "#/definitions/entry" }
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization. Empty string or absent = root."
+    }
+  },
+  "definitions": {
+    "localId": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "condition": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Read-only Lua expression, evaluated once each morning (for example Weather.IsRaining()). Omit for always true."
+    },
+    "place": {
+      "type": "object",
+      "required": ["map", "anchor"],
+      "additionalProperties": false,
+      "properties": {
+        "map": { "type": "string", "pattern": "\\S", "description": "ID of the map, for example base:map-1." },
+        "anchor": { "$ref": "#/definitions/localId", "description": "ID of an anchor on that map." }
+      }
+    },
+    "goal": {
+      "type": "object",
+      "required": ["id", "departAt", "destination"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/definitions/localId" },
+        "departAt": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+          "description": "Time of day (HH:MM) at which the character sets off. Times increase within a routine."
+        },
+        "condition": {
+          "$ref": "#/definitions/condition",
+          "description": "Evaluated once each morning with the variant choice. If false, the goal is skipped that day."
+        },
+        "destination": {
+          "description": "Where the character goes: a map anchor, or \"home\".",
+          "oneOf": [
+            { "type": "string", "enum": ["home"] },
+            { "$ref": "#/definitions/place" }
+          ]
+        },
+        "activity": {
+          "type": "object",
+          "required": ["animation"],
+          "additionalProperties": false,
+          "description": "What the character does at the destination until the next departure.",
+          "properties": {
+            "animation": {
+              "type": "string",
+              "pattern": "\\S",
+              "description": "ID of a character animation: a looping animation, an animation set or an activity animation (start, loop and end)."
+            }
+          }
+        }
+      }
+    },
+    "goals": {
+      "type": "array",
+      "description": "The day's goals in time order. Empty means the character stays home all day.",
+      "items": { "$ref": "#/definitions/goal" }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "description": "Either fixed 'goals', or 'pickOne': a pool from which one matching member is chosen at random each day.",
+      "properties": {
+        "id": { "$ref": "#/definitions/localId" },
+        "condition": { "$ref": "#/definitions/condition" },
+        "goals": { "$ref": "#/definitions/goals" },
+        "pickOne": {
+          "type": "array",
+          "minItems": 1,
+          "description": "One member whose condition is true is chosen at random, weighted by 'weight'. If none match, the entry is skipped.",
+          "items": {
+            "type": "object",
+            "required": ["id", "goals"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/definitions/localId" },
+              "condition": { "$ref": "#/definitions/condition" },
+              "weight": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Relative chance of being chosen. Defaults to 1."
+              },
+              "goals": { "$ref": "#/definitions/goals" }
+            }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["goals"], "not": { "required": ["pickOne"] } },
+        { "required": ["pickOne"], "not": { "required": ["goals"] } }
+      ]
+    }
+  }
+}
