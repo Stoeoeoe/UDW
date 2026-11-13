@@ -22,6 +22,7 @@ import {
 import { GuidedMapCreationDialog } from '../dialogs/GuidedMapCreationDialog';
 import { CreateTilesetDialog } from '../screens/tileset/CreateTilesetDialog';
 import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
+import { CreateRoutineDialog } from '../screens/routine/CreateRoutineDialog';
 
 export type CreateDialogState = {
   kind: NonNullable<WorkspaceTreeNode['resourceKind']>;
@@ -118,6 +119,18 @@ export const WorkspaceCreateDialog: React.FC<{
             { pin: true },
           );
         }}
+      />
+    );
+  }
+
+  if (createFlow === 'routine') {
+    return (
+      <CreateRoutineDialog
+        folderPath={state.folderPath}
+        onClose={onClose}
+        onCreated={(id, name) =>
+          onOpenDocument(createEditorResourceDocument({ type: 'routine', id, name }), { pin: true })
+        }
       />
     );
   }

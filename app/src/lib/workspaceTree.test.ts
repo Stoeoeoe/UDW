@@ -40,6 +40,7 @@ function createTreeInput(
     characters: overrides.characters ?? [],
     entityTypes: overrides.entityTypes ?? [],
     shops: [],
+    routines: [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
   };
@@ -128,6 +129,7 @@ describe('buildWorkspaceTree', () => {
           },
         ],
         shops: [],
+        routines: [],
         items: [
           {
             id: 'apple',
@@ -161,6 +163,7 @@ describe('buildWorkspaceTree', () => {
       'group:entities',
       'group:items',
       'group:shops',
+      'group:routines',
       'group:dialogues',
       'group:cutscenes',
       'data',

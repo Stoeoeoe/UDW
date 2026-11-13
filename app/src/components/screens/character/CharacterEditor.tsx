@@ -19,13 +19,13 @@ import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { DetailPanel } from '../../common/DetailPanel';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
-import { ReadOnlyIdField } from '../../common/Fields';
+import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
 import { EmotionSelect } from '../../common/EmotionSelect';
 import { PortraitField, portraitFolder, usePickPortrait, usePortraitImage } from './PortraitField';
 import { ManifestResourceSelect } from '../../common/ManifestResourceSelect';
-import type { Character } from '../../../types/schema';
+import { DEFAULT_WALK_SPEED, type Character } from '../../../types/schema';
 
 export const CharacterEditor: React.FC = () => {
   const characters = useEditorStore((state) => state.characters);
@@ -175,7 +175,6 @@ const CharacterDetail: React.FC<{
               </form.Field>
             </VStack>
           </GridItem>
-
         </SimpleGrid>
 
         <PortraitsSection
@@ -184,6 +183,11 @@ const CharacterDetail: React.FC<{
         />
 
         <VoiceSection
+          character={character}
+          onUpdate={(updates) => onUpdate(character.id, updates)}
+        />
+
+        <MovementSection
           character={character}
           onUpdate={(updates) => onUpdate(character.id, updates)}
         />
@@ -259,6 +263,31 @@ const PortraitsSection: React.FC<{
     </VStack>
   );
 };
+
+const MovementSection: React.FC<{
+  character: Character;
+  onUpdate: (updates: Partial<Character>) => void;
+}> = ({ character, onUpdate }) => (
+  <VStack align="stretch" spacing={2}>
+    <FieldLabel>Walk speed</FieldLabel>
+    <HStack spacing={2}>
+      <Box w="110px">
+        <CompactNumberInput
+          min={0.1}
+          step={0.5}
+          value={character.walkSpeed ?? ''}
+          inputProps={{ 'aria-label': 'Walk speed', placeholder: String(DEFAULT_WALK_SPEED) }}
+          onChange={(_, speed) =>
+            onUpdate({ walkSpeed: Number.isFinite(speed) && speed > 0 ? speed : undefined })
+          }
+        />
+      </Box>
+      <Text fontSize="xs" color="editorMutedText">
+        tiles per second. Empty uses {DEFAULT_WALK_SPEED}. Routines use it to time each walk.
+      </Text>
+    </HStack>
+  </VStack>
+);
 
 const VoiceSection: React.FC<{
   character: Character;

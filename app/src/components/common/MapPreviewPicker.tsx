@@ -81,6 +81,22 @@ export type MapPreviewOverlay =
       color?: string;
     }
   | {
+      /** A walked route through tile-unit points; dashed when it is only a straight stand-in. */
+      kind: 'route';
+      points: [number, number][];
+      color?: string;
+      dashed?: boolean;
+      opacity?: number;
+    }
+  | {
+      /** A named spot, such as an anchor, at a tile-unit position. */
+      kind: 'marker';
+      position: [number, number];
+      label: string;
+      color?: string;
+      emphasis?: boolean;
+    }
+  | {
       kind: 'arrival';
       position: [number, number];
       facing?: [number, number];

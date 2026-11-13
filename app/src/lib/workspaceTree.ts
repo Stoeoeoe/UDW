@@ -15,6 +15,7 @@ import {
   listEntityDescriptors,
   listItemDescriptors,
   listShopDescriptors,
+  listRoutineDescriptors,
   listDialogueDescriptors,
   listCutsceneDescriptors,
   ResourceDescriptor,
@@ -30,6 +31,7 @@ export interface WorkspaceTreeInput {
   entityTypes: EntityType[];
   items: Item[];
   shops: Shop[];
+  routines: import('../types/routine').Routine[];
   dialogues: DialogueDocument[];
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
@@ -87,6 +89,14 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
     'shops',
   );
 
+  const routineNodes = buildResourceSection(
+    'routine',
+    'Routines',
+    'routines',
+    listRoutineDescriptors(input.routines, input.characters),
+    'routines',
+  );
+
   const dialogueNodes = buildResourceSection(
     'dialogue',
     'Dialogues',
@@ -102,6 +112,7 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
     entityNodes,
     itemNodes,
     shopNodes,
+    routineNodes,
     dialogueNodes,
     buildResourceSection(
       'cutscene',
@@ -259,6 +270,8 @@ function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
       return 'items';
     case 'shop':
       return 'shops';
+    case 'routine':
+      return 'routines';
     case 'cutscene':
       return 'cutscenes';
     case 'dialogue':

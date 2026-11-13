@@ -54,6 +54,7 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'cutscene' ||
     tab.document.kind === 'cutscenes' ||
     tab.document.kind === 'shop' ||
+    tab.document.kind === 'routine' ||
     tab.document.kind === 'dialogues'
   );
 }
@@ -82,6 +83,12 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
     // A shop that cannot be written yet is reported, not shown as saved.
     const unit = getSaveUnitStatus(document.saveUnitId);
     if (unit.status === 'error') throw new Error(unit.error ?? 'The shop could not be saved.');
+    return;
+  }
+  if (document.kind === 'routine') {
+    await editor.saveRoutine(document.routineId);
+    const unit = getSaveUnitStatus(document.saveUnitId);
+    if (unit.status === 'error') throw new Error(unit.error ?? 'The routine could not be saved.');
     return;
   }
 
@@ -135,6 +142,10 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
     }
     if (saveUnitId.startsWith('shop:')) {
       await editor.saveShop(saveUnitId.slice('shop:'.length));
+      continue;
+    }
+    if (saveUnitId.startsWith('routine:')) {
+      await editor.saveRoutine(saveUnitId.slice('routine:'.length));
       continue;
     }
     if (saveUnitId.startsWith('location:')) {
@@ -226,6 +237,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   }
   if (document.kind === 'shop') {
     useEditorStore.getState().discardShop(document.shopId);
+    return;
+  }
+  if (document.kind === 'routine') {
+    useEditorStore.getState().discardRoutine(document.routineId);
     return;
   }
   cancelPendingSaveUnit(document.saveUnitId);

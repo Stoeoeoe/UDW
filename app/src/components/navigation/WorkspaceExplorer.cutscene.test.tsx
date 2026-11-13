@@ -34,6 +34,7 @@ describe('cutscene explorer resources', () => {
       characters: [],
       entityTypes: [],
       shops: [],
+      routines: [],
       items: [],
       dialogues: [],
       cutscenes: state.cutscenes,

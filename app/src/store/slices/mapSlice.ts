@@ -341,6 +341,8 @@ export interface LocationLinkSlice {
   updateLocationLink: (id: string, updates: Partial<LocationLink>, skipSave?: boolean) => void;
   removeLocationLink: (id: string) => void;
   selectLink: (id: string | null) => void;
+  /** Adds an anchor to any loaded map, open or not, such as from the routine editor. */
+  addMapAnchor: (mapId: string, anchor: Anchor) => void;
   updateMapAnchor: (
     mapId: string,
     anchorId: string,
@@ -576,6 +578,35 @@ export const createLocationLinkSlice: ImmerStateCreator<LocationLinkSlice> = (se
         state.selectedAnchorId = null;
       }
     }),
+
+  addMapAnchor: (mapId, anchor) => {
+    const { currentMap, maps } = get();
+    const source = currentMap?.id === mapId ? currentMap : maps.find((map) => map.id === mapId);
+    if (!source) throw new Error(`Map ${mapId} is not loaded.`);
+    if (source.spatialPrimitives?.anchors?.some((existing) => existing.id === anchor.id))
+      throw new Error(`Map ${mapId} already has the anchor ${anchor.id}.`);
+    let updatedMap: GameMap | null = null;
+    set((state) => {
+      const targetMap =
+        state.currentMap?.id === mapId
+          ? state.currentMap
+          : state.maps.find((map) => map.id === mapId);
+      if (!targetMap) return;
+      const anchors = targetMap.spatialPrimitives?.anchors ?? [];
+      updatedMap = {
+        ...targetMap,
+        spatialPrimitives: {
+          ...(targetMap.spatialPrimitives ?? {}),
+          anchors: [
+            ...anchors,
+            { ...anchor, facing: normalizeFacing(anchor.facing ?? DEFAULT_LINK_FACING) },
+          ],
+        },
+      };
+      upsertMapInState(state, updatedMap);
+    });
+    if (updatedMap) saveMapDebounced(updatedMap);
+  },
 
   updateMapAnchor: (mapId, anchorId, updates, skipSave = false) => {
     const normalizedUpdates = { ...updates };

@@ -10,6 +10,7 @@ export { EntityEditor } from './entity/EntityEditor';
 export { default as CharacterEditor } from './character/CharacterEditor';
 export { default as ItemEditor } from './item/ItemEditor';
 export { ShopEditor } from './shop/ShopEditor';
+export { RoutineEditor } from './routine/RoutineEditor';
 export { DialogueEditor } from './dialogue';
 export { ScriptingApiBrowser } from './scripting/ScriptingApiBrowser';
 export { SettingsEditor } from './settings/SettingsEditor';

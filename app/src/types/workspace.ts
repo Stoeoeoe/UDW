@@ -97,6 +97,12 @@ export type WorkspaceDocument =
       saveUnitId: string;
     }
   | {
+      kind: 'routine';
+      routineId: string;
+      label: string;
+      saveUnitId: string;
+    }
+  | {
       kind: 'dialogue';
       dialogueId: string;
       label: string;
@@ -182,6 +188,7 @@ export interface WorkspaceProjectSnapshot {
   entityTypes?: EntityType[];
   items?: Item[];
   shops?: Shop[];
+  routines?: import('./routine').Routine[];
   dialogues?: DialogueDocument[];
   cutscenes?: import('./cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;

@@ -310,6 +310,35 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
       useEditorStore.getState().shops.find((shop) => shop.id === resourceId)
         ?.folderPath ?? '',
   },
+  routine: {
+    id: 'routine',
+    documentDefinition: resourceRegistry.routine,
+    label: 'Routine',
+    collectionLabel: 'Routines',
+    editorIcon: 'routines',
+    createFlow: 'routine',
+    metadataFlow: 'none',
+    saveUnitPrefix: 'routine:',
+    accentColor: 'teal.300',
+    tint: 'rgba(79,209,197,0.12)',
+    hoverTint: 'rgba(79,209,197,0.18)',
+    rowGradient: 'linear(to-r, rgba(79,209,197,0.16), rgba(79,209,197,0.03) 72%, transparent)',
+    headerGradient: 'linear(to-r, rgba(79,209,197,0.12), rgba(79,209,197,0.035) 68%, transparent)',
+    canCreate: true,
+    // A routine is named after its character.
+    canRename: false,
+    canEditMetadata: false,
+    canDelete: true,
+    canRevealInFileExplorer: true,
+    fileExplorerPath: (resourceId) =>
+      `${resourceRegistry.routine.folder}/${fileSystem.resolveFilename(resourceRegistry.routine.folder, resourceFileKey('routine', resourceId))}`,
+    deleteResource: async (resourceId) => {
+      await useEditorStore.getState().deleteRoutine(resourceId);
+    },
+    getFolderPath: (resourceId) =>
+      useEditorStore.getState().routines.find((routine) => routine.id === resourceId)?.folderPath ??
+      '',
+  },
   cutscene: {
     id: 'cutscene',
     documentDefinition: resourceRegistry.cutscene,
@@ -480,6 +509,8 @@ export function getEditorResourceDocumentId(
       return document.itemId;
     case 'shop':
       return document.shopId;
+    case 'routine':
+      return document.routineId;
     case 'cutscene':
       return document.cutsceneId;
     case 'dialogue':
@@ -605,6 +636,8 @@ export function createEditorResourceDocument(
         label: resource.name,
         saveUnitId,
       };
+    case 'routine':
+      return { kind: 'routine', routineId: resource.id, label: resource.name, saveUnitId };
     case 'cutscene':
       return { kind: 'cutscene', cutsceneId: resource.id, label: resource.name, saveUnitId };
     case 'dialogue':
@@ -627,6 +660,7 @@ export function getEditorResourceTypeFromDocument(
     case 'entity':
     case 'item':
     case 'shop':
+    case 'routine':
     case 'dialogue':
     case 'cutscene':
       return document.kind;

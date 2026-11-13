@@ -7,6 +7,7 @@ import {
   EntityEditor,
   ItemEditor,
   ShopEditor,
+  RoutineEditor,
   MapEditor,
   TilesetEditor,
   ScriptingApiBrowser,
@@ -62,6 +63,8 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <ItemResourceDocument itemId={tab.document.itemId} />;
     case 'shop':
       return <ShopResourceDocument shopId={tab.document.shopId} />;
+    case 'routine':
+      return <RoutineEditor routineId={tab.document.routineId} />;
     case 'dialogue':
       return <DialogueResourceDocument dialogueId={tab.document.dialogueId} />;
     default:

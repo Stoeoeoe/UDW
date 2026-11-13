@@ -262,6 +262,17 @@ export class FileSystemManager {
   }
 
   /**
+   * Load all NPC routines from routines/ directory.
+   */
+  async loadAllRoutines(): Promise<import('../types/routine').Routine[]> {
+    return this.readDirectory<import('../types/routine').Routine>(
+      resourceRegistry.routine.folder,
+      resourceRegistry.routine.extension,
+      true,
+    );
+  }
+
+  /**
    * Load all entity types from entities/ directory.
    */
   async loadAllEntityTypes(): Promise<EntityType[]> {

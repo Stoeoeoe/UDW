@@ -40,6 +40,7 @@ interface WorkspaceContextMenuProps {
       | 'entity'
       | 'item'
       | 'shop'
+      | 'routine'
       | 'dialogue'
       | 'cutscene',
     folderPath: string,
@@ -246,6 +247,7 @@ function buildMenuItems(
       | 'entity'
       | 'item'
       | 'shop'
+      | 'routine'
       | 'dialogue'
       | 'cutscene',
     folderPath: string,
@@ -275,6 +277,7 @@ function buildMenuItems(
             | 'entity'
             | 'item'
             | 'shop'
+            | 'routine'
             | 'dialogue'
             | 'cutscene',
           folderPathForNode,

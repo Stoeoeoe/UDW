@@ -13,6 +13,8 @@ import {
   getSchemaResourceId,
   getSchemaResourceName,
 } from '../types/schema';
+import type { Routine } from '../types/routine';
+import { routineLabel } from './routines';
 
 export interface ResourceDescriptor extends EditorResourceDescriptor {
   kind: ResourceKind;
@@ -48,6 +50,24 @@ export function shopDocument(shop: Shop): WorkspaceDocument {
     type: 'shop',
     id: getSchemaResourceId(shop),
     name: getSchemaResourceName(shop),
+  });
+}
+
+export function listRoutineDescriptors(
+  routines: Routine[],
+  characters: Character[],
+): ResourceDescriptor[] {
+  return routines.map((routine) => {
+    const name = routineLabel(routine, characters);
+    return {
+      type: 'routine',
+      kind: 'routine',
+      id: routine.id,
+      name,
+      folderPath: normalizeFolderPath(routine.folderPath),
+      document: createEditorResourceDocument({ type: 'routine', id: routine.id, name }),
+      saveUnitId: getEditorResourceSaveUnitId('routine', routine.id),
+    };
   });
 }
 
@@ -191,6 +211,7 @@ export interface AllResourceDescriptors {
   entities: ResourceDescriptor[];
   items: ResourceDescriptor[];
   shops: ResourceDescriptor[];
+  routines: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
   cutscenes: ResourceDescriptor[];
 }
@@ -202,6 +223,7 @@ export function buildAllResourceDescriptors(state: {
   entityTypes: EntityType[];
   items: Item[];
   shops: Shop[];
+  routines: Routine[];
   dialogues: Map<string, DialogueDocument>;
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
@@ -214,6 +236,7 @@ export function buildAllResourceDescriptors(state: {
     entities: listEntityDescriptors(state.entityTypes),
     items: listItemDescriptors(state.items),
     shops: listShopDescriptors(state.shops),
+    routines: listRoutineDescriptors(state.routines, state.characters),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
     cutscenes: listCutsceneDescriptors(
       state.cutscenes ?? [],
@@ -242,6 +265,7 @@ export function canCreateResourceKind(
   | 'entity'
   | 'item'
   | 'shop'
+  | 'routine'
   | 'dialogue'
   | 'cutscene' {
   return (
@@ -251,6 +275,7 @@ export function canCreateResourceKind(
     kind === 'entity' ||
     kind === 'item' ||
     kind === 'shop' ||
+    kind === 'routine' ||
     kind === 'dialogue' ||
     kind === 'cutscene'
   );
@@ -278,6 +303,9 @@ export async function setResourceFolderPath(
       break;
     case 'shop':
       await store.updateShop(id, { folderPath: normalizedFolderPath });
+      break;
+    case 'routine':
+      store.updateRoutine(id, { folderPath: normalizedFolderPath });
       break;
     case 'entity':
       await store.updateEntityType(id, { folderPath: normalizedFolderPath });
@@ -337,6 +365,8 @@ function listDescriptorsForKind(
       return listItemDescriptors(state.items);
     case 'shop':
       return listShopDescriptors(state.shops);
+    case 'routine':
+      return listRoutineDescriptors(state.routines, state.characters);
     case 'dialogue':
       return listDialogueDescriptors(Array.from(state.dialogues.values()));
   }

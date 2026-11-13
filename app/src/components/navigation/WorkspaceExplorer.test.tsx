@@ -40,6 +40,7 @@ describe('scoped workspace navigation', () => {
       characters: [],
       entityTypes: [],
       shops: [],
+      routines: [],
       items: [],
       dialogues: [],
     });

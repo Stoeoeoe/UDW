@@ -56,6 +56,15 @@ const manifestSchema = z
     tables: z
       .array(z.object({ name: nonblank, fields: z.array(parameterSchema) }).passthrough())
       .optional(),
+    // The game clock, so walking distances can be shown as in-game minutes.
+    clock: z
+      .object({
+        secondsPerInGameMinute: z.number().positive(),
+        startOfDay: z.number().int(),
+        endOfDay: z.number().int(),
+      })
+      .passthrough()
+      .optional(),
     resources: z
       .record(
         z.string(),

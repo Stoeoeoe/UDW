@@ -24,6 +24,7 @@ import {
 } from './resourceIds';
 import { splitTileRef } from './tileRef';
 import type { Cutscene } from '../types/cutscene';
+import type { Routine, RoutineEntry, RoutineGoal, RoutinePlace } from '../types/routine';
 import { parseCutscene } from './cutscenes';
 
 export interface ResourceDocuments {
@@ -34,6 +35,7 @@ export interface ResourceDocuments {
   character: Character;
   item: Item;
   shop: Shop;
+  routine: Routine;
   entity: EntityType;
   dialogue: DialogueDocument;
   'dialogue-runtime': DialogueDocument;
@@ -48,6 +50,7 @@ export type ResourceFolder =
   | 'npcs'
   | 'items'
   | 'shops'
+  | 'routines'
   | 'entities'
   | 'dialogues'
   | 'cutscenes';
@@ -358,6 +361,36 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
     schemaFile: 'shop.schema.json',
     idScope: 'resource',
     normalize: (shop, prefix) => ({ ...shop, id: qualifyResourceId(shop.id, prefix) }),
+  },
+  routine: {
+    kind: 'routine',
+    folder: 'routines',
+    extension: '.routine.json',
+    schemaFile: 'routine.schema.json',
+    idScope: 'resource',
+    normalize: (routine, prefix) => {
+      const place = (p: RoutinePlace): RoutinePlace => ({
+        ...p,
+        map: resourceReference(p.map, prefix),
+      });
+      const goals = (list: RoutineGoal[]) =>
+        list.map((goal) =>
+          goal.destination === 'home' ? goal : { ...goal, destination: place(goal.destination) },
+        );
+      const entry = (e: RoutineEntry): RoutineEntry => ({
+        ...e,
+        ...(e.goals ? { goals: goals(e.goals) } : {}),
+        ...(e.pickOne ? { pickOne: e.pickOne.map((c) => ({ ...c, goals: goals(c.goals) })) } : {}),
+      });
+      return {
+        ...routine,
+        id: qualifyResourceId(routine.id, prefix),
+        character: resourceReference(routine.character, prefix),
+        home: place(routine.home),
+        ...(routine.overrides ? { overrides: routine.overrides.map(entry) } : {}),
+        variants: routine.variants.map(entry),
+      };
+    },
   },
   entity: {
     kind: 'entity',

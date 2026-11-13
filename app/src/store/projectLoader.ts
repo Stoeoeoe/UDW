@@ -144,6 +144,17 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       state.shopFuture = {};
     });
 
+    // 1.84 NPC routines
+    const routines = await fileSystem.loadAllRoutines();
+    set((state) => {
+      state.routines = castDraft(routines);
+      state.savedRoutines = castDraft(
+        Object.fromEntries(routines.map((routine) => [routine.id, routine])),
+      );
+      state.routinePast = {};
+      state.routineFuture = {};
+    });
+
     setResourceLoadingState(set, 'Loading dialogues', 0.64);
 
     // 1.85 Dialogue documents

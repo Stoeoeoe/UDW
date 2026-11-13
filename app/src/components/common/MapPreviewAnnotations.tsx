@@ -183,6 +183,43 @@ export const MapPreviewAnnotations: React.FC<{
             </g>
           );
         }
+        if (overlay.kind === 'route') {
+          const points = overlay.points.map(project);
+          if (points.length < 2) return null;
+          const color = overlay.color ?? colors.movement;
+          const last = points[points.length - 1];
+          return (
+            <g key={index} opacity={overlay.opacity ?? 1}>
+              <polyline
+                points={points.map((point) => point.join(',')).join(' ')}
+                fill="none"
+                stroke={color}
+                strokeWidth={2.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeDasharray={overlay.dashed ? '6 5' : undefined}
+              />
+              {arrow(points[points.length - 2], last, color, false, 6)}
+            </g>
+          );
+        }
+        if (overlay.kind === 'marker') {
+          const [x, y] = project(overlay.position);
+          const color = overlay.color ?? colors.facing;
+          return (
+            <g key={index}>
+              <circle
+                cx={x}
+                cy={y}
+                r={overlay.emphasis ? 6 : 4}
+                fill={overlay.emphasis ? color : colors.background}
+                stroke={color}
+                strokeWidth={2}
+              />
+              {label(overlay.label, x + 8, y - 8, color)}
+            </g>
+          );
+        }
         if (overlay.kind === 'trigger') {
           const position = project(overlay.position),
             size = overlay.size ?? [1, 1],

@@ -477,7 +477,11 @@ export interface Character extends NamedEditorResource {
   portraits?: Record<string, string>; // Portrait image path per emotion id
   typewriterSound?: string; // Typewriter sound id played while this character speaks
   emotionTypewriterSounds?: Record<string, string>; // Typewriter sound id per emotion id
+  walkSpeed?: number; // Tiles per second; absent = DEFAULT_WALK_SPEED, as in Unity
 }
+
+/** The walk speed Unity uses when a character leaves it out (tiles per second). */
+export const DEFAULT_WALK_SPEED = 4;
 
 // Emotions: a project-wide list picked from dropdowns, e.g. for character portraits
 export interface Emotion {

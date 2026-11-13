@@ -1,3 +1,4 @@
+import { routineLabel } from './routines';
 import { Map as GameMap } from '../types/schema';
 import { createEditorResourceDocument } from './editorResourceTypes';
 import {
@@ -105,6 +106,10 @@ export function documentToHash(document: WorkspaceDocument): string {
     case 'shop':
       params.set('doc', 'shop');
       params.set('id', document.shopId);
+      break;
+    case 'routine':
+      params.set('doc', 'routine');
+      params.set('id', document.routineId);
       break;
     case 'cutscene':
       params.set('doc', 'cutscene');
@@ -225,6 +230,17 @@ export function documentFromHash(
     const shop = snapshot.shops?.find((entry) => entry.id === params.get('id'));
     return shop
       ? createEditorResourceDocument({ type: 'shop', id: shop.id, name: shop.name })
+      : null;
+  }
+
+  if (doc === 'routine') {
+    const routine = snapshot.routines?.find((entry) => entry.id === params.get('id'));
+    return routine
+      ? createEditorResourceDocument({
+          type: 'routine',
+          id: routine.id,
+          name: routineLabel(routine, snapshot.characters ?? []),
+        })
       : null;
   }
 

@@ -8,6 +8,7 @@ export const editorResourceTypeIds = [
   'entity',
   'item',
   'shop',
+  'routine',
   'dialogue',
   'cutscene',
 ] as const;
@@ -21,7 +22,13 @@ export const editorResourceSchema = z.object({
 
 export type EditorResource = z.infer<typeof editorResourceSchema>;
 
-export type EditorResourceCreateFlow = 'none' | 'simple' | 'location' | 'tileset' | 'dialogue';
+export type EditorResourceCreateFlow =
+  | 'none'
+  | 'simple'
+  | 'location'
+  | 'tileset'
+  | 'dialogue'
+  | 'routine';
 export type EditorResourceMetadataFlow =
   | 'none'
   | 'location'

@@ -13,6 +13,7 @@ import {
   FiSettings,
   FiSliders,
   FiUsers,
+  FiClock,
 } from 'react-icons/fi';
 import { WorkspaceTab } from '../../types/workspace';
 import { useSaveStore } from '../../lib/saveManager';
@@ -46,6 +47,8 @@ function getDocumentIcon(tab: WorkspaceTab) {
     case 'cutscenes':
     case 'cutscene':
       return FiFilm;
+    case 'routine':
+      return FiClock;
     case 'dialogues':
       return FiMessageSquare;
     case 'scripting':

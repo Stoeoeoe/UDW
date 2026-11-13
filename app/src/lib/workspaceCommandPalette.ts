@@ -10,6 +10,7 @@ import {
 import { WorkspaceDocument } from '../types/workspace';
 import { createEditorResourceDocument } from './editorResourceTypes';
 import { createLocationDocument } from './workspaceRouting';
+import { routineLabel } from './routines';
 
 export type CommandPaletteFilter =
   | 'all'
@@ -19,6 +20,7 @@ export type CommandPaletteFilter =
   | 'characters'
   | 'items'
   | 'shops'
+  | 'routines'
   | 'dialogues'
   | 'cutscenes';
 
@@ -29,6 +31,7 @@ export type CommandPaletteResourceType =
   | 'character'
   | 'item'
   | 'shop'
+  | 'routine'
   | 'dialogue'
   | 'cutscene';
 
@@ -57,6 +60,7 @@ export interface BuildCommandPaletteResourcesOptions {
   characters: Character[];
   items: Item[];
   shops: Shop[];
+  routines?: import('../types/routine').Routine[];
   dialogues: DialogueDocument[];
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
@@ -174,6 +178,19 @@ export function buildCommandPaletteResources(
         resourceId: shop.id,
       });
     });
+
+  (options.routines ?? []).forEach((routine) => {
+    const label = routineLabel(routine, options.characters);
+    resources.push({
+      key: `routine:${routine.id}`,
+      type: 'routine',
+      typeLabel: 'Routine',
+      label,
+      secondaryLabel: routine.folderPath || undefined,
+      document: createEditorResourceDocument({ type: 'routine', id: routine.id, name: label }),
+      resourceId: routine.id,
+    });
+  });
 
   options.dialogues
     .slice()
@@ -392,6 +409,8 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'item';
     case 'shops':
       return resource.type === 'shop';
+    case 'routines':
+      return resource.type === 'routine';
     case 'cutscenes':
       return resource.type === 'cutscene';
     case 'dialogues':

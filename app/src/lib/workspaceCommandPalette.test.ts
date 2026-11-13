@@ -45,6 +45,7 @@ describe('workspaceCommandPalette', () => {
     ],
     characters: [{ id: 'marcus', name: 'Marcus' }],
     shops: [],
+    routines: [],
     items: [
       {
         id: 'apple',
@@ -111,6 +112,7 @@ describe('workspaceCommandPalette', () => {
         { id: 'marcus', name: 'Marcus', folderPath: 'NPCs/Villagers' },
       ],
       shops: [],
+      routines: [],
       items: [],
       dialogues: [],
     });
