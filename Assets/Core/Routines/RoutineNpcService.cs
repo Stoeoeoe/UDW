@@ -212,7 +212,7 @@ namespace Core.Routines
             var day = _state.Time.daysSinceStart;
             _days.Clear();
             _world ??= WorldNavigation.Build(_worlds.EnabledDefinitions.ToArray());
-            var planner = new RoutinePlanner(_lua.CreateEngine());
+            var planner = new RoutinePlanner(_lua.CreateEngine(), _state.Seed);
             var dayStart = _clockSettings.startOfDay * 60;
             var dayEnd = _clockSettings.endOfDay * 60;
             foreach (var routine in _routines.EnabledDefinitions)

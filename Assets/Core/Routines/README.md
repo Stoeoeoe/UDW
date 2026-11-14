@@ -35,11 +35,12 @@ Each morning the day is chosen once, from game state at that time:
 3. Goals whose `condition` is false are skipped for the day.
 
 Conditions are read-only Lua expressions, like dialogue conditions. The
-random pick is deterministic: the same character and day always choose the
-same member, so loading a save mid-day rebuilds the same plan. (Once STO-80
-adds a per-save seed, it will be mixed in so playthroughs differ.)
+random pick is deterministic: the same playthrough, character and day always
+choose the same member, so loading a save mid-day rebuilds the same plan. The
+playthrough's seed (`GameState.Seed`, chosen when a new game is created and
+kept in the save) makes each playthrough choose differently.
 
-`new RoutinePlanner(luaEngine).PlanDay(routine, daysSinceStart)` returns that
+`new RoutinePlanner(luaEngine, seed).PlanDay(routine, daysSinceStart)` returns that
 day's `DayPlan`: the goals that hold, with `"home"` resolved. The timetable
 (below) turns it into where the character is at each minute.
 

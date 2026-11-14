@@ -46,6 +46,15 @@ namespace Core.Game.Editor
         }
 
         [Test]
+        public void EachNewGameGetsItsOwnSeed()
+        {
+            _session.NewGame("Hillside farm");
+            var first = Game.State.Seed;
+            _session.NewGame("Lakeside farm");
+            Assert.That(Game.State.Seed, Is.Not.EqualTo(first));
+        }
+
+        [Test]
         public void ANewGameStartsWithTheConfiguredMoney()
         {
             Game.State.Player.Wallet.SetBalance(5);
@@ -67,9 +76,11 @@ namespace Core.Game.Editor
                 Game.State.Time.initialized = true;
                 Game.State.Time.daysSinceStart = 1;
                 Game.State.Time.dayOfSeason = 1;
+                var seed = Game.State.Seed;
                 _saves.Save(slot, Game.State.Data);
                 Assert.That(_session.Load(slot), Is.True);
                 Assert.That(StartAtHome(Game.State), Is.False);
+                Assert.That(Game.State.Seed, Is.EqualTo(seed), "Loading keeps the playthrough's seed.");
             }
             finally { _saves.Delete(slot); }
         }

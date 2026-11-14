@@ -28,6 +28,8 @@ namespace Core.Game
         public StoryState Story => Data.story;
         public GameTimeState Time => Data.time;
         public SessionState Session => Data.session;
+        /// <summary>This playthrough's random seed (<see cref="GameSaveData.seed"/>).</summary>
+        public int Seed => Data.seed;
     }
 
     /// <summary>Where the player is and which conditions are active, so a save resumes exactly where it was made.</summary>

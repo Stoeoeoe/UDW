@@ -66,16 +66,21 @@ namespace Core.Routines
 
     /// <summary>
     /// Chooses each character's day: the first matching override, otherwise the first matching variant. A pool picks one
-    /// of its matching members by weight, the same way for a character and day every time. Goals whose condition is false
-    /// are left out.
+    /// of its matching members by weight, the same way for a playthrough, character and day every time. Goals whose
+    /// condition is false are left out.
     /// </summary>
     public sealed class RoutinePlanner
     {
         private readonly VulcanusLuaEngine _conditions;
+        private readonly int _seed;
 
         /// <param name="conditions">Evaluates the routine's read-only conditions against the current game state.</param>
-        public RoutinePlanner(VulcanusLuaEngine conditions) =>
+        /// <param name="seed">The playthrough's seed (<c>GameState.Seed</c>), so pools choose differently in each game.</param>
+        public RoutinePlanner(VulcanusLuaEngine conditions, int seed)
+        {
             _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
+            _seed = seed;
+        }
 
         public DayPlan PlanDay(RoutineDefinition routine, int daysSinceStart)
         {
@@ -97,20 +102,20 @@ namespace Core.Routines
                 if (!entry.IsPool) return entry;
                 var matching = entry.PickOne.Where(choice => _conditions.EvaluateCondition(choice.Condition)).ToArray();
                 if (matching.Length > 0)
-                    return MathUtils.PickWeighted(matching, choice => choice.Weight, DailySample(characterId, daysSinceStart));
+                    return MathUtils.PickWeighted(matching, choice => choice.Weight, DailySample(_seed, characterId, daysSinceStart));
             }
             return null;
         }
 
         /// <summary>
-        /// A number in [0, 1) that is the same for a character and day every time, so loading mid-day reproduces the choice.
-        /// TODO(STO-80): include the per-save seed once GameSaveData has one, so playthroughs differ.
+        /// A number in [0, 1) that is the same for a playthrough, character and day every time, so loading mid-day
+        /// reproduces the choice, while another playthrough chooses differently.
         /// </summary>
-        internal static double DailySample(string characterId, int daysSinceStart)
+        internal static double DailySample(int seed, string characterId, int daysSinceStart)
         {
             // Hash128 is stable across runs, unlike string.GetHashCode.
-            var seed = Hash128.Compute($"{characterId}|{daysSinceStart}").GetHashCode();
-            return new System.Random(seed).NextDouble();
+            var hash = Hash128.Compute($"{seed}|{characterId}|{daysSinceStart}").GetHashCode();
+            return new System.Random(hash).NextDouble();
         }
     }
 }

@@ -34,12 +34,14 @@ namespace Core.Routines.Editor
         private static string Story(string flag) => $"GameState.Story.Has('{flag}')";
 
         /// <summary>A planner whose conditions run against game state with exactly these story flags set.</summary>
-        private RoutinePlanner Planner(params string[] flags)
+        private RoutinePlanner Planner(params string[] flags) => Planner(1234, flags);
+
+        private RoutinePlanner Planner(int seed, params string[] flags)
         {
             var lua = Game.Lua.CreateEngine();
             foreach (var flag in StoryFlags) lua.Execute($"GameState.Story.Remove('{flag}')");
             foreach (var flag in flags) lua.Execute($"GameState.Story.Set('{flag}', true)");
-            return new RoutinePlanner(lua);
+            return new RoutinePlanner(lua, seed);
         }
 
         [Test]
@@ -106,9 +108,23 @@ namespace Core.Routines.Editor
         }
 
         [Test]
+        public void EachPlaythroughChoosesItsOwnDaysAndKeepsThem()
+        {
+            var routine = Routine(new[] { Pool("summer", null, Choice("shop", 1), Choice("beach", 1)) });
+            string[] Days(int seed)
+            {
+                var planner = Planner(seed);
+                return Enumerable.Range(1, 30).Select(day => planner.PlanDay(routine, day).ChoiceId).ToArray();
+            }
+
+            Assert.That(Days(1), Is.EqualTo(Days(1)), "The same playthrough plans the same days after loading.");
+            Assert.That(Days(1), Is.Not.EqualTo(Days(2)), "Another playthrough chooses differently.");
+        }
+
+        [Test]
         public void DifferentCharactersRollDifferentlyOnTheSameDay()
         {
-            var samples = Enumerable.Range(0, 20).Select(i => RoutinePlanner.DailySample($"base:npc_{i}", 7)).ToArray();
+            var samples = Enumerable.Range(0, 20).Select(i => RoutinePlanner.DailySample(1234, $"base:npc_{i}", 7)).ToArray();
             Assert.That(samples.Distinct().Count(), Is.EqualTo(samples.Length));
             Assert.That(samples, Has.All.InRange(0.0, 1.0));
             Assert.That(samples.Max() - samples.Min(), Is.GreaterThan(0.5), "Similar IDs must still spread out.");

@@ -17,6 +17,11 @@ namespace Core.Game
         public int worldBaselineVersion = 1;
         /// <summary>The player-facing slot name; null falls back to the slot ID.</summary>
         public string saveName;
+        /// <summary>
+        /// Chosen once when the game is created and never changed, so choices derived from it ("random" but the same after
+        /// loading) differ between playthroughs. Saves made before it existed load with 0.
+        /// </summary>
+        public int seed;
         public PlayerState player = new();
         public StoryState story = new();
         public GameTimeState time = new();

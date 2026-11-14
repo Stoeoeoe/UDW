@@ -62,7 +62,7 @@ namespace Core.Game
         {
             if (_location.SceneReady)
                 throw new InvalidOperationException("Start a new game before entering a location; active scene objects are not rehydrated yet.");
-            Restore(new GameSaveData { saveName = saveName });
+            Restore(new GameSaveData { saveName = saveName, seed = new System.Random().Next() });
             _state.StartAtHome = true;
             _state.Player.Wallet.SetBalance(_player.startingMoney);
             CurrentSlot = _saves.NextSlotId();
