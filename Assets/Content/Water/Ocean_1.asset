@@ -12,23 +12,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a41e7ee4131a8e4d89124f1930931f6, type: 3}
   m_Name: Ocean_1
   m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Water.WaterProfile
-  material: {fileID: 2100000, guid: 8a8d7f18ef894b2ab376bcc659cbd40c, type: 2}
-  deepColor: {r: 0.09019608, g: 0.19607843, b: 0.30980393, a: 1}
-  baseColor: {r: 0.14117648, g: 0.3137255, b: 0.43137255, a: 1}
-  waveColor: {r: 0.23921569, g: 0.43529412, b: 0.56078434, a: 1}
-  highlightColor: {r: 0.7176471, g: 0.8039216, b: 0.81960785, a: 1}
+  material: {fileID: 2100000, guid: 7e6732f61dab2dd4db9bb36b745493a2, type: 2}
+  deepColor: {r: 0.08, g: 0.22, b: 0.32, a: 1}
+  baseColor: {r: 0.16, g: 0.38, b: 0.47, a: 1}
+  waveColor: {r: 0.27, g: 0.48, b: 0.56, a: 1}
+  highlightColor: {r: 0.76, g: 0.85, b: 0.81, a: 1}
   animationFps: 12
   waveSpeed: 0.16
   waveScale: 1
-  causticIntensity: 0.1
+  causticIntensity: 0.22
   causticScale: 1.7
   flowDirection: {x: 1, y: 0.12}
+  oceanBeachSlopePixels: 12
+  oceanWobblePixels: 0.8
+  oceanWobblePeriod: 7
   smoothFades: 1
   shorelineEnabled: 1
   foamEnabled: 1
   foamWidth: 2
-  foamIntensity: 0.38
-  foamSpeed: 0.2
+  foamIntensity: 0.5
+  foamSpeed: 0.16
   shoreWavesEnabled: 1
   shoreWaveFrequency: 0.071428575
   shoreWaveWidth: 1
@@ -36,8 +39,8 @@ MonoBehaviour:
   shallowWaterEnabled: 0
   shallowWaterWidth: 3
   depthEnabled: 1
-  depthStartPixels: 8
-  depthBlendPixels: 12
+  depthStartPixels: 4
+  depthBlendPixels: 24
   depthSteps: 2
   depthWobblePixels: 1.5
   depthWobbleScale: 16
@@ -67,18 +70,18 @@ MonoBehaviour:
   objectReflectionRippleSpeed: 0.5
   swellEnabled: 1
   swellDirection: {x: 0, y: 1}
-  swellWavelength: 20
+  swellWavelength: 32
   swellSpeed: 3
   swellCrestPixels: 1
-  swellBreakup: 0.72
+  swellBreakup: 0.5
   swellCrossStrength: 0.15
   swellMeander: 0.5
   swellRipple: 0.6
-  swellStretchPixels: 8
+  swellStretchPixels: 22
   swellShading: 0.3
   swellShoalPixels: 24
-  surfPixels: 8
-  surfWashPixels: 4
+  surfPixels: 10
+  surfWashPixels: 3
   interactionRipplesEnabled: 1
   rainSplashesEnabled: 1
   contactFoamEnabled: 1

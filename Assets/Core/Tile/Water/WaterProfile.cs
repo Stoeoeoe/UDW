@@ -8,6 +8,7 @@ namespace Core.Tile.Water
     public sealed class WaterProfile : ScriptableObject
     {
         public const string ShaderName = "UrdewValley/Pixel Water";
+        public const string OceanShaderName = "UrdewValley/Pixel Ocean";
 
         public Material material;
         public Color deepColor = new Color32(36, 82, 120, 255);
@@ -21,6 +22,14 @@ namespace Core.Tile.Water
         [Range(0, 1)] public float causticIntensity = 0.35f;
         [Min(0.001f)] public float causticScale = 2f;
         public Vector2 flowDirection = new(1, 0.25f);
+
+        [Header("Ocean surface")]
+        [Min(0), Tooltip("Logical pixels from the coast to opaque ocean water. Zero disables the slope. Requires ground art beneath the water.")]
+        public float oceanBeachSlopePixels;
+        [Min(0), Tooltip("Gentle displacement of ocean surface patterns in logical pixels; does not move the coastline.")]
+        public float oceanWobblePixels;
+        [Min(0.5f), Tooltip("Seconds for the ocean surface wobble cycle.")]
+        public float oceanWobblePeriod = 6;
 
         [Tooltip("Blend instead of hard palette steps: depth becomes a gradient, foam and surf fade away from the shore, and swell crests become soft bands. Faded pixels are blended colours, not palette colours.")]
         public bool smoothFades;
@@ -135,6 +144,10 @@ namespace Core.Tile.Water
 
         public void Validate()
         {
+            if (!float.IsFinite(oceanBeachSlopePixels) || oceanBeachSlopePixels < 0 ||
+                !float.IsFinite(oceanWobblePixels) || oceanWobblePixels < 0 ||
+                !float.IsFinite(oceanWobblePeriod) || oceanWobblePeriod < 0.5f)
+                throw new InvalidOperationException($"Water profile '{name}' has invalid ocean slope or wobble settings.");
             if (!float.IsFinite(swellDirection.x) || !float.IsFinite(swellDirection.y) || (swellEnabled && swellDirection == Vector2.zero) ||
                 !float.IsFinite(swellWavelength) || swellWavelength < 4 || !float.IsFinite(swellSpeed) || swellSpeed < 0 ||
                 swellCrestPixels < 1 || swellCrestPixels > 3 || !float.IsFinite(swellBreakup) || swellBreakup < 0 || swellBreakup > 1 ||
@@ -146,8 +159,9 @@ namespace Core.Tile.Water
                 !float.IsFinite(swellShoalPixels) || swellShoalPixels < 1 || !float.IsFinite(surfPixels) || surfPixels < 0 ||
                 !float.IsFinite(surfWashPixels) || surfWashPixels < 0)
                 throw new InvalidOperationException($"Water profile '{name}' has invalid swell settings.");
-            if (!material || !material.shader || material.shader.name != ShaderName)
-                throw new InvalidOperationException($"Water profile '{name}' requires a material using '{ShaderName}'.");
+            if (!material || !material.shader ||
+                (material.shader.name != ShaderName && material.shader.name != OceanShaderName))
+                throw new InvalidOperationException($"Water profile '{name}' requires a material using '{ShaderName}' or '{OceanShaderName}'.");
             if (!float.IsFinite(animationFps) || animationFps <= 0 ||
                 !float.IsFinite(waveSpeed) || waveSpeed < 0 ||
                 !float.IsFinite(waveScale) || waveScale <= 0 ||
@@ -212,6 +226,7 @@ namespace Core.Tile.Water
             properties.SetFloat("_WaveScale", waveScale);
             properties.SetFloat("_CausticIntensity", causticIntensity);
             properties.SetFloat("_CausticScale", causticScale);
+            properties.SetVector("_OceanSurface", new Vector4(oceanBeachSlopePixels, oceanWobblePixels, oceanWobblePeriod, 0));
             properties.SetVector("_FlowDirection", flowDirection);
             properties.SetFloat("_PixelsPerUnit", pixelsPerUnit);
             properties.SetVector("_ShorelineEffects", new Vector4(shorelineEnabled ? 1 : 0, foamEnabled ? 1 : 0,

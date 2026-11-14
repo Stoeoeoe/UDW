@@ -46,12 +46,15 @@ namespace Core.Tile.Water
             if (!shoreline)
                 throw new InvalidOperationException($"Water body '{name}' requires baked shoreline data. Reimport its map.");
             shoreline.Validate();
+            if (profile.material.shader.name == WaterProfile.OceanShaderName && profile.oceanBeachSlopePixels > shoreline.MaximumDistance)
+                throw new InvalidOperationException($"Water body '{name}' ocean beach slope exceeds its baked {shoreline.MaximumDistance}-pixel range. Increase the map importer's shoreline distance and reimport.");
             if (flow) flow.Validate();
             if (profile.foamWidth > shoreline.MaximumDistance || profile.shallowWaterWidth > shoreline.MaximumDistance ||
                 profile.shoreWaveWidth > shoreline.MaximumDistance)
                 throw new InvalidOperationException($"Water body '{name}' shoreline widths exceed its baked {shoreline.MaximumDistance}-pixel range. Increase the map importer's shoreline distance and reimport.");
             // The surf doubles in a storm; beyond the baked range all water would read as surf.
-            if (profile.swellEnabled && (profile.swellShoalPixels > shoreline.MaximumDistance || profile.surfPixels * 2 > shoreline.MaximumDistance))
+            if ((profile.swellEnabled || profile.material.shader.name == WaterProfile.OceanShaderName) &&
+                (profile.swellShoalPixels > shoreline.MaximumDistance || profile.surfPixels * 2 > shoreline.MaximumDistance))
                 throw new InvalidOperationException($"Water body '{name}' swell shoaling or storm surf exceeds its baked {shoreline.MaximumDistance}-pixel range. Increase the map importer's shoreline distance and reimport.");
             if (!float.IsFinite(swellDirection.x) || !float.IsFinite(swellDirection.y))
                 throw new InvalidOperationException($"Water body '{name}' has an invalid swell direction.");

@@ -17,8 +17,30 @@ namespace Core.Tile.Editor
     {
         public override void OnInspectorGUI()
         {
-            var changed = DrawDefaultInspector();
             var profile = (WaterProfile)target;
+            var ocean = profile.material && profile.material.shader && profile.material.shader.name == WaterProfile.OceanShaderName;
+            bool changed;
+            if (ocean)
+            {
+                serializedObject.Update();
+                EditorGUILayout.HelpBox("Ocean: stepped depth and broad swells at the map's pixel scale; thin crests and coastal wash use half pixels. Foam Speed is washes per second. River/lake-only controls are hidden.", MessageType.Info);
+                foreach (var field in OceanFields)
+                {
+                    var label = field switch
+                    {
+                        "swellShading" => new GUIContent("Swell Shading", "Strength of the broad, stepped light on each rolling swell."),
+                        "swellShoalPixels" => new GUIContent("Swell Fade Distance", "Distance from shore in logical pixels at which offshore crests reach full strength."),
+                        "swellMeander" => new GUIContent("Crest Curvature", "How far the long swell crests bend along their length."),
+                        "surfPixels" => new GUIContent("Wash Reach", "Distance from land in logical pixels where a coastal wash begins. Storms double it."),
+                        "surfWashPixels" => new GUIContent("Wash Trail", "Width of dissolving foam behind the leading edge in logical pixels."),
+                        "foamSpeed" => new GUIContent("Wash Frequency", "Coastal washes per second."),
+                        _ => null
+                    };
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty(field), label);
+                }
+                changed = serializedObject.ApplyModifiedProperties();
+            }
+            else changed = DrawDefaultInspector();
             try
             {
                 profile.Validate();
@@ -28,6 +50,18 @@ namespace Core.Tile.Editor
             }
             catch (InvalidOperationException exception) { EditorGUILayout.HelpBox(exception.Message, MessageType.Error); }
         }
+
+        private static readonly string[] OceanFields =
+        {
+            "material", "deepColor", "baseColor", "waveColor", "highlightColor", "animationFps",
+            "oceanBeachSlopePixels", "oceanWobblePixels", "oceanWobblePeriod", "causticIntensity", "causticScale",
+            "depthEnabled", "depthStartPixels", "depthBlendPixels", "depthWobblePixels", "depthWobbleScale",
+            "swellEnabled", "swellDirection", "swellWavelength", "swellSpeed", "swellCrestPixels",
+            "swellBreakup", "swellMeander", "swellStretchPixels", "swellShading", "swellShoalPixels",
+            "shorelineEnabled", "foamEnabled", "foamWidth", "foamIntensity", "foamSpeed", "surfPixels", "surfWashPixels",
+            "objectReflectionsEnabled", "objectReflectionOpacity", "objectReflectionRipplePixels", "objectReflectionRippleSpeed",
+            "interactionRipplesEnabled", "rainSplashesEnabled", "contactFoamEnabled"
+        };
     }
 
     [CustomEditor(typeof(WaterBody))]

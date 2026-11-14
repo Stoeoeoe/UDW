@@ -36,6 +36,51 @@ sampling preserves the sprite's atlas UVs. Source layer opacity and renderer
 sorting are retained. It needs no noise texture, simulation or save state.
 Optional object reflections use one temporary color capture per camera.
 
+## Ocean
+
+`Ocean_1` uses `PixelOcean.mat` and the independent `UrdewValley/Pixel Ocean`
+shader. Its surface has three layers: static stepped depth colour, broad broken
+travelling swells, and an independent coastal wash that advances towards land and
+dissolves behind its leading edge. It preserves the sprite mask, renderer tint,
+2D lighting and flat normal pass.
+`Lake_1` and `River_1` continue to use `PixelWater.mat` / `PixelWater.shader`.
+
+`WaterBody` supplies the profile and baked shoreline through its property block.
+The ocean Inspector shows only its supported controls. The four palette colours
+provide the depth, swell and foam colours, with a few intermediate colour levels.
+Broad shapes use the imported pixel scale (normally 16 PPU); thin crests and foam
+use half pixels. Animation advances at `animationFps`. The shoreline bake is
+interpolated across chunk boundaries before sampling on that half-pixel grid.
+
+The ocean uses depth start/blend and static depth wobble; swell direction (including
+the map override), wavelength, speed, crest thickness, breakup, curvature, stretch,
+shading and fade distance. It does not use river flow, lake wavelets,
+cross swell, surface glints, depth motion or the shared shader's smooth-fade toggle.
+
+`causticIntensity` and `causticScale` control the animated light net in open water.
+It is sampled on the logical pixel grid (normally 16 PPU), excluded from the beach
+slope, and fades in towards deep water across the depth range.
+`oceanWobblePixels` and `oceanWobblePeriod` gently deform caustics and
+swells without moving the coastline or gameplay contacts; zero amplitude disables it.
+`oceanBeachSlopePixels` fades water opacity from the coast to fully opaque water
+over that many logical pixels. Zero restores the hard edge. Author ground beneath
+the water (as on the shipped beach); the slope reveals that art rather than inventing
+a sand colour. Breaking foam retains its own coverage over these transparent shallows.
+The slope must fit within the baked shoreline distance range.
+
+Coastal wash needs shoreline and foam enabled. `foamSpeed` is washes per second;
+`surfPixels` is the reach from land and `surfWashPixels` the dissolving trail width.
+Foam width/intensity control residual edge foam and wash strength. Weather sea state
+widens the wash and adds restrained whitecaps. Wash remains independent of the swell
+direction, so it travels towards shore around inlets and islands. It stays inside
+the authored water mask; it does not animate water onto the land or move collision.
+Object reflections retain captured colours with a water tint and half-pixel ripple
+distortion. Gameplay ripples, contact foam and weather rain use the existing global
+water interaction data. Reflections draw under coastal foam and interactions.
+
+The feature descriptions below describe `PixelWater`; ocean behaviour is specified
+above. Profiles and imported map references remain shared; no map reimport is needed.
+
 ## Drawn water layers
 
 A Vulcanus layer of kind `water` holds hand-drawn **bodies** instead of tiles. Each body in

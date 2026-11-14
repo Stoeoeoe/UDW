@@ -37,7 +37,7 @@ namespace Core.Tile.Vulcanus
         }
 
         /// <summary>The middle of a cell's drawn tile.</summary>
-        public static Vector2 CellCentre(Vector2Int cell) => new Vector2(cell.x + 0.5f, cell.y + 0.5f) + MapManager.TileVisualOffset;
+        public static Vector2 CellCenter(Vector2Int cell) => new Vector2(cell.x + 0.5f, cell.y + 0.5f) + MapManager.TileVisualOffset;
 
         /// <summary>
         /// Where characters walk to use a link: the walkable cell nearest the middle of its trigger, among those the
@@ -55,9 +55,9 @@ namespace Core.Tile.Vulcanus
                 {
                     var cell = new Vector2Int(x, y);
                     if (!Grid.Contains(cell) || Grid.IsBlocked(cell)) continue;
-                    var tile = new Rect(CellCentre(cell) - new Vector2(0.5f, 0.5f), Vector2.one);
+                    var tile = new Rect(CellCenter(cell) - new Vector2(0.5f, 0.5f), Vector2.one);
                     if (!tile.Overlaps(reach)) continue;
-                    var centre = CellCentre(cell);
+                    var centre = CellCenter(cell);
                     if (best == null || (centre - area.center).sqrMagnitude < (best.Value - area.center).sqrMagnitude) best = centre;
                 }
             return best ?? throw new InvalidOperationException(

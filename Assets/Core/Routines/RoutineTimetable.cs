@@ -262,7 +262,7 @@ namespace Core.Routines
                 return false;
             }
             var route = new List<Vector2> { from };
-            for (var i = 0; i < cells.Count - 1; i++) route.Add(NavigationMap.CellCentre(cells[i]));
+            for (var i = 0; i < cells.Count - 1; i++) route.Add(NavigationMap.CellCenter(cells[i]));
             route.Add(to); // the exact destination, not its tile's middle
             var length = 0f;
             for (var i = 1; i < route.Count; i++) length += Vector2.Distance(route[i - 1], route[i]);

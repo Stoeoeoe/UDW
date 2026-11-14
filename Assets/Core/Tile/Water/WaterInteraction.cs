@@ -14,7 +14,7 @@ namespace Core.Tile.Water
     /// </summary>
     public static class WaterInteraction
     {
-        // Must match WATER_MAX_RIPPLES / WATER_MAX_CONTACTS in PixelWater.shader.
+        // Must match the ripple/contact arrays in PixelWater.shader and PixelOcean.shader.
         public const int MaxRipples = 16;
         public const int MaxContacts = 32;
         public const int MaxRadiusPixels = 32;

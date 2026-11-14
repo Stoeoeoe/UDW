@@ -67,6 +67,22 @@ namespace Core.Tile.Editor
             Assert.That(BlockedRow(grid, 1), Is.EqualTo(new[] { false, false, false, true }));
         }
 
+        [TestCase(0, 0, 4, 16, true)]
+        [TestCase(12, 0, 4, 16, true)]
+        [TestCase(0, 0, 16, 4, true)]
+        [TestCase(0, 12, 16, 4, true)]
+        [TestCase(0, 0, 4, 4, true)]
+        [TestCase(0, 0, 3, 16, false)]
+        [TestCase(13, 0, 3, 16, false)]
+        public void MapCollisionTouchingTheFootprintBlocksButAGapStaysFree(int x, int y, int w, int h, bool expected)
+        {
+            var grid = Build(System.Array.Empty<LayerDto>(), new List<MapCollisionDto>
+            {
+                new() { Shape = "rectangle", Position = new List<float> { x, y }, Size = new List<float> { w, h } }
+            });
+            Assert.That(grid.IsBlocked(new Vector2Int(0, Height - 1)), Is.EqualTo(expected));
+        }
+
         [Test]
         public void DrawnWaterBlocksCellsItMostlyCovers()
         {

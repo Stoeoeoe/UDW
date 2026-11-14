@@ -23,20 +23,27 @@ namespace Core.Tile.Editor.Vulcanus
         public static bool[] Build(IReadOnlyList<LayerDto> layers, IList<VulcanusTilesetAsset> tilesetsByIndex,
             IReadOnlyList<MapCollisionDto> collisions, int width, int height, int tileSize)
         {
-            // Worked out in Vulcanus cells (row 0 at the top), then flipped once.
+            // Geometry uses Vulcanus cells (row 0 at the top); store flags in Unity cell order.
             var blocked = new bool[width * height];
             void Block(int x, int y)
             {
-                if (x >= 0 && y >= 0 && x < width && y < height) blocked[y * width + x] = true;
+                if (x >= 0 && y >= 0 && x < width && y < height) blocked[(height - 1 - y) * width + x] = true;
             }
-            bool IsBlocked(int x, int y) => blocked[y * width + x];
+            bool IsBlocked(int x, int y) => blocked[(height - 1 - y) * width + x];
             // Blocks every cell whose middle the polygon (in Vulcanus tile units) overlaps.
             void BlockUnder(Vector2[] polygon)
             {
-                var minX = Mathf.Max(0, Mathf.FloorToInt(polygon.Min(point => point.x)));
-                var maxX = Mathf.Min(width - 1, Mathf.FloorToInt(polygon.Max(point => point.x)));
-                var minY = Mathf.Max(0, Mathf.FloorToInt(polygon.Min(point => point.y)));
-                var maxY = Mathf.Min(height - 1, Mathf.FloorToInt(polygon.Max(point => point.y)));
+                var min = polygon[0];
+                var max = min;
+                for (var i = 1; i < polygon.Length; i++)
+                {
+                    min = Vector2.Min(min, polygon[i]);
+                    max = Vector2.Max(max, polygon[i]);
+                }
+                var minX = Mathf.Max(0, Mathf.FloorToInt(min.x));
+                var maxX = Mathf.Min(width - 1, Mathf.FloorToInt(max.x));
+                var minY = Mathf.Max(0, Mathf.FloorToInt(min.y));
+                var maxY = Mathf.Min(height - 1, Mathf.FloorToInt(max.y));
                 for (var y = minY; y <= maxY; y++)
                     for (var x = minX; x <= maxX; x++)
                         if (!IsBlocked(x, y) && PolygonOverlapsBox(polygon, Footprint(x, y))) Block(x, y);
@@ -49,7 +56,10 @@ namespace Core.Tile.Editor.Vulcanus
                     {
                         if (cell.X < 0 || cell.Y < 0 || cell.X >= width || cell.Y >= height || IsBlocked(cell.X, cell.Y)) continue;
                         if (TryGetTile(cell.Encoded, tilesetsByIndex, out var tile))
-                            foreach (var polygon in TilePolygons(tile, new Vector2(cell.X, cell.Y))) BlockUnder(polygon);
+                        {
+                            if (tile.CollisionKind == VulcanusCollisionKind.Full) Block(cell.X, cell.Y);
+                            else foreach (var polygon in TilePolygons(tile, new Vector2(cell.X, cell.Y))) BlockUnder(polygon);
+                        }
                     }
                 else if (IsKind(layer, "object"))
                     foreach (var instance in layer.ObjectInstances)
@@ -75,10 +85,7 @@ namespace Core.Tile.Editor.Vulcanus
                 if (polygon.Length >= 3) BlockUnder(polygon);
             }
 
-            var flipped = new bool[width * height];
-            for (var y = 0; y < height; y++)
-                Array.Copy(blocked, y * width, flipped, (height - 1 - y) * width, width);
-            return flipped;
+            return blocked;
         }
 
         /// <summary>
@@ -151,13 +158,21 @@ namespace Core.Tile.Editor.Vulcanus
         /// <summary>Whether a polygon and a box share any area or edge.</summary>
         internal static bool PolygonOverlapsBox(Vector2[] polygon, Rect box)
         {
-            bool Inside(Vector2 point) => point.x > box.xMin && point.x < box.xMax && point.y > box.yMin && point.y < box.yMax;
-            if (polygon.Any(Inside)) return true;
-            var corners = new[] { box.min, new Vector2(box.xMax, box.yMin), box.max, new Vector2(box.xMin, box.yMax) };
-            if (corners.Any(corner => PointInPolygon(corner, polygon))) return true;
+            foreach (var point in polygon)
+                if (point.x >= box.xMin && point.x <= box.xMax && point.y >= box.yMin && point.y <= box.yMax) return true;
+            var bottomLeft = box.min;
+            var bottomRight = new Vector2(box.xMax, box.yMin);
+            var topRight = box.max;
+            var topLeft = new Vector2(box.xMin, box.yMax);
+            if (PointInPolygon(bottomLeft, polygon) || PointInPolygon(bottomRight, polygon) ||
+                PointInPolygon(topRight, polygon) || PointInPolygon(topLeft, polygon)) return true;
             for (var i = 0; i < polygon.Length; i++)
-                for (var j = 0; j < 4; j++)
-                    if (SegmentsCross(polygon[i], polygon[(i + 1) % polygon.Length], corners[j], corners[(j + 1) % 4])) return true;
+            {
+                var a = polygon[i];
+                var b = polygon[(i + 1) % polygon.Length];
+                if (SegmentsCross(a, b, bottomLeft, bottomRight) || SegmentsCross(a, b, bottomRight, topRight) ||
+                    SegmentsCross(a, b, topRight, topLeft) || SegmentsCross(a, b, topLeft, bottomLeft)) return true;
+            }
             return false;
         }
 
@@ -174,7 +189,16 @@ namespace Core.Tile.Editor.Vulcanus
         private static bool SegmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
         {
             static float Cross(Vector2 o, Vector2 p, Vector2 q) => (p.x - o.x) * (q.y - o.y) - (p.y - o.y) * (q.x - o.x);
-            return Cross(c, d, a) * Cross(c, d, b) < 0 && Cross(a, b, c) * Cross(a, b, d) < 0;
+            static bool OnSegment(Vector2 a, Vector2 b, Vector2 p) =>
+                p.x >= Mathf.Min(a.x, b.x) && p.x <= Mathf.Max(a.x, b.x) &&
+                p.y >= Mathf.Min(a.y, b.y) && p.y <= Mathf.Max(a.y, b.y);
+            var d1 = Cross(c, d, a);
+            var d2 = Cross(c, d, b);
+            var d3 = Cross(a, b, c);
+            var d4 = Cross(a, b, d);
+            return d1 * d2 < 0 && d3 * d4 < 0 ||
+                d1 == 0 && OnSegment(c, d, a) || d2 == 0 && OnSegment(c, d, b) ||
+                d3 == 0 && OnSegment(a, b, c) || d4 == 0 && OnSegment(a, b, d);
         }
 
         /// <summary>A painted cell of a tile layer, in Vulcanus cells.</summary>
