@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "quest-i18n.schema.json",
+  "title": "Quest texts",
+  "description": "The texts of one quest by message key (<name>.i18n.json next to <name>.quest.json), written by Vulcanus.",
+  "type": "object",
+  "required": ["questId", "messages"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "questId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "generatedAt": { "type": "string" },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["msgKey", "text"],
+        "additionalProperties": false,
+        "properties": {
+          "msgKey": { "type": "string", "pattern": "^quest\\." },
+          "text": { "type": "string" }
+        }
+      }
+    }
+  }
+}
