@@ -1,0 +1,13 @@
+{
+  "$schema": "../schemas/shop.schema.json",
+  "id": "test:market_seeds",
+  "name": "Market Stall",
+  "buysGoods": true,
+  "offerings": [
+    {
+      "itemId": "base:broad_bean_seeds",
+      "price": 10
+    }
+  ],
+  "folderPath": ""
+}

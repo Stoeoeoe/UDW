@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/entity-type.schema.json",
+  "id": "forage-fig",
+  "displayName": "Forage Fig",
+  "category": "object",
+  "group": "Foraging",
+  "description": "A fig collected through the pickup interaction.",
+  "placeholderColor": "#8c9d32",
+  "defaultSize": [16, 16],
+  "sprite": {
+    "path": "assets/Fig.png"
+  },
+  "properties": [],
+  "folderPath": "Foraging"
+}

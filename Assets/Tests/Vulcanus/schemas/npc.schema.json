@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "npc.schema.json",
+  "title": "NPC",
+  "description": "A non-player character definition (*.npc.json).",
+  "type": "object",
+  "required": ["id", "name"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable lowercase namespace:name identifier for this NPC.",
+      "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Display name shown in the editor and game."
+    }
+  }
+}

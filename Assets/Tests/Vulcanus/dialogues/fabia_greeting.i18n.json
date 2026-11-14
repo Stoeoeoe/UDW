@@ -1,0 +1,176 @@
+{
+  "dialogueId": "test:fabia_greeting",
+  "dialogueName": "Fabia — Greeting",
+  "generatedAt": "2026-11-12T21:28:34.516Z",
+  "messages": [
+    {
+      "msgKey": "dlg.test:fabia_greeting.01",
+      "text": "Salve! Fresh seeds and fair prices. What can I do for you?",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.02",
+      "text": "Show me your wares.",
+      "nodeId": "choice-1",
+      "optionId": "opt-wares",
+      "sourceType": "choiceOption"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.03",
+      "text": "Just wanted to chat.",
+      "nodeId": "choice-1",
+      "optionId": "opt-chat",
+      "sourceType": "choiceOption"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.04",
+      "text": "Surely these prices can come down a little?",
+      "nodeId": "choice-1",
+      "optionId": "opt-haggle",
+      "sourceType": "choiceOption"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.05",
+      "text": "That's a lovely scarf you're wearing.",
+      "nodeId": "choice-1",
+      "optionId": "opt-compliment",
+      "sourceType": "choiceOption"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.06",
+      "text": "I heard wolves howling last night.",
+      "nodeId": "choice-1",
+      "optionId": "opt-wolves",
+      "sourceType": "choiceOption"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.07",
+      "text": "Goodbye.",
+      "nodeId": "choice-1",
+      "optionId": "opt-bye",
+      "sourceType": "choiceOption"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.08",
+      "text": "Wonderful! Take a look at what I have today.",
+      "nodeId": "line-wares",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.09",
+      "text": "The beans do well in this soil. Water them every day and they will repay you.",
+      "nodeId": "line-chat-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.10",
+      "text": "Good to know.",
+      "nodeId": "line-chat-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.11",
+      "text": "Though the frost last week took half my seedlings...",
+      "nodeId": "line-chat-3",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.12",
+      "text": "I'm sorry to hear that.",
+      "nodeId": "line-chat-4",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.13",
+      "text": "Ah, don't mind me. They will grow back! Anything else?",
+      "nodeId": "line-chat-5",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.14",
+      "text": "Surely these prices can come down a little?",
+      "nodeId": "line-haggle-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.15",
+      "text": "Come down?! I grew every one of these myself!",
+      "nodeId": "line-haggle-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.16",
+      "text": "Okay, okay. Fair prices it is.",
+      "nodeId": "line-haggle-3",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.17",
+      "text": "Hmph. Fair prices. As I said.",
+      "nodeId": "line-haggle-4",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.18",
+      "text": "That's a lovely scarf you're wearing.",
+      "nodeId": "line-flirt-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.19",
+      "text": "Oh! Th-thank you. I made it myself.",
+      "nodeId": "line-flirt-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.20",
+      "text": "It suits you.",
+      "nodeId": "line-flirt-3",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.21",
+      "text": "Careful, or I might start giving discounts...",
+      "nodeId": "line-flirt-4",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.22",
+      "text": "I heard wolves howling last night.",
+      "nodeId": "line-wolves-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.23",
+      "text": "Wolves?! Near the market?",
+      "nodeId": "line-wolves-2",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.24",
+      "text": "Probably far away.",
+      "nodeId": "line-wolves-3",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.25",
+      "text": "Please... keep an eye out for me when you go home.",
+      "nodeId": "line-wolves-4",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.26",
+      "text": "Anyway! Anything else?",
+      "nodeId": "line-wolves-5",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.test:fabia_greeting.27",
+      "text": "Come back soon!",
+      "nodeId": "line-bye",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../schemas/dialogue-i18n.schema.json"
+}

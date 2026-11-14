@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Core.Catalogs.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -25,8 +26,9 @@ namespace Core.Tile.Editor.Vulcanus
             string[] movedAssets,
             string[] movedFromAssetPaths)
         {
+            // Test maps never become game scenes.
             var mapAssets = importedAssets
-                .Where(p => p.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase))
+                .Where(p => p.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase) && !CatalogAssetDiscovery.IsTestContent(p))
                 .ToArray();
 
             if (mapAssets.Length == 0)

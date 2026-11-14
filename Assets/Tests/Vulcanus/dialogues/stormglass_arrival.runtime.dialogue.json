@@ -1,0 +1,40 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "test:stormglass_arrival",
+  "name": "Stormglass — Keep to the Path",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "stormglass",
+    "cutscene"
+  ],
+  "createdAt": "2026-10-29T21:50:17Z",
+  "updatedAt": "2026-10-29T21:50:17Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "test:my_test_char",
+      "text": "Keep to the middle of the path. The rain remembers every footprint.",
+      "msgKey": "dlg.test:stormglass_arrival.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "test:player",
+      "text": "And if we stop?",
+      "msgKey": "dlg.test:stormglass_arrival.02",
+      "next": "line-3"
+    },
+    {
+      "id": "line-3",
+      "type": "line",
+      "speaker": "test:my_test_char",
+      "text": "Then it remembers us.",
+      "msgKey": "dlg.test:stormglass_arrival.03",
+      "next": null
+    }
+  ]
+}

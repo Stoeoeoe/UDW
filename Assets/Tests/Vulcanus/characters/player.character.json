@@ -1,0 +1,19 @@
+{
+  "$schema": "../schemas/character.schema.json",
+  "id": "test:player",
+  "name": "Player",
+  "folderPath": "",
+  "defaultPortrait": "assets/portraits/player/Hero_Neutral.png",
+  "portraits": {
+    "base:angry": "assets/portraits/player/Hero_Angry.png",
+    "base:embarrassed": "assets/portraits/player/Hero_Embarrassed.png",
+    "base:flirty": "assets/portraits/player/Hero_Flirty.png",
+    "base:frightened": "assets/portraits/player/Hero_Frightened.png",
+    "base:happy": "assets/portraits/player/Hero_Happy.png",
+    "base:neutral": "assets/portraits/player/Hero_Neutral.png",
+    "base:sad": "assets/portraits/player/Hero_Sad.png",
+    "base:scared": "assets/portraits/player/Hero_Scared.png",
+    "base:very_happy": "assets/portraits/player/Hero_Very_Happy.png"
+  },
+  "typewriterSound": "base:standard"
+}

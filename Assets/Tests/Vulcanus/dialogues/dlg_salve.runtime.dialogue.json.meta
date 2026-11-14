@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: 8b5e823f717e187468423b77289ef23c
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 3279a71ca97f4ca99824e1700d749846, type: 3}
+  shorelineDistancePixels: 32

@@ -1,0 +1,47 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "test:stormglass_afterglow",
+  "name": "Stormglass — A Bargain with Thunder",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "stormglass",
+    "cutscene"
+  ],
+  "createdAt": "2026-10-29T21:50:17Z",
+  "updatedAt": "2026-10-29T21:50:17Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "text": "The rain stops before the thunder does.",
+      "msgKey": "dlg.test:stormglass_afterglow.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "test:my_test_char",
+      "text": "There. The storm has your name now.",
+      "msgKey": "dlg.test:stormglass_afterglow.02",
+      "next": "line-3"
+    },
+    {
+      "id": "line-3",
+      "type": "line",
+      "speaker": "test:player",
+      "text": "Can it at least learn to knock?",
+      "msgKey": "dlg.test:stormglass_afterglow.03",
+      "next": "line-4"
+    },
+    {
+      "id": "line-4",
+      "type": "line",
+      "speaker": "test:my_test_char",
+      "text": "That was it knocking.",
+      "msgKey": "dlg.test:stormglass_afterglow.04",
+      "next": null
+    }
+  ]
+}

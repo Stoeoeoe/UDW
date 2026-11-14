@@ -1,0 +1,18 @@
+{
+  "$schema": "../schemas/entity-type.schema.json",
+  "id": "test:bed",
+  "displayName": "Bed",
+  "category": "object",
+  "placeholderColor": "#888888",
+  "properties": [],
+  "folderPath": "",
+  "defaultSize": [
+    64,
+    64
+  ],
+  "sprite": {
+    "path": "assets/bed1_PROTO.png"
+  },
+  "description": "A bed",
+  "icon": "GiBed"
+}

@@ -1,0 +1,1629 @@
+{
+  "$schema": "../schemas/cutscene.schema.json",
+  "formatVersion": 2,
+  "id": "test:stormglass",
+  "mapId": "test:map-1",
+  "allowSkip": true,
+  "variables": [
+    {
+      "name": "basePulse",
+      "type": "number",
+      "initialValue": 0.24
+    },
+    {
+      "name": "pulseSeconds",
+      "type": "number",
+      "initialValue": 0.24
+    },
+    {
+      "name": "glow",
+      "type": "string",
+      "initialValue": "#DDEBFF"
+    },
+    {
+      "name": "shakeStrength",
+      "type": "number",
+      "initialValue": 0.48
+    },
+    {
+      "name": "echoHold",
+      "type": "number",
+      "initialValue": 0.6
+    },
+    {
+      "name": "snapToWalkingSpeed",
+      "type": "boolean",
+      "initialValue": false
+    },
+    {
+      "name": "playerRoute",
+      "type": "path",
+      "initialValue": [
+        {
+          "x": 168,
+          "y": 104
+        },
+        {
+          "x": 200,
+          "y": 120
+        },
+        {
+          "x": 216,
+          "y": 168
+        }
+      ]
+    }
+  ],
+  "transition": {
+    "enabled": true
+  },
+  "onStart": [],
+  "onComplete": {
+    "steps": [],
+    "characterPlacements": [
+      {
+        "character": "player",
+        "anchor": "anchor-1776461296590",
+        "facing": "North"
+      },
+      {
+        "character": "storm-keeper",
+        "position": {
+          "x": 232,
+          "y": 152
+        },
+        "facing": "West"
+      }
+    ]
+  },
+  "sequence": [],
+  "graphs": {
+    "onStart": {
+      "nodes": [
+        {
+          "id": "setup-entry",
+          "kind": "entry",
+          "position": {
+            "x": 0,
+            "y": 180
+          }
+        },
+        {
+          "id": "starting-point",
+          "kind": "position",
+          "position": {
+            "x": 20,
+            "y": 490
+          },
+          "arguments": {
+            "x": 152,
+            "y": 88
+          }
+        },
+        {
+          "id": "place-player",
+          "kind": "action",
+          "position": {
+            "x": 540,
+            "y": 180
+          },
+          "step": {
+            "id": "place-player",
+            "action": "characters.place",
+            "arguments": {
+              "character": "player"
+            }
+          }
+        },
+        {
+          "id": "summon-keeper",
+          "kind": "action",
+          "position": {
+            "x": 1080,
+            "y": 180
+          },
+          "step": {
+            "id": "summon-keeper",
+            "action": "characters.spawn",
+            "arguments": {
+              "character": "storm-keeper",
+              "definition": "test:fabia",
+              "position": {
+                "x": 184,
+                "y": 88
+              }
+            }
+          }
+        },
+        {
+          "id": "player-look-ahead",
+          "kind": "action",
+          "position": {
+            "x": 1620,
+            "y": 180
+          },
+          "step": {
+            "id": "player-look-ahead",
+            "action": "characters.faceDirection",
+            "arguments": {
+              "character": "player",
+              "direction": "South"
+            }
+          }
+        },
+        {
+          "id": "keeper-look-ahead",
+          "kind": "action",
+          "position": {
+            "x": 2160,
+            "y": 180
+          },
+          "step": {
+            "id": "keeper-look-ahead",
+            "action": "characters.faceDirection",
+            "arguments": {
+              "character": "storm-keeper",
+              "direction": "South"
+            }
+          }
+        },
+        {
+          "id": "gather-rain",
+          "kind": "action",
+          "position": {
+            "x": 2700,
+            "y": 180
+          },
+          "step": {
+            "id": "gather-rain",
+            "action": "weather.setWeather",
+            "arguments": {
+              "weather": "LightRainSpring"
+            }
+          }
+        },
+        {
+          "id": "setup-exit",
+          "kind": "exit",
+          "position": {
+            "x": 3240,
+            "y": 180
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "starting-point-position-place-player-position",
+          "source": "starting-point",
+          "sourcePin": "position",
+          "target": "place-player",
+          "targetPin": "position",
+          "kind": "data"
+        },
+        {
+          "id": "setup-entry-next-place-player-in",
+          "source": "setup-entry",
+          "sourcePin": "next",
+          "target": "place-player",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "place-player-next-summon-keeper-in",
+          "source": "place-player",
+          "sourcePin": "next",
+          "target": "summon-keeper",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "summon-keeper-next-player-look-ahead-in",
+          "source": "summon-keeper",
+          "sourcePin": "next",
+          "target": "player-look-ahead",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-look-ahead-next-keeper-look-ahead-in",
+          "source": "player-look-ahead",
+          "sourcePin": "next",
+          "target": "keeper-look-ahead",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-look-ahead-next-gather-rain-in",
+          "source": "keeper-look-ahead",
+          "sourcePin": "next",
+          "target": "gather-rain",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "gather-rain-next-setup-exit-in",
+          "source": "gather-rain",
+          "sourcePin": "next",
+          "target": "setup-exit",
+          "targetPin": "in",
+          "kind": "execution"
+        }
+      ]
+    },
+    "sequence": {
+      "nodes": [
+        {
+          "id": "scene-entry",
+          "kind": "entry",
+          "position": {
+            "x": 0,
+            "y": 180
+          }
+        },
+        {
+          "id": "calibrate-storm",
+          "kind": "lua",
+          "position": {
+            "x": 1200,
+            "y": 180
+          },
+          "expression": "local pulse = Cutscene.Variables.basePulse\nreturn pulse, \"#DDEBFF\", pulse * 2",
+          "outputs": [
+            {
+              "name": "seconds",
+              "type": "number"
+            },
+            {
+              "name": "color",
+              "type": "string"
+            },
+            {
+              "name": "strength",
+              "type": "number"
+            }
+          ],
+          "resultVariables": [
+            "pulseSeconds",
+            "glow",
+            "shakeStrength"
+          ]
+        },
+        {
+          "id": "give-thunder-room",
+          "kind": "action",
+          "position": {
+            "x": 1800,
+            "y": 180
+          },
+          "step": {
+            "id": "give-thunder-room",
+            "action": "cutscene.setVariable",
+            "arguments": {
+              "name": "echoHold",
+              "value": 1.2
+            }
+          }
+        },
+        {
+          "id": "keeper-introduction",
+          "kind": "action",
+          "position": {
+            "x": 2400,
+            "y": 180
+          },
+          "step": {
+            "id": "keeper-introduction",
+            "action": "dialogue.play",
+            "arguments": {
+              "dialogue": "test:stormglass_arrival"
+            }
+          }
+        },
+        {
+          "id": "approach-together",
+          "kind": "parallel",
+          "position": {
+            "x": 4200,
+            "y": 180
+          },
+          "pair": "approach-joined",
+          "tracks": 3
+        },
+        {
+          "id": "player-follows-path",
+          "kind": "action",
+          "position": {
+            "x": 4800,
+            "y": -180
+          },
+          "step": {
+            "id": "player-follows-path",
+            "action": "characters.walkPath",
+            "arguments": {
+              "character": "player",
+              "ignoreCollisions": true
+            },
+            "argumentVariables": {
+              "immediateAcceleration": "snapToWalkingSpeed"
+            }
+          }
+        },
+        {
+          "id": "player-route",
+          "kind": "variable",
+          "position": {
+            "x": 4200,
+            "y": -600
+          },
+          "variable": "playerRoute"
+        },
+        {
+          "id": "keeper-follows-path",
+          "kind": "action",
+          "position": {
+            "x": 4800,
+            "y": 360
+          },
+          "step": {
+            "id": "keeper-follows-path",
+            "action": "characters.walkPath",
+            "arguments": {
+              "character": "storm-keeper",
+              "path": [
+                {
+                  "x": 184,
+                  "y": 104
+                },
+                {
+                  "x": 208,
+                  "y": 120
+                },
+                {
+                  "x": 232,
+                  "y": 152
+                }
+              ],
+              "immediateAcceleration": true,
+              "ignoreCollisions": true
+            }
+          }
+        },
+        {
+          "id": "first-light-delay",
+          "kind": "action",
+          "position": {
+            "x": 4800,
+            "y": 940
+          },
+          "step": {
+            "id": "first-light-delay",
+            "action": "cutscene.wait",
+            "arguments": {}
+          }
+        },
+        {
+          "id": "breath-before-light",
+          "kind": "expression",
+          "position": {
+            "x": 4200,
+            "y": 1390
+          },
+          "expression": "math.max(0.12, Cutscene.Variables.pulseSeconds * 0.75)",
+          "outputs": [
+            {
+              "name": "value",
+              "type": "number"
+            }
+          ]
+        },
+        {
+          "id": "storm-center",
+          "kind": "position",
+          "position": {
+            "x": 5340,
+            "y": 1390
+          },
+          "arguments": {
+            "x": 216,
+            "y": 168
+          }
+        },
+        {
+          "id": "distant-thunder",
+          "kind": "action",
+          "position": {
+            "x": 5400,
+            "y": 940
+          },
+          "step": {
+            "id": "distant-thunder",
+            "action": "audio.playSound",
+            "arguments": {
+              "sound": "base:prototype-impact"
+            }
+          }
+        },
+        {
+          "id": "blue-lightning",
+          "kind": "action",
+          "position": {
+            "x": 6000,
+            "y": 940
+          },
+          "step": {
+            "id": "blue-lightning",
+            "action": "camera.flash",
+            "arguments": {
+              "easeInSeconds": 0.02,
+              "holdSeconds": 0.08,
+              "easeOutSeconds": 0.12
+            }
+          }
+        },
+        {
+          "id": "first-rumble",
+          "kind": "action",
+          "position": {
+            "x": 6600,
+            "y": 940
+          },
+          "step": {
+            "id": "first-rumble",
+            "action": "camera.shake",
+            "arguments": {
+              "durationSeconds": 0.6
+            }
+          }
+        },
+        {
+          "id": "let-thunder-roll",
+          "kind": "action",
+          "position": {
+            "x": 7200,
+            "y": 940
+          },
+          "step": {
+            "id": "let-thunder-roll",
+            "action": "cutscene.wait",
+            "arguments": {},
+            "argumentVariables": {
+              "seconds": "echoHold"
+            }
+          }
+        },
+        {
+          "id": "approach-joined",
+          "kind": "join",
+          "position": {
+            "x": 7800,
+            "y": 180
+          },
+          "pair": "approach-together"
+        },
+        {
+          "id": "turn-to-keeper",
+          "kind": "action",
+          "position": {
+            "x": 9000,
+            "y": 180
+          },
+          "step": {
+            "id": "turn-to-keeper",
+            "action": "characters.face",
+            "arguments": {
+              "character": "player",
+              "target": "storm-keeper"
+            }
+          }
+        },
+        {
+          "id": "keeper-meets-eyes",
+          "kind": "action",
+          "position": {
+            "x": 9600,
+            "y": 180
+          },
+          "step": {
+            "id": "keeper-meets-eyes",
+            "action": "characters.face",
+            "arguments": {
+              "character": "storm-keeper",
+              "target": "player"
+            }
+          }
+        },
+        {
+          "id": "does-the-storm-remember",
+          "kind": "function",
+          "method": "GameState.Story.Has",
+          "position": {
+            "x": 9600,
+            "y": -440
+          },
+          "arguments": {
+            "key": "is_rabatentent"
+          }
+        },
+        {
+          "id": "remembered-or-first-time",
+          "kind": "branch",
+          "position": {
+            "x": 10800,
+            "y": 180
+          },
+          "pair": "memory-joined"
+        },
+        {
+          "id": "remembered-warning",
+          "kind": "action",
+          "position": {
+            "x": 11400,
+            "y": -180
+          },
+          "step": {
+            "id": "remembered-warning",
+            "action": "dialogue.play",
+            "arguments": {
+              "dialogue": "test:stormglass_remembered"
+            }
+          }
+        },
+        {
+          "id": "gentler-echo",
+          "kind": "action",
+          "position": {
+            "x": 12000,
+            "y": -180
+          },
+          "step": {
+            "id": "gentler-echo",
+            "action": "cutscene.setVariable",
+            "arguments": {
+              "name": "shakeStrength",
+              "value": 0.3
+            }
+          }
+        },
+        {
+          "id": "first-warning",
+          "kind": "action",
+          "position": {
+            "x": 11400,
+            "y": 480
+          },
+          "step": {
+            "id": "first-warning",
+            "action": "dialogue.play",
+            "arguments": {
+              "dialogue": "test:stormglass_first_contact"
+            }
+          }
+        },
+        {
+          "id": "full-storm",
+          "kind": "action",
+          "position": {
+            "x": 12000,
+            "y": 480
+          },
+          "step": {
+            "id": "full-storm",
+            "action": "cutscene.setVariable",
+            "arguments": {
+              "name": "shakeStrength",
+              "value": 0.65
+            }
+          }
+        },
+        {
+          "id": "memory-joined",
+          "kind": "join",
+          "position": {
+            "x": 12600,
+            "y": 180
+          },
+          "pair": "remembered-or-first-time"
+        },
+        {
+          "id": "tune-the-echo",
+          "kind": "action",
+          "position": {
+            "x": 13800,
+            "y": 180
+          },
+          "step": {
+            "id": "tune-the-echo",
+            "action": "cutscene.runLua",
+            "arguments": {
+              "code": "Cutscene.Variables.echoHold = math.max(0.6, Cutscene.Variables.pulseSeconds * 4)"
+            }
+          }
+        },
+        {
+          "id": "the-storm-answers",
+          "kind": "parallel",
+          "position": {
+            "x": 14400,
+            "y": 180
+          },
+          "pair": "impact-joined",
+          "tracks": 3
+        },
+        {
+          "id": "player-staggers",
+          "kind": "action",
+          "position": {
+            "x": 15000,
+            "y": -180
+          },
+          "step": {
+            "id": "player-staggers",
+            "action": "characters.playAnimation",
+            "arguments": {
+              "character": "player",
+              "animation": "base:pass-out",
+              "holdLastFrame": false
+            }
+          }
+        },
+        {
+          "id": "keeper-watches-sky",
+          "kind": "action",
+          "position": {
+            "x": 15000,
+            "y": 390
+          },
+          "step": {
+            "id": "keeper-watches-sky",
+            "action": "characters.faceDirection",
+            "arguments": {
+              "character": "storm-keeper",
+              "direction": "North"
+            }
+          }
+        },
+        {
+          "id": "keeper-counts-silence",
+          "kind": "action",
+          "position": {
+            "x": 15600,
+            "y": 390
+          },
+          "step": {
+            "id": "keeper-counts-silence",
+            "action": "cutscene.wait",
+            "arguments": {},
+            "argumentVariables": {
+              "seconds": "echoHold"
+            }
+          }
+        },
+        {
+          "id": "white-out",
+          "kind": "action",
+          "position": {
+            "x": 15000,
+            "y": 940
+          },
+          "step": {
+            "id": "white-out",
+            "action": "camera.flash",
+            "arguments": {
+              "durationSeconds": 0.3,
+              "easeInSeconds": 0.015,
+              "holdSeconds": 0.11,
+              "easeOutSeconds": 0.175
+            },
+            "argumentVariables": {
+              "color": "glow"
+            }
+          }
+        },
+        {
+          "id": "thunder-at-our-feet",
+          "kind": "action",
+          "position": {
+            "x": 15600,
+            "y": 940
+          },
+          "step": {
+            "id": "thunder-at-our-feet",
+            "action": "audio.playSound",
+            "arguments": {
+              "sound": "base:prototype-impact",
+              "position": {
+                "x": 216,
+                "y": 168
+              }
+            }
+          }
+        },
+        {
+          "id": "answering-rumble",
+          "kind": "action",
+          "position": {
+            "x": 16200,
+            "y": 940
+          },
+          "step": {
+            "id": "answering-rumble",
+            "action": "camera.shake",
+            "arguments": {
+              "durationSeconds": 0.8
+            },
+            "argumentVariables": {
+              "strength": "shakeStrength"
+            }
+          }
+        },
+        {
+          "id": "wait-for-the-echo",
+          "kind": "action",
+          "position": {
+            "x": 16800,
+            "y": 940
+          },
+          "step": {
+            "id": "wait-for-the-echo",
+            "action": "cutscene.wait",
+            "arguments": {}
+          }
+        },
+        {
+          "id": "echo-length",
+          "kind": "variable",
+          "position": {
+            "x": 16200,
+            "y": 1390
+          },
+          "variable": "echoHold"
+        },
+        {
+          "id": "impact-joined",
+          "kind": "join",
+          "position": {
+            "x": 17400,
+            "y": 180
+          },
+          "pair": "the-storm-answers"
+        },
+        {
+          "id": "the-rain-forgets",
+          "kind": "action",
+          "position": {
+            "x": 18600,
+            "y": 180
+          },
+          "step": {
+            "id": "the-rain-forgets",
+            "action": "weather.setWeather",
+            "arguments": {
+              "weather": "Sunny"
+            }
+          }
+        },
+        {
+          "id": "recover-at-the-crossing",
+          "kind": "position",
+          "position": {
+            "x": 18600,
+            "y": -440
+          },
+          "arguments": {
+            "x": 216,
+            "y": 168
+          }
+        },
+        {
+          "id": "player-gets-bearings",
+          "kind": "action",
+          "position": {
+            "x": 19200,
+            "y": 180
+          },
+          "step": {
+            "id": "player-gets-bearings",
+            "action": "characters.place",
+            "arguments": {
+              "character": "player"
+            }
+          }
+        },
+        {
+          "id": "step-into-daylight",
+          "kind": "action",
+          "position": {
+            "x": 20400,
+            "y": 180
+          },
+          "step": {
+            "id": "step-into-daylight",
+            "action": "characters.moveTo",
+            "arguments": {
+              "character": "player",
+              "destination": "anchor-1776461296590",
+              "immediateAcceleration": false,
+              "ignoreCollisions": true
+            }
+          }
+        },
+        {
+          "id": "look-back-at-keeper",
+          "kind": "action",
+          "position": {
+            "x": 21000,
+            "y": 180
+          },
+          "step": {
+            "id": "look-back-at-keeper",
+            "action": "characters.face",
+            "arguments": {
+              "character": "player",
+              "target": "storm-keeper"
+            }
+          }
+        },
+        {
+          "id": "a-bargain-with-thunder",
+          "kind": "action",
+          "position": {
+            "x": 21600,
+            "y": 180
+          },
+          "step": {
+            "id": "a-bargain-with-thunder",
+            "action": "dialogue.play",
+            "arguments": {
+              "dialogue": "test:stormglass_afterglow"
+            }
+          }
+        },
+        {
+          "id": "let-the-silence-stay",
+          "kind": "action",
+          "position": {
+            "x": 23400,
+            "y": 180
+          },
+          "step": {
+            "id": "let-the-silence-stay",
+            "action": "cutscene.wait",
+            "arguments": {},
+            "argumentVariables": {
+              "seconds": "echoHold"
+            }
+          }
+        },
+        {
+          "id": "scene-exit",
+          "kind": "exit",
+          "position": {
+            "x": 24000,
+            "y": 180
+          }
+        },
+        {
+          "id": "establish-the-rain",
+          "kind": "action",
+          "position": {
+            "x": 600,
+            "y": 180
+          },
+          "step": {
+            "id": "establish-the-rain",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 1.5
+            }
+          }
+        },
+        {
+          "id": "weigh-the-warning",
+          "kind": "action",
+          "position": {
+            "x": 3600,
+            "y": 180
+          },
+          "step": {
+            "id": "weigh-the-warning",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 0.7
+            }
+          }
+        },
+        {
+          "id": "settle-at-the-crossing",
+          "kind": "action",
+          "position": {
+            "x": 8400,
+            "y": 180
+          },
+          "step": {
+            "id": "settle-at-the-crossing",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 0.8
+            }
+          }
+        },
+        {
+          "id": "hold-the-look",
+          "kind": "action",
+          "position": {
+            "x": 10200,
+            "y": 180
+          },
+          "step": {
+            "id": "hold-the-look",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 0.5
+            }
+          }
+        },
+        {
+          "id": "recover-in-the-silence",
+          "kind": "action",
+          "position": {
+            "x": 18000,
+            "y": 180
+          },
+          "step": {
+            "id": "recover-in-the-silence",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 1.2
+            }
+          }
+        },
+        {
+          "id": "find-our-feet",
+          "kind": "action",
+          "position": {
+            "x": 19800,
+            "y": 180
+          },
+          "step": {
+            "id": "find-our-feet",
+            "action": "cutscene.wait",
+            "arguments": {
+              "seconds": 0.6
+            }
+          }
+        },
+        {
+          "id": "player-considers-warning",
+          "kind": "action",
+          "position": {
+            "x": 3000,
+            "y": 180
+          },
+          "step": {
+            "id": "player-considers-warning",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:think"
+            }
+          }
+        },
+        {
+          "id": "keeper-shrugs-at-storm",
+          "kind": "action",
+          "position": {
+            "x": 13200,
+            "y": 180
+          },
+          "step": {
+            "id": "keeper-shrugs-at-storm",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "storm-keeper",
+              "emote": "base:shrug"
+            }
+          }
+        },
+        {
+          "id": "player-laughs-at-knocking",
+          "kind": "action",
+          "position": {
+            "x": 22200,
+            "y": 180
+          },
+          "step": {
+            "id": "player-laughs-at-knocking",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:laugh"
+            }
+          }
+        },
+        {
+          "id": "player-farewell-wave",
+          "kind": "action",
+          "position": {
+            "x": 22800,
+            "y": 180
+          },
+          "step": {
+            "id": "player-farewell-wave",
+            "action": "characters.emote",
+            "arguments": {
+              "character": "player",
+              "emote": "base:wave"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "player-route-value-player-follows-path-path",
+          "source": "player-route",
+          "sourcePin": "value",
+          "target": "player-follows-path",
+          "targetPin": "path",
+          "kind": "data"
+        },
+        {
+          "id": "breath-before-light-value-first-light-delay-seconds",
+          "source": "breath-before-light",
+          "sourcePin": "value",
+          "target": "first-light-delay",
+          "targetPin": "seconds",
+          "kind": "data"
+        },
+        {
+          "id": "storm-center-position-distant-thunder-position",
+          "source": "storm-center",
+          "sourcePin": "position",
+          "target": "distant-thunder",
+          "targetPin": "position",
+          "kind": "data"
+        },
+        {
+          "id": "calibrate-storm-seconds-blue-lightning-durationSeconds",
+          "source": "calibrate-storm",
+          "sourcePin": "seconds",
+          "target": "blue-lightning",
+          "targetPin": "durationSeconds",
+          "kind": "data"
+        },
+        {
+          "id": "calibrate-storm-color-blue-lightning-color",
+          "source": "calibrate-storm",
+          "sourcePin": "color",
+          "target": "blue-lightning",
+          "targetPin": "color",
+          "kind": "data"
+        },
+        {
+          "id": "calibrate-storm-strength-first-rumble-strength",
+          "source": "calibrate-storm",
+          "sourcePin": "strength",
+          "target": "first-rumble",
+          "targetPin": "strength",
+          "kind": "data"
+        },
+        {
+          "id": "scene-entry-next-establish-the-rain-in",
+          "source": "scene-entry",
+          "sourcePin": "next",
+          "target": "establish-the-rain",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "calibrate-storm-next-give-thunder-room-in",
+          "source": "calibrate-storm",
+          "sourcePin": "next",
+          "target": "give-thunder-room",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "give-thunder-room-next-keeper-introduction-in",
+          "source": "give-thunder-room",
+          "sourcePin": "next",
+          "target": "keeper-introduction",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-introduction-next-weigh-the-warning-in",
+          "source": "keeper-introduction",
+          "sourcePin": "next",
+          "target": "player-considers-warning",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "approach-together-track-0-player-follows-path-in",
+          "source": "approach-together",
+          "sourcePin": "track-0",
+          "target": "player-follows-path",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "approach-together-track-1-keeper-follows-path-in",
+          "source": "approach-together",
+          "sourcePin": "track-1",
+          "target": "keeper-follows-path",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "approach-together-track-2-first-light-delay-in",
+          "source": "approach-together",
+          "sourcePin": "track-2",
+          "target": "first-light-delay",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-follows-path-next-approach-joined-track-0",
+          "source": "player-follows-path",
+          "sourcePin": "next",
+          "target": "approach-joined",
+          "targetPin": "track-0",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-follows-path-next-approach-joined-track-1",
+          "source": "keeper-follows-path",
+          "sourcePin": "next",
+          "target": "approach-joined",
+          "targetPin": "track-1",
+          "kind": "execution"
+        },
+        {
+          "id": "first-light-delay-next-distant-thunder-in",
+          "source": "first-light-delay",
+          "sourcePin": "next",
+          "target": "distant-thunder",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "distant-thunder-next-blue-lightning-in",
+          "source": "distant-thunder",
+          "sourcePin": "next",
+          "target": "blue-lightning",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "blue-lightning-next-first-rumble-in",
+          "source": "blue-lightning",
+          "sourcePin": "next",
+          "target": "first-rumble",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "first-rumble-next-let-thunder-roll-in",
+          "source": "first-rumble",
+          "sourcePin": "next",
+          "target": "let-thunder-roll",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "let-thunder-roll-next-approach-joined-track-2",
+          "source": "let-thunder-roll",
+          "sourcePin": "next",
+          "target": "approach-joined",
+          "targetPin": "track-2",
+          "kind": "execution"
+        },
+        {
+          "id": "does-the-storm-remember-result-remembered-or-first-time-condition",
+          "source": "does-the-storm-remember",
+          "sourcePin": "result",
+          "target": "remembered-or-first-time",
+          "targetPin": "condition",
+          "kind": "data"
+        },
+        {
+          "id": "approach-joined-next-settle-at-the-crossing-in",
+          "source": "approach-joined",
+          "sourcePin": "next",
+          "target": "settle-at-the-crossing",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "turn-to-keeper-next-keeper-meets-eyes-in",
+          "source": "turn-to-keeper",
+          "sourcePin": "next",
+          "target": "keeper-meets-eyes",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-meets-eyes-next-hold-the-look-in",
+          "source": "keeper-meets-eyes",
+          "sourcePin": "next",
+          "target": "hold-the-look",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "remembered-or-first-time-then-remembered-warning-in",
+          "source": "remembered-or-first-time",
+          "sourcePin": "then",
+          "target": "remembered-warning",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "remembered-or-first-time-else-first-warning-in",
+          "source": "remembered-or-first-time",
+          "sourcePin": "else",
+          "target": "first-warning",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "remembered-warning-next-gentler-echo-in",
+          "source": "remembered-warning",
+          "sourcePin": "next",
+          "target": "gentler-echo",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "first-warning-next-full-storm-in",
+          "source": "first-warning",
+          "sourcePin": "next",
+          "target": "full-storm",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "gentler-echo-next-memory-joined-track-0",
+          "source": "gentler-echo",
+          "sourcePin": "next",
+          "target": "memory-joined",
+          "targetPin": "track-0",
+          "kind": "execution"
+        },
+        {
+          "id": "full-storm-next-memory-joined-track-1",
+          "source": "full-storm",
+          "sourcePin": "next",
+          "target": "memory-joined",
+          "targetPin": "track-1",
+          "kind": "execution"
+        },
+        {
+          "id": "echo-length-value-wait-for-the-echo-seconds",
+          "source": "echo-length",
+          "sourcePin": "value",
+          "target": "wait-for-the-echo",
+          "targetPin": "seconds",
+          "kind": "data"
+        },
+        {
+          "id": "memory-joined-next-tune-the-echo-in",
+          "source": "memory-joined",
+          "sourcePin": "next",
+          "target": "keeper-shrugs-at-storm",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "tune-the-echo-next-the-storm-answers-in",
+          "source": "tune-the-echo",
+          "sourcePin": "next",
+          "target": "the-storm-answers",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "the-storm-answers-track-0-player-staggers-in",
+          "source": "the-storm-answers",
+          "sourcePin": "track-0",
+          "target": "player-staggers",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "the-storm-answers-track-1-keeper-watches-sky-in",
+          "source": "the-storm-answers",
+          "sourcePin": "track-1",
+          "target": "keeper-watches-sky",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "the-storm-answers-track-2-white-out-in",
+          "source": "the-storm-answers",
+          "sourcePin": "track-2",
+          "target": "white-out",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-staggers-next-impact-joined-track-0",
+          "source": "player-staggers",
+          "sourcePin": "next",
+          "target": "impact-joined",
+          "targetPin": "track-0",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-watches-sky-next-keeper-counts-silence-in",
+          "source": "keeper-watches-sky",
+          "sourcePin": "next",
+          "target": "keeper-counts-silence",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-counts-silence-next-impact-joined-track-1",
+          "source": "keeper-counts-silence",
+          "sourcePin": "next",
+          "target": "impact-joined",
+          "targetPin": "track-1",
+          "kind": "execution"
+        },
+        {
+          "id": "white-out-next-thunder-at-our-feet-in",
+          "source": "white-out",
+          "sourcePin": "next",
+          "target": "thunder-at-our-feet",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "thunder-at-our-feet-next-answering-rumble-in",
+          "source": "thunder-at-our-feet",
+          "sourcePin": "next",
+          "target": "answering-rumble",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "answering-rumble-next-wait-for-the-echo-in",
+          "source": "answering-rumble",
+          "sourcePin": "next",
+          "target": "wait-for-the-echo",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "wait-for-the-echo-next-impact-joined-track-2",
+          "source": "wait-for-the-echo",
+          "sourcePin": "next",
+          "target": "impact-joined",
+          "targetPin": "track-2",
+          "kind": "execution"
+        },
+        {
+          "id": "recover-at-the-crossing-position-player-gets-bearings-position",
+          "source": "recover-at-the-crossing",
+          "sourcePin": "position",
+          "target": "player-gets-bearings",
+          "targetPin": "position",
+          "kind": "data"
+        },
+        {
+          "id": "impact-joined-next-recover-in-the-silence-in",
+          "source": "impact-joined",
+          "sourcePin": "next",
+          "target": "recover-in-the-silence",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "the-rain-forgets-next-player-gets-bearings-in",
+          "source": "the-rain-forgets",
+          "sourcePin": "next",
+          "target": "player-gets-bearings",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-gets-bearings-next-find-our-feet-in",
+          "source": "player-gets-bearings",
+          "sourcePin": "next",
+          "target": "find-our-feet",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "step-into-daylight-next-look-back-at-keeper-in",
+          "source": "step-into-daylight",
+          "sourcePin": "next",
+          "target": "look-back-at-keeper",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "look-back-at-keeper-next-a-bargain-with-thunder-in",
+          "source": "look-back-at-keeper",
+          "sourcePin": "next",
+          "target": "a-bargain-with-thunder",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "a-bargain-with-thunder-next-let-the-silence-stay-in",
+          "source": "a-bargain-with-thunder",
+          "sourcePin": "next",
+          "target": "player-laughs-at-knocking",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "let-the-silence-stay-next-scene-exit-in",
+          "source": "let-the-silence-stay",
+          "sourcePin": "next",
+          "target": "scene-exit",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "establish-the-rain-next-calibrate-storm-in",
+          "source": "establish-the-rain",
+          "sourcePin": "next",
+          "target": "calibrate-storm",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "weigh-the-warning-next-approach-together-in",
+          "source": "weigh-the-warning",
+          "sourcePin": "next",
+          "target": "approach-together",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "settle-at-the-crossing-next-turn-to-keeper-in",
+          "source": "settle-at-the-crossing",
+          "sourcePin": "next",
+          "target": "turn-to-keeper",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "hold-the-look-next-remembered-or-first-time-in",
+          "source": "hold-the-look",
+          "sourcePin": "next",
+          "target": "remembered-or-first-time",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "recover-in-the-silence-next-the-rain-forgets-in",
+          "source": "recover-in-the-silence",
+          "sourcePin": "next",
+          "target": "the-rain-forgets",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "find-our-feet-next-step-into-daylight-in",
+          "source": "find-our-feet",
+          "sourcePin": "next",
+          "target": "step-into-daylight",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-considers-warning-next-weigh-the-warning-in",
+          "source": "player-considers-warning",
+          "sourcePin": "next",
+          "target": "weigh-the-warning",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "keeper-shrugs-at-storm-next-tune-the-echo-in",
+          "source": "keeper-shrugs-at-storm",
+          "sourcePin": "next",
+          "target": "tune-the-echo",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-laughs-at-knocking-next-let-the-silence-stay-in",
+          "source": "player-laughs-at-knocking",
+          "sourcePin": "next",
+          "target": "player-farewell-wave",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "player-farewell-wave-next-let-the-silence-stay-in",
+          "source": "player-farewell-wave",
+          "sourcePin": "next",
+          "target": "let-the-silence-stay",
+          "targetPin": "in",
+          "kind": "execution"
+        }
+      ]
+    },
+    "completion": {
+      "nodes": [
+        {
+          "id": "completion-entry",
+          "kind": "entry",
+          "position": {
+            "x": 0,
+            "y": 180
+          }
+        },
+        {
+          "id": "leave-clear-skies",
+          "kind": "action",
+          "position": {
+            "x": 540,
+            "y": 180
+          },
+          "step": {
+            "id": "leave-clear-skies",
+            "action": "weather.setWeather",
+            "arguments": {
+              "weather": "Sunny"
+            }
+          }
+        },
+        {
+          "id": "daylight-chime",
+          "kind": "action",
+          "position": {
+            "x": 1080,
+            "y": 180
+          },
+          "step": {
+            "id": "daylight-chime",
+            "action": "audio.playSound",
+            "arguments": {
+              "sound": "base:prototype-complete",
+              "position": null
+            }
+          }
+        },
+        {
+          "id": "completion-exit",
+          "kind": "exit",
+          "position": {
+            "x": 1620,
+            "y": 180
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "completion-entry-next-leave-clear-skies-in",
+          "source": "completion-entry",
+          "sourcePin": "next",
+          "target": "leave-clear-skies",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "daylight-chime-next-completion-exit-in",
+          "source": "daylight-chime",
+          "sourcePin": "next",
+          "target": "completion-exit",
+          "targetPin": "in",
+          "kind": "execution"
+        },
+        {
+          "id": "leave-clear-skies-next-daylight-chime-in",
+          "source": "leave-clear-skies",
+          "sourcePin": "next",
+          "target": "daylight-chime",
+          "targetPin": "in",
+          "kind": "execution"
+        }
+      ]
+    }
+  }
+}

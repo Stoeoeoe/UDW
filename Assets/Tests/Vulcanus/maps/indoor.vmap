@@ -1,0 +1,1113 @@
+{
+  "$schema": "../schemas/map.schema.json",
+  "version": 1,
+  "id": "test:indoor",
+  "name": "Indoor",
+  "width": 16,
+  "height": 16,
+  "baseTilesetId": "test:villagetileset",
+  "tilesetRefs": [
+    "test:villagetileset"
+  ],
+  "layers": [
+    {
+      "id": "terrain",
+      "name": "Terrain",
+      "kind": "terrain",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 0,
+      "data": {
+        "sparse": true,
+        "width": 16,
+        "height": 16,
+        "entries": [
+          {
+            "x": 8,
+            "y": 8,
+            "v": 50
+          }
+        ]
+      },
+      "terrainData": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ],
+      "definitionId": "terrain",
+      "terrainPalette": [
+        "grass"
+      ]
+    },
+    {
+      "id": "layer-1793453797362",
+      "name": "Bottom",
+      "kind": "visual",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 1,
+      "sortingLayer": "ground",
+      "data": [
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          null,
+          943,
+          945,
+          946,
+          943,
+          943,
+          943,
+          943,
+          943,
+          943,
+          943,
+          945,
+          946,
+          943,
+          943,
+          null
+        ],
+        [
+          null,
+          975,
+          977,
+          978,
+          975,
+          975,
+          975,
+          975,
+          975,
+          975,
+          975,
+          977,
+          978,
+          975,
+          975,
+          null
+        ],
+        [
+          null,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          1007,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          192,
+          null
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          192,
+          192,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    {
+      "id": "layer-1793452818316",
+      "name": "Objects",
+      "kind": "visual",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 2,
+      "sortingLayer": "ground",
+      "data": {
+        "sparse": true,
+        "width": 16,
+        "height": 16,
+        "entries": [
+          {
+            "x": 0,
+            "y": 0,
+            "v": 195
+          },
+          {
+            "x": 1,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 2,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 3,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 4,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 5,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 6,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 7,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 8,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 9,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 10,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 11,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 12,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 13,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 14,
+            "y": 0,
+            "v": 226
+          },
+          {
+            "x": 15,
+            "y": 0,
+            "v": 195
+          },
+          {
+            "x": 0,
+            "y": 1,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 1,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 2,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 2,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 3,
+            "v": 193
+          },
+          {
+            "x": 5,
+            "y": 3,
+            "v": 606
+          },
+          {
+            "x": 6,
+            "y": 3,
+            "v": 607
+          },
+          {
+            "x": 7,
+            "y": 3,
+            "v": 604
+          },
+          {
+            "x": 8,
+            "y": 3,
+            "v": 605
+          },
+          {
+            "x": 15,
+            "y": 3,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 4,
+            "v": 193
+          },
+          {
+            "x": 5,
+            "y": 4,
+            "v": 638
+          },
+          {
+            "x": 6,
+            "y": 4,
+            "v": 639
+          },
+          {
+            "x": 7,
+            "y": 4,
+            "v": 636
+          },
+          {
+            "x": 8,
+            "y": 4,
+            "v": 637
+          },
+          {
+            "x": 14,
+            "y": 4,
+            "v": 827
+          },
+          {
+            "x": 15,
+            "y": 4,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 5,
+            "v": 193
+          },
+          {
+            "x": 12,
+            "y": 5,
+            "v": 224
+          },
+          {
+            "x": 15,
+            "y": 5,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 6,
+            "v": 193
+          },
+          {
+            "x": 3,
+            "y": 6,
+            "v": 224
+          },
+          {
+            "x": 15,
+            "y": 6,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 7,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 7,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 8,
+            "v": 193
+          },
+          {
+            "x": 11,
+            "y": 8,
+            "v": 634
+          },
+          {
+            "x": 15,
+            "y": 8,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 9,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 9,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 10,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 10,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 11,
+            "v": 193
+          },
+          {
+            "x": 11,
+            "y": 11,
+            "v": 224
+          },
+          {
+            "x": 15,
+            "y": 11,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 12,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 12,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 13,
+            "v": 193
+          },
+          {
+            "x": 1,
+            "y": 13,
+            "v": 224
+          },
+          {
+            "x": 15,
+            "y": 13,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 14,
+            "v": 193
+          },
+          {
+            "x": 15,
+            "y": 14,
+            "v": 194
+          },
+          {
+            "x": 0,
+            "y": 15,
+            "v": 195
+          },
+          {
+            "x": 1,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 2,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 3,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 4,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 5,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 6,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 9,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 10,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 11,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 12,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 13,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 14,
+            "y": 15,
+            "v": 225
+          },
+          {
+            "x": 15,
+            "y": 15,
+            "v": 195
+          }
+        ]
+      }
+    },
+    {
+      "id": "navigation",
+      "name": "Navigation",
+      "kind": "navigation",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 9999
+    },
+    {
+      "id": "layer-1793949256895",
+      "name": "Entities",
+      "kind": "entity",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 4,
+      "sortingLayer": "ground",
+      "entities": [
+        {
+          "id": "home_bed",
+          "typeId": "test:bed",
+          "position": [
+            32,
+            112
+          ],
+          "properties": {},
+          "layerId": "layer-1793949256895"
+        }
+      ]
+    }
+  ],
+  "entities": [],
+  "locationLinks": [
+    {
+      "id": "link-1793455025194",
+      "triggerId": "trigger-1793454828014",
+      "targetMapId": "test:map-1",
+      "targetAnchorId": "anchor-1776461296590",
+      "linkType": "open"
+    }
+  ],
+  "spatialPrimitives": {
+    "triggers": [
+      {
+        "id": "trigger-1793454828014",
+        "type": "locationLinkTrigger",
+        "shape": "rectangle",
+        "position": [
+          112,
+          256
+        ],
+        "size": [
+          32,
+          1
+        ],
+        "tags": []
+      }
+    ],
+    "anchors": [
+      {
+        "id": "anchor-1793454943629",
+        "name": "Anchor",
+        "position": [
+          128,
+          230
+        ],
+        "facing": [
+          0,
+          -1
+        ],
+        "tags": []
+      },
+      {
+        "id": "anchor-1793894673996",
+        "name": "Debug Spawn",
+        "position": [
+          128,
+          176
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": [
+          "debug_spawn_point"
+        ]
+      },
+      {
+        "id": "fabia-home",
+        "name": "Fabia's home",
+        "position": [
+          40,
+          104
+        ],
+        "facing": [
+          0,
+          1
+        ],
+        "tags": []
+      }
+    ]
+  },
+  "metadata": {
+    "locationType": "Indoor",
+    "musicCue": "base:interior",
+    "musicPreset": "full"
+  }
+}

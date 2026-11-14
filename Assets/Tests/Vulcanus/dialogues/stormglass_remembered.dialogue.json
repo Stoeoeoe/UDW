@@ -1,0 +1,40 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "test:stormglass_remembered",
+  "name": "Stormglass — An Echo Knows You",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "stormglass",
+    "cutscene"
+  ],
+  "createdAt": "2026-10-29T21:50:17Z",
+  "updatedAt": "2026-10-29T21:50:17Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "test:my_test_char",
+      "text": "You've heard it before. It kept the shape of your silence.",
+      "msgKey": "dlg.test:stormglass_remembered.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "test:player",
+      "text": "Tell me this ends differently.",
+      "msgKey": "dlg.test:stormglass_remembered.02",
+      "next": "line-3"
+    },
+    {
+      "id": "line-3",
+      "type": "line",
+      "speaker": "test:my_test_char",
+      "text": "This time the storm knows your name. The answer will be gentler.",
+      "msgKey": "dlg.test:stormglass_remembered.03",
+      "next": null
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../schemas/entity-type.schema.json",
+  "id": "test:market_stall_fish",
+  "displayName": "Fish Stall",
+  "category": "object",
+  "group": "Market",
+  "description": "A market stall that opens a shop. Choose its shop.",
+  "placeholderColor": "#2f3f8f",
+  "defaultSize": [
+    66,
+    83
+  ],
+  "sprite": {
+    "path": "assets/market_stall_fish.png"
+  },
+  "properties": [
+    {
+      "key": "shopId",
+      "label": "Shop",
+      "type": "string",
+      "defaultValue": "test:market_seeds",
+      "required": true,
+      "description": "ID of the shop this stall opens, for example test:market_seeds."
+    }
+  ],
+  "folderPath": "Market",
+  "icon": "GiShop"
+}

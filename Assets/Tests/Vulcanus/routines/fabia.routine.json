@@ -1,0 +1,36 @@
+{
+  "$schema": "../schemas/routine.schema.json",
+  "formatVersion": 1,
+  "id": "test:fabia_routine",
+  "character": "test:fabia",
+  "home": {
+    "map": "test:indoor",
+    "anchor": "fabia-home"
+  },
+  "variants": [
+    {
+      "id": "default",
+      "goals": [
+        {
+          "id": "visit",
+          "departAt": "06:30",
+          "destination": {
+            "map": "test:map-1",
+            "anchor": "fabia-destination"
+          },
+          "activity": {
+            "animation": "base:wave"
+          },
+          "walkingDialogue": "test:dlg_salve",
+          "dialogue": "test:fabia_greeting"
+        },
+        {
+          "id": "back_home",
+          "departAt": "08:00",
+          "destination": "home",
+          "walkingDialogue": "test:dlg_salve"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "labels": {
+    "test:cutscene-prototype": "Prototype",
+    "test:cutscene-prototype/prototype-completion-sound": "Completion cue (global)",
+    "test:cutscene-prototype/prototype-impact-hold": "Let the shake finish",
+    "test:cutscene-prototype/prototype-impact-shake": "Landing screen shake",
+    "test:cutscene-prototype/prototype-impact-sound": "Landing impact (positioned)",
+    "test:stormglass": "Stormglass — A Bargain with Thunder"
+  },
+  "folders": {}
+}

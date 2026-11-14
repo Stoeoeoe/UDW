@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "test:dlg_salve",
+  "name": "Salve",
+  "oneShot": false,
+  "startNodeId": "step_1",
+  "tags": [],
+  "createdAt": "2026-11-13T16:37:58.345Z",
+  "updatedAt": "2026-11-13T16:38:10.171Z",
+  "nodes": [
+    {
+      "id": "step_1",
+      "type": "line",
+      "text": "Salve!",
+      "msgKey": "dlg.test:dlg_salve.01",
+      "next": null,
+      "speaker": "test:fabia",
+      "emotion": "base:angry"
+    }
+  ]
+}
