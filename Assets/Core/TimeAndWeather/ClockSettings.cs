@@ -13,8 +13,18 @@ namespace Core.TimeAndWeather
         public int startOfDay = 6;
         public int endOfDay = 23;
         public int numberOfDaysInSeason = 14;
+        /// <summary>
+        /// Real seconds per step of the clock; each step advances it <see cref="MinutesPerStep"/> minutes, so this is
+        /// not the length of one minute (see <see cref="SecondsPerMinute"/>).
+        /// </summary>
         public float secondsPerInGameMinute = 10f; // TODO: Probably wrong? Seems too fast
         [Tooltip("Seasons in calendar order.")] public SeasonData[] seasons = Array.Empty<SeasonData>();
+
+        /// <summary>The clock shows and advances whole steps of this many minutes.</summary>
+        public const int MinutesPerStep = 10;
+
+        /// <summary>Real seconds one in-game minute lasts on average.</summary>
+        public float SecondsPerMinute => secondsPerInGameMinute / MinutesPerStep;
 
         public void Validate()
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Character;
 using Character.Animations;
 using Core.Events;
@@ -19,9 +20,9 @@ using Object = UnityEngine.Object;
 namespace Core.Routines
 {
     /// <summary>
-    /// Brings routine characters into the entered location where their day plan puts them at the current time, moves
-    /// them through the rest of their day while the location stays loaded, and removes them when it is left. Nothing is
-    /// saved: the plan and the clock decide where everyone is, so loading mid-day places them again.
+    /// Brings routine characters into the entered location where their timetable puts them at the current time, moves
+    /// them through their day while the location stays loaded, and lets them leave and arrive through its doors.
+    /// Nothing is saved: the timetable and the clock decide where everyone is, so loading mid-day places them again.
     /// </summary>
     /// <remarks>
     /// Days are planned when the service starts, when a game is started or loaded, and at each new day. Overnight the
@@ -29,31 +30,47 @@ namespace Core.Routines
     /// </remarks>
     public sealed class RoutineNpcService : ILocationLifecycle, ITickable, IDisposable, IEventListener<NewDayEvent>
     {
+        private const float FadeSeconds = 0.3f;
+        // How close counts as already being at a place, so she doesn't walk a few pixels there.
+        private const float AtPlaceDistance = 0.1f;
+
+        private sealed class Day
+        {
+            public RoutineTimetable Timetable;
+            /// <summary>
+            /// The segment in which she last left the current map through a door. She isn't brought back before her
+            /// timetable moves past it, even when she reached the door earlier than planned.
+            /// </summary>
+            public int LeftAt = -1;
+        }
+
         private sealed class Npc
         {
+            public Day Day;
             public GameObject Instance;
             public GameCharacter Character;
+            public SpriteRenderer[] Sprites;
             /// <summary>What talking to the character starts; the routine changes its dialogue through the day.</summary>
             public ShowVulcanusDialogueInteractable Talk;
-            public DayPlan Plan;
-            /// <summary>The goal most recently set off for; -1 while still at home.</summary>
-            public int GoalIndex;
+            /// <summary>Index of the timetable segment she is living through.</summary>
+            public int Index;
             /// <summary>Set once the character has entered the location; until then its entry idle would replace any pose.</summary>
             public bool Settled;
             public Vector2 Facing;
-            /// <summary>Goal still being walked to when the character was placed partway along its route.</summary>
-            public PlannedGoal WalkOnTo;
             public CharacterAnimationDefinition PendingActivity;
             public UrCharacterAnimator.ActivityPlayback Activity;
             /// <summary>A plain looping animation or set is playing, which has no end to wait for.</summary>
             public bool PlainActivity;
             public NavigationRoute Route;
-            public PlannedGoal Heading;
+            /// <summary>Seconds into a fade; negative when not fading.</summary>
+            public float FadeTime = -1;
+            public bool FadingOut;
+
+            public TimetableSegment Segment => Day.Timetable.Segments[Index];
         }
 
         private readonly IObjectResolver _resolver;
         private readonly GameState _state;
-        private readonly GameClock _clock;
         private readonly ClockSettings _clockSettings;
         private readonly MapManager _maps;
         private readonly RoutineCatalog _routines;
@@ -61,20 +78,21 @@ namespace Core.Routines
         private readonly CharacterAnimationCatalog _animations;
         private readonly WorldObjectSpawner _spawner;
         private readonly LuaRuntime _lua;
+        private readonly WorldCatalog _worlds;
 
-        private readonly List<DayPlan> _plans = new();
+        private readonly List<Day> _days = new();
+        private WorldNavigation _world;
         private IReadOnlyDictionary<string, SpawnedObject> _prefabs;
         private readonly List<Npc> _npcs = new();
         private Transform _root;
         private string _mapId;
 
-        public RoutineNpcService(IObjectResolver resolver, GameState state, GameClock clock, ClockSettings clockSettings,
+        public RoutineNpcService(IObjectResolver resolver, GameState state, ClockSettings clockSettings,
             MapManager maps, RoutineCatalog routines, CharacterCatalog characters, CharacterAnimationCatalog animations,
-            WorldObjectSpawner spawner, LuaRuntime lua)
+            WorldObjectSpawner spawner, LuaRuntime lua, WorldCatalog worlds)
         {
             _resolver = resolver;
             _state = state;
-            _clock = clock;
             _clockSettings = clockSettings;
             _maps = maps;
             _routines = routines;
@@ -82,6 +100,7 @@ namespace Core.Routines
             _animations = animations;
             _spawner = spawner;
             _lua = lua;
+            _worlds = worlds;
             _state.Restored += PlanDay;
             EventBus<NewDayEvent>.Subscribe(this);
             // The first game is started before this service exists, so plan its current day now.
@@ -94,8 +113,8 @@ namespace Core.Routines
             get { foreach (var npc in _npcs) yield return npc.Character; }
         }
 
-        /// <summary>Today's plans, one per enabled routine.</summary>
-        public IReadOnlyList<DayPlan> Plans => _plans;
+        /// <summary>Today's timetables, one per enabled routine.</summary>
+        public IEnumerable<RoutineTimetable> Timetables => _days.Select(day => day.Timetable);
 
         public void OnLocationEnter(LocationData location)
         {
@@ -115,21 +134,30 @@ namespace Core.Routines
         {
             PlanDay();
             if (_mapId == null) return;
-            // The overnight blackout hides the change: everyone starts the new day where its plan puts them.
+            // The overnight blackout hides the change: everyone starts the new day where its timetable puts them.
             Clear();
             PlaceAll();
         }
 
         public void Tick()
         {
-            if (_npcs.Count == 0) return;
-            var minute = MinuteOfDay();
-            // Iterate a copy: a character who leaves for another map is removed.
+            if (_mapId == null) return;
+            var minute = Minute();
+            // Iterate a copy: a character who leaves through a door is removed.
             foreach (var npc in _npcs.ToArray())
             {
                 if (!npc.Character || !npc.Character.IsInLocation) continue;
                 if (!npc.Settled) Settle(npc);
+                Fade(npc, Time.deltaTime);
+                if (npc.FadingOut) continue;
                 Advance(npc, minute, Time.deltaTime);
+            }
+            // Characters whose timetable now brings them onto this map, usually through one of its doors.
+            foreach (var day in _days)
+            {
+                if (_npcs.Any(npc => npc.Day == day)) continue;
+                var index = day.Timetable.IndexAt(minute);
+                if (index > day.LeftAt && day.Timetable.Segments[index].MapId == _mapId) Spawn(day, index, minute, fadeIn: true);
             }
         }
 
@@ -140,16 +168,18 @@ namespace Core.Routines
             Clear();
         }
 
-        private int MinuteOfDay()
+        /// <summary>Minutes after midnight, including the way through the clock's current step.</summary>
+        private float Minute()
         {
-            var time = _clock.CurrentTime;
-            return time.Hour * 60 + time.Minute;
+            var time = _state.Time;
+            return time.hour * 60 + time.minute + time.secondsTowardNextMinute / _clockSettings.SecondsPerMinute;
         }
 
         private void PlanDay()
         {
             var day = _state.Time.daysSinceStart;
-            _plans.Clear();
+            _days.Clear();
+            _world ??= WorldNavigation.Build(_worlds.EnabledDefinitions.ToArray());
             var planner = new RoutinePlanner(_lua.CreateEngine());
             var dayStart = _clockSettings.startOfDay * 60;
             var dayEnd = _clockSettings.endOfDay * 60;
@@ -160,7 +190,11 @@ namespace Core.Routines
                     if (goal.DepartMinute < dayStart || goal.DepartMinute >= dayEnd)
                         throw new InvalidOperationException($"Routine '{routine.RoutineId}': goal '{goal.Id}' departs at " +
                             $"{goal.DepartMinute / 60:00}:{goal.DepartMinute % 60:00}, outside the day ({_clockSettings.startOfDay:00}:00-{_clockSettings.endOfDay:00}:00).");
-                _plans.Add(plan);
+                // The timetable uses the authored walk speed; boons change only how fast she walks in sight.
+                var timetable = RoutineTimetablePlanner.Plan(plan, _world, _characters.Require(routine.CharacterId).WalkSpeed,
+                    _clockSettings.SecondsPerMinute);
+                foreach (var warning in timetable.Warnings) Debug.LogWarning(warning);
+                _days.Add(new Day { Timetable = timetable });
             }
         }
 
@@ -168,55 +202,21 @@ namespace Core.Routines
         {
             // The new root goes into the active scene, which LevelManager sets to the entered location.
             _root = new GameObject("Routine characters").transform;
-            var minute = MinuteOfDay();
-            foreach (var plan in _plans) Place(plan, plan.At(minute));
+            var minute = Minute();
+            foreach (var day in _days)
+            {
+                day.LeftAt = -1;
+                var index = day.Timetable.IndexAt(minute);
+                if (day.Timetable.Segments[index].MapId == _mapId) Spawn(day, index, minute, fadeIn: false);
+            }
         }
 
-        // ── Placing on location entry ───────────────────────────────────────────────
+        // ── Placing ─────────────────────────────────────────────────────────────────
 
-        private void Place(DayPlan plan, RoutineMoment moment)
+        /// <summary>Puts the character where the segment has her at this minute: at its place, or along its walk.</summary>
+        private void Spawn(Day day, int index, float minute, bool fadeIn)
         {
-            var routine = plan.Routine;
-            if (moment.IsHome)
-            {
-                if (routine.Home.MapId == _mapId) Spawn(plan, moment, routine.Home, null);
-                return;
-            }
-            var goal = moment.Goal;
-            var to = goal.Destination;
-            // Travel between maps isn't built yet: until it is, a character is at another map's destination once she sets off.
-            if (moment.From.MapId != to.MapId)
-            {
-                if (to.MapId == _mapId) Spawn(plan, moment, to, goal);
-                return;
-            }
-            if (to.MapId != _mapId) return;
-
-            // Start at the departure point, then measure the route to find how far she has come.
-            var npc = Spawn(plan, moment, moment.From, null);
-            var route = CharacterNavigation.PlanRoute(npc.Character, AnchorFeet(to), _maps);
-            if (!route.Found)
-            {
-                Debug.LogWarning($"Routine '{routine.RoutineId}': {route.Error} Placing the character at '{to}' instead.", npc.Character);
-                StandAt(npc, to, goal);
-                return;
-            }
-            var walked = moment.MinutesSinceDeparture * _clockSettings.secondsPerInGameMinute * npc.Character.Attributes.WalkSpeed;
-            if (walked >= route.Length)
-            {
-                StandAt(npc, to, goal);
-                return;
-            }
-            var feet = route.PointAt(walked);
-            PlaceFeet(npc.Character, feet);
-            npc.Facing = Cardinal(route.PointAt(Mathf.Min(walked + 0.5f, route.Length)) - feet);
-            npc.WalkOnTo = goal;
-            UpdateDialogue(npc, arrived: false);
-        }
-
-        private Npc Spawn(DayPlan plan, RoutineMoment moment, RoutinePlace place, PlannedGoal goal)
-        {
-            var routine = plan.Routine;
+            var routine = day.Timetable.Plan.Routine;
             _prefabs ??= ActorSpawnDefinitions.Find(_spawner.RegisteredPrefabs, _characters);
             if (!_prefabs.TryGetValue(routine.CharacterId, out var prefab))
                 throw new InvalidOperationException($"Routine '{routine.RoutineId}' needs a spawnable prefab for character '{routine.CharacterId}'.");
@@ -224,25 +224,39 @@ namespace Core.Routines
             instance.name = $"{prefab.name} (routine)";
             var npc = new Npc
             {
+                Day = day,
+                Index = index,
                 Instance = instance,
                 Character = instance.GetComponentInChildren<GameCharacter>(true),
-                Talk = instance.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true),
-                Plan = plan,
-                GoalIndex = moment.GoalIndex
+                Sprites = instance.GetComponentsInChildren<SpriteRenderer>(true),
+                Talk = instance.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true)
             };
             _npcs.Add(npc);
-            StandAt(npc, place, goal);
-            return npc;
+            var segment = npc.Segment;
+            if (segment.IsWalk)
+            {
+                var feet = segment.PositionAt(minute);
+                var ahead = segment.PositionAt(Mathf.Min(minute + 0.1f, segment.EndMinute));
+                PlaceFeet(npc.Character, ToWorld(feet));
+                npc.Facing = Cardinal(ahead - feet);
+                UpdateDialogue(npc);
+            }
+            else StandAt(npc);
+            if (fadeIn)
+            {
+                npc.FadeTime = 0;
+                SetAlpha(npc, 0);
+            }
         }
 
-        /// <summary>Puts the character at a place, facing its anchor's direction, with the goal's activity to start.</summary>
-        private void StandAt(Npc npc, RoutinePlace place, PlannedGoal goal)
+        /// <summary>Puts the character at her segment's place, facing its anchor's direction, with its activity to start.</summary>
+        private void StandAt(Npc npc)
         {
-            var anchor = Anchor(place);
+            var anchor = Anchor(npc.Segment.Place);
             PlaceFeet(npc.Character, anchor.transform.position);
             npc.Facing = anchor.FacingDirection;
-            npc.PendingActivity = Activity(goal);
-            UpdateDialogue(npc, arrived: true);
+            npc.PendingActivity = Activity(npc);
+            UpdateDialogue(npc);
         }
 
         // ── Living through the day ─────────────────────────────────────────────────
@@ -251,38 +265,38 @@ namespace Core.Routines
         {
             npc.Settled = true;
             npc.Character.Orientation.ForceDirection(npc.Facing);
-            if (npc.WalkOnTo != null) Walk(npc, npc.WalkOnTo);
+            if (npc.Segment.IsWalk) Walk(npc, ToWorld(npc.Segment.Route[^1]));
             else StartActivity(npc, npc.PendingActivity);
         }
 
-        private void Advance(Npc npc, int minute, float deltaTime)
+        private void Advance(Npc npc, float minute, float deltaTime)
         {
+            var segment = npc.Segment;
             if (npc.Route != null)
             {
                 npc.Route.Tick(deltaTime);
                 if (npc.Route.Status == NavigationMoveStatus.Moving) return;
-                var goal = npc.Heading;
                 // Something stopped her on the way; carry on as if she had arrived, like an NPC catching up off-screen.
                 if (npc.Route.Status != NavigationMoveStatus.Arrived)
-                    Debug.LogWarning($"Routine '{npc.Plan.Routine.RoutineId}': walking to '{goal.Destination}' stopped " +
-                        $"({npc.Route.Error}). Placing the character there.", npc.Character);
+                    Debug.LogWarning($"Routine '{npc.Day.Timetable.Plan.Routine.RoutineId}': walking on '{_mapId}' stopped " +
+                        $"({npc.Route.Error}). Placing the character at the end of the walk.", npc.Character);
                 npc.Route.Dispose();
                 npc.Route = null;
-                npc.Heading = null;
-                // Walking stops within a few pixels and coasts; activities such as sitting need the exact spot.
-                var anchor = Anchor(goal.Destination);
-                PlaceFeet(npc.Character, anchor.transform.position);
-                npc.Character.Orientation.ForceDirection(anchor.FacingDirection);
-                StartActivity(npc, Activity(goal));
-                UpdateDialogue(npc, arrived: true);
+                if (segment.IsWalk && segment.Leaves != null)
+                {
+                    // Through the door: she fades out here and goes on in her timetable.
+                    PlaceFeet(npc.Character, ToWorld(segment.Route[^1]));
+                    npc.Day.LeftAt = npc.Index;
+                    npc.FadingOut = true;
+                    npc.FadeTime = 0;
+                    return;
+                }
+                if (segment.IsWalk) Begin(npc, Next(npc, minute));
+                else Arrive(npc);
                 return;
             }
 
-            var due = npc.GoalIndex;
-            var goals = npc.Plan.Goals;
-            while (due + 1 < goals.Count && goals[due + 1].DepartMinute <= minute) due++;
-            if (due == npc.GoalIndex) return;
-
+            if (segment.IsWalk || minute < segment.EndMinute) return;
             // Finish the current activity before setting off; its end animation may take a moment.
             if (npc.Activity != null && !npc.Activity.IsCompleted && !npc.Activity.IsInterrupted)
             {
@@ -292,34 +306,62 @@ namespace Core.Routines
             if (npc.PlainActivity) npc.Character.Animator.EndInteractionAnimation();
             npc.Activity = null;
             npc.PlainActivity = false;
-
-            // When the clock jumped past several departures, she heads straight for the latest.
-            npc.GoalIndex = due;
-            var next = goals[due];
-            if (next.Destination.MapId != _mapId)
-            {
-                // Travel between maps isn't built yet: she leaves this map at once.
-                Remove(npc);
-                return;
-            }
-            Walk(npc, next);
+            Begin(npc, Next(npc, minute));
         }
 
-        private void Walk(Npc npc, PlannedGoal goal)
+        /// <summary>
+        /// The segment after the current one, or the one the timetable has reached if she is behind it: a late arrival
+        /// sets off again at once, and after the clock jumps she heads straight for where she should be.
+        /// </summary>
+        private static int Next(Npc npc, float minute) => Mathf.Max(npc.Index + 1, npc.Day.Timetable.IndexAt(minute));
+
+        private void Begin(Npc npc, int index)
         {
-            npc.WalkOnTo = null;
-            npc.Heading = goal;
-            npc.Route = CharacterNavigation.NavigateTo(npc.Character, AnchorFeet(goal.Destination), _maps);
-            UpdateDialogue(npc, arrived: false);
+            npc.Index = index;
+            var segment = npc.Segment;
+            if (segment.MapId != _mapId)
+            {
+                // Only after the clock jumped past her walk to a door: she leaves without walking there.
+                npc.Day.LeftAt = index - 1;
+                npc.FadingOut = true;
+                npc.FadeTime = 0;
+                return;
+            }
+            if (segment.IsWalk)
+            {
+                Walk(npc, ToWorld(segment.Route[^1]));
+                return;
+            }
+            var place = (Vector2)Anchor(segment.Place).transform.position;
+            if (Vector2.Distance(Feet(npc.Character), place) > AtPlaceDistance) Walk(npc, place);
+            else Arrive(npc);
+        }
+
+        private void Walk(Npc npc, Vector2 feet)
+        {
+            npc.Route = CharacterNavigation.NavigateTo(npc.Character, feet, _maps);
+            UpdateDialogue(npc, walking: true);
+        }
+
+        /// <summary>At her segment's place: on the exact spot, which activities such as sitting need, playing its activity.</summary>
+        private void Arrive(Npc npc)
+        {
+            var anchor = Anchor(npc.Segment.Place);
+            PlaceFeet(npc.Character, anchor.transform.position);
+            npc.Character.Orientation.ForceDirection(anchor.FacingDirection);
+            StartActivity(npc, Activity(npc));
+            UpdateDialogue(npc);
         }
 
         /// <summary>Lets the character say what the routine has set for this point of the day.</summary>
-        private static void UpdateDialogue(Npc npc, bool arrived)
+        private static void UpdateDialogue(Npc npc, bool walking = false)
         {
-            var dialogue = npc.Plan.DialogueAt(npc.GoalIndex, arrived);
+            var segment = npc.Segment;
+            var plan = npc.Day.Timetable.Plan;
+            var dialogue = plan.DialogueAt(segment.GoalIndex, arrived: !segment.IsWalk && !walking);
             if (npc.Talk) npc.Talk.UseDialogue(dialogue);
             else if (dialogue != null)
-                throw new InvalidOperationException($"Routine '{npc.Plan.Routine.RoutineId}' sets the dialogue '{dialogue}', but " +
+                throw new InvalidOperationException($"Routine '{plan.Routine.RoutineId}' sets the dialogue '{dialogue}', but " +
                     $"character '{npc.Character.CharacterId}' has no {nameof(ShowVulcanusDialogueInteractable)} to say it.");
         }
 
@@ -335,29 +377,57 @@ namespace Core.Routines
             }
         }
 
+        /// <summary>Fades her in after arriving through a door, or out after leaving through one; then she is removed.</summary>
+        private void Fade(Npc npc, float deltaTime)
+        {
+            if (npc.FadeTime < 0) return;
+            npc.FadeTime += deltaTime;
+            var progress = Mathf.Clamp01(npc.FadeTime / FadeSeconds);
+            SetAlpha(npc, npc.FadingOut ? 1 - progress : progress);
+            if (progress < 1) return;
+            npc.FadeTime = -1;
+            if (npc.FadingOut) Remove(npc);
+        }
+
         // ── Helpers ────────────────────────────────────────────────────────────────
 
-        private CharacterAnimationDefinition Activity(PlannedGoal goal) =>
-            string.IsNullOrEmpty(goal?.ActivityAnimationId) ? null
-                : _animations.Get(goal.ActivityAnimationId)
-                  ?? throw new InvalidOperationException($"Animation '{goal.ActivityAnimationId}' is not registered and enabled.");
+        private CharacterAnimationDefinition Activity(Npc npc)
+        {
+            var goalIndex = npc.Segment.GoalIndex;
+            var id = goalIndex < 0 ? null : npc.Day.Timetable.Plan.Goals[goalIndex].ActivityAnimationId;
+            return string.IsNullOrEmpty(id) ? null
+                : _animations.Get(id) ?? throw new InvalidOperationException($"Animation '{id}' is not registered and enabled.");
+        }
 
         private VulcanusMapAnchor Anchor(RoutinePlace place) =>
             _maps.TryGetAnchor(place.AnchorId, out var anchor)
                 ? anchor
                 : throw new InvalidOperationException($"Map '{place.MapId}' has no anchor '{place.AnchorId}'.");
 
-        private Vector2 AnchorFeet(RoutinePlace place) => Anchor(place).transform.position;
+        /// <summary>A timetable position, in the current map's local space, in the world.</summary>
+        private Vector2 ToWorld(Vector2 local) => _maps.CurrentMap.transform.TransformPoint(local);
 
         private static Vector2 Cardinal(Vector2 direction) =>
             Mathf.Abs(direction.x) >= Mathf.Abs(direction.y)
                 ? (direction.x >= 0 ? Vector2.right : Vector2.left)
                 : (direction.y >= 0 ? Vector2.up : Vector2.down);
 
+        private static Vector2 Feet(GameCharacter character) => (Vector2)character.transform.position + NavigationPlan.FeetOffset(character);
+
         private static void PlaceFeet(GameCharacter character, Vector2 feet)
         {
             character.transform.position = feet - NavigationPlan.FeetOffset(character);
             Physics2D.SyncTransforms();
+        }
+
+        private static void SetAlpha(Npc npc, float alpha)
+        {
+            foreach (var sprite in npc.Sprites)
+            {
+                var color = sprite.color;
+                color.a = alpha;
+                sprite.color = color;
+            }
         }
 
         private static void Release(Npc npc)

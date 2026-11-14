@@ -1528,7 +1528,7 @@
     ]
   },
   "clock": {
-    "secondsPerInGameMinute": 5.0,
+    "secondsPerInGameMinute": 0.5,
     "startOfDay": 6,
     "endOfDay": 23
   }

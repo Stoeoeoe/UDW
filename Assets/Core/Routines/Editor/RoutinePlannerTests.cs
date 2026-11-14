@@ -51,22 +51,9 @@ namespace Core.Routines.Editor
             Assert.That(plan.ChoiceId, Is.EqualTo("default"));
             Assert.That(plan.Goals[1].Destination, Is.SameAs(routine.Home), "\"home\" resolves to the routine's home.");
 
-            var early = plan.At(7 * 60 + 30);
-            Assert.That(early.IsHome, Is.True);
-            Assert.That(early.From, Is.SameAs(routine.Home));
-
-            var visiting = plan.At(9 * 60);
-            Assert.That(visiting.Goal.Id, Is.EqualTo("visit"));
-            Assert.That(visiting.From, Is.SameAs(routine.Home));
-            Assert.That(visiting.MinutesSinceDeparture, Is.EqualTo(60));
-            Assert.That(visiting.Goal.ActivityAnimationId, Is.EqualTo("base:wave2"));
-
-            var exactly = plan.At(10 * 60);
-            Assert.That(exactly.Goal.Id, Is.EqualTo("back_home"), "A goal starts at its departure minute.");
-            Assert.That(exactly.From.AnchorId, Is.EqualTo("fabia-destination"));
-            Assert.That(exactly.MinutesSinceDeparture, Is.EqualTo(0));
-
-            Assert.That(plan.At(23 * 60).Goal.Id, Is.EqualTo("back_home"), "After the last departure she stays put.");
+            Assert.That(plan.Goals.Select(goal => (goal.Id, goal.DepartMinute)), Is.EqualTo(new[] { ("visit", 480), ("back_home", 600) }));
+            Assert.That(plan.Goals[0].Destination, Is.SameAs(Square));
+            Assert.That(plan.Goals[0].ActivityAnimationId, Is.EqualTo("base:wave2"));
         }
 
         [Test]
@@ -89,7 +76,6 @@ namespace Core.Routines.Editor
             Assert.That(Planner("hungry").PlanDay(routine, 1).Goals.Select(goal => goal.Id), Is.EqualTo(new[] { "lunch", "back_home" }));
             var skipped = Planner().PlanDay(routine, 1);
             Assert.That(skipped.Goals.Select(goal => goal.Id), Is.EqualTo(new[] { "back_home" }));
-            Assert.That(skipped.At(12 * 60 + 30).IsHome, Is.True);
         }
 
         [Test]
@@ -154,14 +140,6 @@ namespace Core.Routines.Editor
 
             var silent = Planner().PlanDay(Routine(new[] { Fixed("default", null, Goal("visit", 9, Square)) }), 1);
             Assert.That(silent.DialogueAt(0, arrived: true), Is.Null, "Without any dialogue the character cannot be talked to.");
-        }
-
-        [Test]
-        public void TimesOutsideTheDayAreRejected()
-        {
-            var plan = Planner().PlanDay(Routine(new[] { Fixed("default", null) }), 1);
-            Assert.Throws<ArgumentOutOfRangeException>(() => plan.At(-1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => plan.At(24 * 60));
         }
     }
 }

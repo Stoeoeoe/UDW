@@ -40,10 +40,8 @@ same member, so loading a save mid-day rebuilds the same plan. (Once STO-80
 adds a per-save seed, it will be mixed in so playthroughs differ.)
 
 `new RoutinePlanner(luaEngine).PlanDay(routine, daysSinceStart)` returns that
-day's `DayPlan`. `DayPlan.At(minuteOfDay)` says where the day stands: at home before
-the first departure, otherwise which goal the character last set off for, from
-where, and how long ago. Whether they have arrived depends on the route, which
-the caller measures.
+day's `DayPlan`: the goals that hold, with `"home"` resolved. The timetable
+(below) turns it into where the character is at each minute.
 
 ## Moving between maps
 
@@ -51,19 +49,21 @@ Characters change maps only through location links. `MapLinkGraph` (built from t
 the maps; catalog refresh rejects a routine whose goal is on a map no chain of links reaches from where the character
 comes from (home or the goal before).
 
-`RoutineTimetablePlanner.Plan(dayPlan, world, walkSpeed, secondsPerInGameMinute)` turns a day plan into a
+`RoutineTimetablePlanner.Plan(dayPlan, world, walkSpeed, secondsPerMinute)` turns a day plan into a
 `RoutineTimetable`: stays and the walks between them, minute by minute and split at every door crossed. It reads only
-`WorldNavigation` (each map's baked navigation grid and anchors, plus the links, built once from the map prefabs), so
+`WorldNavigation` (each map's baked navigation grid and anchors, plus the links, built once from the map prefabs of the
+worlds in `WorldCatalog`), so
 it answers for maps that aren't loaded. `At(minute)` gives the segment, `PositionAt(minute)` the feet position in that
 map's local space.
 
-- A walk takes the shortest chain of links by walking distance. Links within one map are ignored.
+- A walk goes through as few maps as possible, and is the shortest of those: characters don't pass through another map
+  to save a few steps. Links within one map are ignored.
 - A link is used at the walkable tile nearest the middle of its trigger, among those the trigger covers or borders.
   Walking resumes at the link's arrival anchor; crossing takes no time.
 - A walk that is still going at the next departure sets off again on arrival.
 - A goal with no walkable route is reached as soon as she sets off, with a warning in `Warnings`.
-
-The service doesn't use the timetable yet; placing characters from it on any map is STO-86.
+- Minutes are real minutes. The clock advances in steps of `ClockSettings.MinutesPerStep`, one step every
+  `secondsPerInGameMinute` seconds, so one minute lasts `ClockSettings.SecondsPerMinute`.
 
 ## What the character says
 
@@ -97,41 +97,28 @@ dialogue on their own prefab.
 
 ## Presence
 
-`RoutineNpcService` places routine characters when a location is entered and
-removes them when it is left. It plans every enabled routine when it starts,
-when a game is started or loaded (`GameState.Restored`) and at each
-`NewDayEvent`. Overnight the player returns home before the new day begins,
-so the new day also re-places the characters in the current location, behind
-the overnight blackout. On entering a location it asks each plan where its
-character is now:
+`RoutineNpcService` plans every enabled routine's day and timetable when it starts, when a game is started or loaded
+(`GameState.Restored`) and at each `NewDayEvent`. Overnight the player returns home before the new day begins, so the
+new day also re-places the characters in the current location, behind the overnight blackout. The timetable uses the
+walk speed from the character's definition; boons only change how fast she walks in sight.
 
-- At home before the first departure; at a goal's destination once the
-  route there is walked, with the goal's activity playing; or partway along
-  the route. Walking distance is the time since departure times
-  `secondsPerInGameMinute` times the character's walk speed, measured with
-  `CharacterNavigation.PlanRoute`.
-- A character is spawned only if that place is on the entered map, from the
-  character's spawnable prefab (the same lookup as `characters.spawn`), and is
-  never saved: the plan and the clock place them again after loading.
-- Travel between maps isn't built yet: a character who sets off for another
-  map is at the destination at once.
-- Departures must fall within the clock's day (`startOfDay`-`endOfDay`).
-- A character with a routine must not also be placed on a map; catalog
-  validation reports it.
+On entering a location, every character whose timetable has her on its map now is placed where it says: at her place
+with its activity, or partway along a walk, walking on. Characters are spawned from their spawnable prefab (the same
+lookup as `characters.spawn`) and never saved: the timetable and the clock place them again after loading. A character
+with a routine must not also be placed on a map; catalog validation reports it. Departures must fall within the
+clock's day (`startOfDay`-`endOfDay`).
 
-While the location stays loaded, the service also moves characters through
-the rest of their day:
+While the location stays loaded, the characters on it live through their timetable:
 
-- When a goal's departure time comes, the current activity's end plays first
-  (activity animations), then the character walks to the destination with
-  `CharacterNavigation.NavigateTo` and starts that goal's activity there. A
-  character placed partway along a route keeps walking.
-- If the clock jumps past several departures, the character heads straight
-  for the latest one.
-- If walking stops on the way (no route, or something blocks a segment), the
-  character is placed at the destination with a warning, like an NPC catching
-  up off-screen.
-- A character setting off for another map leaves this one at once.
+- When a stay ends, its activity's end plays first (activity animations), then she walks the next segment with
+  `CharacterNavigation.NavigateTo`. A walk that ends at a goal starts that goal's stay and activity.
+- A walk that ends at a door: she walks to the door's tile and fades out. She isn't brought back to this map until her
+  timetable has moved past that walk, even if she got to the door early.
+- When her timetable brings her onto the map, usually through a door, she fades in where it puts her (the arrival
+  anchor, or further along if the clock jumped) and walks on.
+- Live walking can run ahead of or behind the timetable. Arriving late, she sets off again at once if her next
+  departure has passed; after the clock jumps, she heads for where the timetable has reached.
+- If walking stops on the way (no route, or something blocks a segment), she is placed at the end of the walk with a
+  warning, like an NPC catching up off-screen.
 
-Not yet built: interruptions (talking, cutscenes), travel between maps and
-authoring routines in Vulcanus.
+Not yet built: interruptions and delays (talking, cutscenes; STO-87).

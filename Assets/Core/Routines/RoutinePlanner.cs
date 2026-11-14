@@ -31,32 +31,6 @@ namespace Core.Routines
         }
     }
 
-    /// <summary>Where a planned day stands at one time: still at home, or past a goal's departure.</summary>
-    public readonly struct RoutineMoment
-    {
-        /// <summary>Before the first departure, the character is at home.</summary>
-        public bool IsHome => Goal == null;
-        /// <summary>The goal most recently set off for; null at home.</summary>
-        public PlannedGoal Goal { get; }
-        /// <summary>Index of <see cref="Goal"/> in the plan; -1 at home.</summary>
-        public int GoalIndex { get; }
-        /// <summary>Where the character set off from: home or the previous goal's destination.</summary>
-        public RoutinePlace From { get; }
-        /// <summary>
-        /// Time since setting off for <see cref="Goal"/>. Whether the character has arrived depends on the route,
-        /// which the caller measures.
-        /// </summary>
-        public int MinutesSinceDeparture { get; }
-
-        internal RoutineMoment(PlannedGoal goal, int goalIndex, RoutinePlace from, int minutesSinceDeparture)
-        {
-            Goal = goal;
-            GoalIndex = goalIndex;
-            From = from;
-            MinutesSinceDeparture = minutesSinceDeparture;
-        }
-    }
-
     /// <summary>One character's goals for one day. It depends only on the morning's choices, so it can be rebuilt after loading.</summary>
     public sealed class DayPlan
     {
@@ -70,17 +44,6 @@ namespace Core.Routines
             Routine = routine;
             ChoiceId = choiceId;
             Goals = goals;
-        }
-
-        public RoutineMoment At(int minuteOfDay)
-        {
-            if (minuteOfDay < 0 || minuteOfDay >= RoutineValidator.MinutesPerDay)
-                throw new ArgumentOutOfRangeException(nameof(minuteOfDay), "Use minutes after midnight.");
-            var index = -1;
-            while (index + 1 < Goals.Count && Goals[index + 1].DepartMinute <= minuteOfDay) index++;
-            if (index < 0) return new RoutineMoment(null, -1, Routine.Home, 0);
-            var from = index == 0 ? Routine.Home : Goals[index - 1].Destination;
-            return new RoutineMoment(Goals[index], index, from, minuteOfDay - Goals[index].DepartMinute);
         }
 
         /// <summary>

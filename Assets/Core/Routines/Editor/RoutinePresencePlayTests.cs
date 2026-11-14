@@ -17,16 +17,17 @@ using Object = UnityEngine.Object;
 namespace Core.Routines.Editor
 {
     /// <summary>
-    /// Fabia's authored routine on map-1: from home she goes to a destination with an activity, then back home.
-    /// Times and places are read from her plan, so the tests follow edits to her routine file.
+    /// Fabia's authored routine: from her home in the house she walks to a spot on map-1 with an activity, then back home.
+    /// These tests watch map-1. Times and places are read from her timetable, so they follow edits to her routine file.
     /// </summary>
     public sealed class RoutinePresencePlayTests
     {
         private const string MapScene = "Assets/Scenes/Maps/map-1.unity";
+        private const string Map = "base:map-1";
         private const string Fabia = "base:fabia";
 
         [UnityTest]
-        public IEnumerator EnteringTheMapPlacesFabiaWhereHerPlanPutsHer()
+        public IEnumerator EnteringTheMapPlacesFabiaWhereHerTimetablePutsHer()
         {
             // The test runner only enters Play mode when the test itself yields this instruction.
             EditorSceneManager.OpenScene(MapScene, OpenSceneMode.Single);
@@ -34,33 +35,28 @@ namespace Core.Routines.Editor
             yield return WaitForGame();
             var service = LiveGame.Get<RoutineNpcService>();
             var level = LiveGame.Get<LevelManager>();
-            var (home, visit, goHome) = FabiasDay(service);
+            var day = FabiasDay(service);
+            Assert.That(None(service), Is.True, "Before she sets off she is at home in the house.");
 
-            // Before her first departure she is at home.
-            var fabia = Single(service);
-            yield return null; // She enters the location on her first frame.
-            Assert.That(FeetDistance(fabia, home.AnchorId), Is.LessThan(0.05f));
+            // Partway along her walk on this map she is placed on her route, walking on.
+            var walkIn = day.Segments.First(s => s.IsWalk && s.MapId == Map && s.Enters != null);
+            SetTime(Mid(walkIn));
+            var fabia = ReEnter(service, level);
+            yield return null;
+            yield return null;
+            Assert.That(fabia.Controller.IsMovementOwned, Is.True, "She walks on.");
+            Assert.That(Vector2.Distance(fabia.Graphics.position, Start(walkIn)), Is.GreaterThan(0.5f), "She is past the door she came in by.");
             Assert.That(fabia.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true).DialogueId,
-                Is.EqualTo(service.Plans.Single(plan => plan.Routine.CharacterId == Fabia).DialogueAt(-1, arrived: true) ?? ""),
-                "Talking to her starts the dialogue her routine sets, not one fixed on her prefab.");
+                Is.EqualTo(day.Plan.DialogueAt(walkIn.GoalIndex, arrived: false) ?? ""), "She says what her routine sets for the walk.");
 
-
-            // Between her departures she has arrived and plays her activity.
-            SetTime((visit.DepartMinute + goHome.DepartMinute) / 2);
+            // During her stay she is at the spot with her activity.
+            var stay = day.Segments.First(s => !s.IsWalk && s.MapId == Map);
+            SetTime(Mid(stay));
             fabia = ReEnter(service, level);
             yield return null;
             yield return null; // The activity starts once she has entered the location.
-            Assert.That(FeetDistance(fabia, visit.Destination.AnchorId), Is.LessThan(0.05f));
+            Assert.That(FeetDistance(fabia, stay.Place.AnchorId), Is.LessThan(0.05f));
             Assert.That(PoseActive(fabia), Is.True, "Her activity plays at the destination.");
-
-            // At the moment she sets off home she is still at the destination, walking, without her activity.
-            SetTime(goHome.DepartMinute);
-            fabia = ReEnter(service, level);
-            yield return null;
-            yield return null;
-            Assert.That(FeetDistance(fabia, visit.Destination.AnchorId), Is.LessThan(0.5f));
-            Assert.That(fabia.Controller.IsMovementOwned, Is.True, "She is walking home.");
-            Assert.That(PoseActive(fabia), Is.False);
 
             // Leaving the map removes her; nothing about her is saved.
             service.OnLocationLeave(level.CurrentLocationData);
@@ -70,44 +66,58 @@ namespace Core.Routines.Editor
         }
 
         [UnityTest]
-        public IEnumerator FabiaLivesThroughHerDayWhileThePlayerIsOnTheMap()
+        public IEnumerator FabiaComesInThroughADoorAndLeavesThroughOne()
         {
             EditorSceneManager.OpenScene(MapScene, OpenSceneMode.Single);
             yield return new EnterPlayMode();
             yield return WaitForGame();
             var service = LiveGame.Get<RoutineNpcService>();
-            var (home, visit, goHome) = FabiasDay(service);
+            var day = FabiasDay(service);
+            var walkIn = day.Segments.First(s => s.IsWalk && s.MapId == Map && s.Enters != null);
+            var stay = day.Segments.First(s => !s.IsWalk && s.MapId == Map);
+            var walkOut = day.Segments.First(s => s.IsWalk && s.MapId == Map && s.Leaves != null);
+
+            // When her timetable brings her through the door, she fades in at its arrival anchor and walks to her spot.
+            SetTime(Mathf.FloorToInt(walkIn.StartMinute));
+            yield return WaitUntil(() => service.Characters.Any(), "She comes in while the player watches.");
             var fabia = Single(service);
-            yield return null;
-            Assert.That(FeetDistance(fabia, home.AnchorId), Is.LessThan(0.05f));
-
-            // At her first departure she walks to her destination and starts her activity there.
-            SetTime(visit.DepartMinute);
-            yield return WaitUntil(() => fabia.Controller.IsMovementOwned, "She sets off at her first departure.");
+            Assert.That(Vector2.Distance(fabia.Graphics.position, Start(walkIn)), Is.LessThan(0.5f), "She comes in at the door.");
+            yield return WaitUntil(() => fabia.Controller.IsMovementOwned, "She walks on.");
             yield return WaitUntil(() => !fabia.Controller.IsMovementOwned && PoseActive(fabia), "She arrives and starts her activity.");
-            Assert.That(FeetDistance(fabia, visit.Destination.AnchorId), Is.LessThan(0.05f));
-            Assert.That(Single(service), Is.SameAs(fabia), "She is the same character all day.");
+            Assert.That(FeetDistance(fabia, stay.Place.AnchorId), Is.LessThan(0.05f));
+            Assert.That(Single(service), Is.SameAs(fabia), "She is the same character all along.");
 
-            // At her next departure she ends her activity and walks home.
-            SetTime(goHome.DepartMinute);
+            // When her stay ends she walks to the door she leaves by and fades out.
+            SetTime((int)stay.EndMinute);
             yield return WaitUntil(() => fabia.Controller.IsMovementOwned, "She sets off home.");
-            yield return WaitUntil(() => !fabia.Controller.IsMovementOwned, "She arrives home.");
-            Assert.That(FeetDistance(fabia, home.AnchorId), Is.LessThan(0.05f));
-            Assert.That(PoseActive(fabia), Is.False, "Her day has no activity at home.");
+            var last = Vector2.zero;
+            yield return WaitUntil(() =>
+            {
+                if (fabia) last = fabia.Graphics.position;
+                return None(service);
+            }, "She leaves through the door.");
+            Assert.That(Vector2.Distance(last, End(walkOut)), Is.LessThan(0.1f), "She fades out at the door.");
+            yield return null;
+            Assert.That(None(service), Is.True, "She isn't brought back while her timetable has her walking home.");
         }
 
-        /// <summary>Her home, the goal with an activity she visits, and the goal that takes her home again.</summary>
-        private static (RoutinePlace Home, PlannedGoal Visit, PlannedGoal GoHome) FabiasDay(RoutineNpcService service)
+        private static RoutineTimetable FabiasDay(RoutineNpcService service)
         {
-            var plan = service.Plans.Single(each => each.Routine.CharacterId == Fabia);
-            Assert.That(plan.Goals.Count, Is.EqualTo(2), "These tests expect a day with a visit and a return home.");
-            var (visit, goHome) = (plan.Goals[0], plan.Goals[1]);
-            Assert.That(visit.ActivityAnimationId, Is.Not.Empty, "The visit has an activity.");
-            Assert.That(goHome.Destination, Is.SameAs(plan.Routine.Home), "The second goal returns home.");
-            Assert.That(goHome.DepartMinute - visit.DepartMinute, Is.GreaterThanOrEqualTo(2), "There is time between the departures.");
-            Assert.That(MinuteOfDay(), Is.LessThan(visit.DepartMinute), "The game starts before her first departure.");
-            return (plan.Routine.Home, visit, goHome);
+            var day = service.Timetables.Single(each => each.Plan.Routine.CharacterId == Fabia);
+            Assert.That(day.Plan.Routine.Home.MapId, Is.Not.EqualTo(Map), "These tests expect her to live on another map.");
+            Assert.That(day.Segments.Count(s => !s.IsWalk && s.MapId == Map), Is.EqualTo(1), "She stays once on this map.");
+            Assert.That(MinuteOfDay(), Is.LessThan(day.Plan.Goals[0].DepartMinute), "The game starts before her first departure.");
+            Assert.That(day.Warnings, Is.Empty);
+            return day;
         }
+
+        private static int Mid(TimetableSegment segment) => Mathf.RoundToInt((segment.StartMinute + segment.EndMinute) / 2);
+
+        private static Vector2 Start(TimetableSegment segment) => ToWorld(segment.Route[0]);
+
+        private static Vector2 End(TimetableSegment segment) => ToWorld(segment.Route[^1]);
+
+        private static Vector2 ToWorld(Vector2 local) => LiveGame.Get<MapManager>().CurrentMap.transform.TransformPoint(local);
 
         private static int MinuteOfDay()
         {
@@ -139,6 +149,8 @@ namespace Core.Routines.Editor
             service.OnLocationEnter(level.CurrentLocationData);
             return Single(service);
         }
+
+        private static bool None(RoutineNpcService service) => !service.Characters.Any(character => character.CharacterId == Fabia);
 
         private static GameCharacter Single(RoutineNpcService service)
         {

@@ -18,6 +18,7 @@ namespace Core.Scripting
     [Serializable]
     public sealed class LuaClockDescription
     {
+        /// <summary>Real seconds one in-game minute lasts (the clock advances in steps of several minutes).</summary>
         public float secondsPerInGameMinute;
         public int startOfDay;
         public int endOfDay;

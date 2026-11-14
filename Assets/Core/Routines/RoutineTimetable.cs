@@ -89,17 +89,16 @@ namespace Core.Routines
         }
 
         /// <summary>The segment the character is in at a minute; at a door, the walk on the far side.</summary>
-        public TimetableSegment At(float minute)
+        public TimetableSegment At(float minute) => Segments[IndexAt(minute)];
+
+        /// <summary>The index of <see cref="At"/>'s segment in <see cref="Segments"/>.</summary>
+        public int IndexAt(float minute)
         {
             if (minute < 0 || minute > RoutineValidator.MinutesPerDay)
                 throw new ArgumentOutOfRangeException(nameof(minute), "Use minutes after midnight.");
-            var current = Segments[0];
-            foreach (var segment in Segments)
-            {
-                if (segment.StartMinute > minute) break;
-                current = segment;
-            }
-            return current;
+            var index = 0;
+            while (index + 1 < Segments.Count && Segments[index + 1].StartMinute <= minute) index++;
+            return index;
         }
     }
 
@@ -126,12 +125,12 @@ namespace Core.Routines
     public static class RoutineTimetablePlanner
     {
         /// <param name="walkSpeed">Tiles per second, as <c>CharacterAttributes.WalkSpeed</c>.</param>
-        /// <param name="secondsPerInGameMinute">From the game clock's settings.</param>
-        public static RoutineTimetable Plan(DayPlan plan, WorldNavigation world, float walkSpeed, float secondsPerInGameMinute)
+        /// <param name="secondsPerMinute">Real seconds per in-game minute, <c>ClockSettings.SecondsPerMinute</c>.</param>
+        public static RoutineTimetable Plan(DayPlan plan, WorldNavigation world, float walkSpeed, float secondsPerMinute)
         {
             if (!(walkSpeed > 0)) throw new ArgumentOutOfRangeException(nameof(walkSpeed));
-            if (!(secondsPerInGameMinute > 0)) throw new ArgumentOutOfRangeException(nameof(secondsPerInGameMinute));
-            var tilesPerMinute = walkSpeed * secondsPerInGameMinute;
+            if (!(secondsPerMinute > 0)) throw new ArgumentOutOfRangeException(nameof(secondsPerMinute));
+            var tilesPerMinute = walkSpeed * secondsPerMinute;
             var segments = new List<TimetableSegment>();
             var warnings = new List<string>();
 
@@ -174,6 +173,8 @@ namespace Core.Routines
             public string MapId;
             public Vector2 Position;
             public float Distance;
+            /// <summary>Links crossed to get here.</summary>
+            public int Crossings;
             /// <summary>The link that brought her here; null at the start.</summary>
             public MapLink Entered;
             public Stop Previous;
@@ -195,8 +196,9 @@ namespace Core.Routines
         }
 
         /// <summary>
-        /// The shortest walk from one place to another, through any chain of location links between maps; null when
-        /// none exists. Dijkstra over the links, each crossed at most once, arriving at its anchor.
+        /// The walk from one place to another through the fewest maps, and the shortest of those; null when none exists.
+        /// Characters don't pass through another map to save a few steps. Dijkstra over the links, each crossed at most
+        /// once, arriving at its anchor.
         /// </summary>
         private static List<TimetableLeg> FindLegs(WorldNavigation world, RoutinePlace from, RoutinePlace to)
         {
@@ -205,7 +207,7 @@ namespace Core.Routines
             var crossed = new HashSet<MapLink>();
             while (open.Count > 0)
             {
-                var stop = open.OrderBy(candidate => candidate.Distance).First();
+                var stop = open.OrderBy(candidate => candidate.Crossings).ThenBy(candidate => candidate.Distance).First();
                 open.Remove(stop);
                 if (stop.IsGoal) return Legs(stop);
                 // The first time a link comes out of the queue is the shortest way through it.
@@ -214,14 +216,15 @@ namespace Core.Routines
                 if (string.Equals(stop.MapId, to.MapId, StringComparison.OrdinalIgnoreCase)
                     && TryWalk(map, stop.Position, map.Anchor(to.AnchorId), out var toGoal))
                     open.Add(new Stop { MapId = stop.MapId, Position = toGoal.Route[^1], Distance = stop.Distance + toGoal.Length,
-                        Previous = stop, Walk = toGoal, IsGoal = true });
+                        Crossings = stop.Crossings, Previous = stop, Walk = toGoal, IsGoal = true });
                 foreach (var link in world.Links.LinksFrom(stop.MapId))
                 {
                     // Links within a map are shortcuts the player takes; characters walk.
                     if (string.Equals(link.ToMapId, stop.MapId, StringComparison.OrdinalIgnoreCase) || crossed.Contains(link)) continue;
                     if (!TryWalk(map, stop.Position, map.DoorPosition(link), out var toDoor)) continue;
                     open.Add(new Stop { MapId = link.ToMapId, Position = world.Map(link.ToMapId).Anchor(link.ArrivalAnchorId),
-                        Distance = stop.Distance + toDoor.Length, Entered = link, Previous = stop, Walk = toDoor });
+                        Distance = stop.Distance + toDoor.Length, Crossings = stop.Crossings + 1, Entered = link, Previous = stop,
+                        Walk = toDoor });
                 }
             }
             return null;

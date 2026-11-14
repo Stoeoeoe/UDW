@@ -89,7 +89,7 @@ namespace Core.Scripting.Editor
 
         internal static LuaClockDescription DescribeClock(Core.TimeAndWeather.ClockSettings clock) => new()
         {
-            secondsPerInGameMinute = clock.secondsPerInGameMinute,
+            secondsPerInGameMinute = clock.SecondsPerMinute,
             startOfDay = clock.startOfDay,
             endOfDay = clock.endOfDay
         };

@@ -160,11 +160,11 @@ namespace Core.TimeAndWeather
             var previousMinute = time.TotalMinutes;
             time.secondsTowardNextMinute += deltaSeconds;
 
-            // Instead of advancing minutes by 1, advance in 10-minute increments.
+            // Instead of advancing minutes by 1, advance in steps of several minutes.
             if (time.secondsTowardNextMinute >= _settings.secondsPerInGameMinute)
             {
                 var increments = Mathf.FloorToInt(time.secondsTowardNextMinute / _settings.secondsPerInGameMinute);
-                time.minute += 10 * increments;
+                time.minute += ClockSettings.MinutesPerStep * increments;
                 time.secondsTowardNextMinute -= increments * _settings.secondsPerInGameMinute;
             }
 

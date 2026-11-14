@@ -52,7 +52,8 @@ namespace Core.Scripting.Editor
         {
             var clock = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemRoot>(SystemRoot.PrefabPath).Clock;
             var described = LuaBindingManifestExporter.DescribeClock(clock);
-            Assert.That(described.secondsPerInGameMinute, Is.EqualTo(clock.secondsPerInGameMinute));
+            Assert.That(described.secondsPerInGameMinute, Is.EqualTo(clock.SecondsPerMinute),
+                "One minute, not one step of the clock.");
             Assert.That(described.startOfDay, Is.EqualTo(clock.startOfDay));
             Assert.That(described.endOfDay, Is.EqualTo(clock.endOfDay));
         }
