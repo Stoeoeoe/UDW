@@ -25,11 +25,13 @@ namespace Core
     /// <summary>Game-session services. Construction and disposal belong to the container, not scene callbacks.</summary>
     public static class GameServices
     {
-        public static void Register(IContainerBuilder builder, PlayerSettings player, ItemSettings items, ClockSettings clock)
+        public static void Register(IContainerBuilder builder, PlayerSettings player, ItemSettings items, ClockSettings clock,
+            RoutineSettings routines)
         {
             if (!builder.Exists(typeof(PlayerSettings))) builder.RegisterInstance(player);
             if (!builder.Exists(typeof(ItemSettings))) builder.RegisterInstance(items);
             if (!builder.Exists(typeof(ClockSettings))) builder.RegisterInstance(clock);
+            if (!builder.Exists(typeof(RoutineSettings))) builder.RegisterInstance(routines);
             builder.Register<GameState>(Lifetime.Singleton);
             builder.Register<LocationContext>(Lifetime.Singleton);
             builder.Register<CharacterManager>(Lifetime.Singleton);

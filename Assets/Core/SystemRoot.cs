@@ -34,12 +34,13 @@ namespace Core
         [SerializeField] private PlayerSettings player = new();
         [SerializeField] private ItemSettings items = new();
         [SerializeField] private ClockSettings clock = new();
+        [SerializeField] private RoutineSettings routines = new();
         public ItemSettings Items => items;
         public ClockSettings Clock => clock;
 
         /// <summary>Registers the game-session services with the authored settings; scene-less tests use this alone.</summary>
         public void RegisterServices(IContainerBuilder builder) =>
-            GameServices.Register(builder, player, items, clock);
+            GameServices.Register(builder, player, items, clock, routines);
 
         protected override void Configure(IContainerBuilder builder) => ConfigureServices(builder, gameObject);
 

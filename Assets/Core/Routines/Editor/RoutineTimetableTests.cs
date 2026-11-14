@@ -87,23 +87,23 @@ namespace Core.Routines.Editor
             Assert.That((toDoor.MapId, toDoor.Enters, toDoor.Leaves), Is.EqualTo(("base:town", (MapLink)null, FrontDoor)));
             Assert.That(toDoor.Route[^1], Is.EqualTo(new Vector2(9.5f, 2)), "The walkable tile beside the exit strip.");
             Assert.That((inside.MapId, inside.Enters, inside.Leaves), Is.EqualTo(("base:shop", FrontDoor, (MapLink)null)));
-            Assert.That(inside.Route[0], Is.EqualTo(ShopAnchors["front"]), "She comes in at the link's arrival anchor.");
+            Assert.That(inside.Route[0], Is.EqualTo(ShopAnchors["front"]), "The walk goes on from the link's arrival anchor.");
             Assert.That((toDoor.StartMinute, toDoor.EndMinute, inside.EndMinute), Is.EqualTo((480f, 489f, 491f)),
                 "Crossing takes no time.");
-            Assert.That(timetable.At(489), Is.SameAs(inside), "At the door she is already through it.");
+            Assert.That(timetable.At(489), Is.SameAs(inside), "At the door the character is already through it.");
             Assert.That(timetable.Segments[3].MapId, Is.EqualTo("base:shop"));
         }
 
         [Test]
-        public void SheTakesTheQuickestDoor()
+        public void TheQuickestDoorIsTaken()
         {
             var timetable = Plan(Day(Goal("shop", Eight, Counter)), World(null, FrontDoor, BackDoor));
-            Assert.That(timetable.Segments[1].Leaves, Is.SameAs(BackDoor), "The back door is beside her home.");
+            Assert.That(timetable.Segments[1].Leaves, Is.SameAs(BackDoor), "The back door is beside home.");
             Assert.That(timetable.Segments[2].EndMinute, Is.EqualTo(482f));
         }
 
         [Test]
-        public void SheGoesOnFromAWalkThatOverrunsTheNextDeparture()
+        public void AWalkThatOverrunsTheNextDepartureGoesStraightOn()
         {
             var timetable = Plan(Day(Goal("well", Eight, Well), Goal("back_home", Eight + 3, null)), World());
 
@@ -114,7 +114,7 @@ namespace Core.Routines.Editor
         }
 
         [Test]
-        public void WithoutARouteSheIsThereAsSoonAsSheSetsOff()
+        public void WithoutARouteTheCharacterIsThereAtDeparture()
         {
             var walled = Grid(10, 5, Enumerable.Range(0, 5).Select(y => new Vector2Int(3, y)).ToArray());
             var timetable = Plan(Day(Goal("well", Eight, Well)), World(walled));

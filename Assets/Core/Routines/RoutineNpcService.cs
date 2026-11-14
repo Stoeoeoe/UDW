@@ -31,15 +31,15 @@ namespace Core.Routines
     public sealed class RoutineNpcService : ILocationLifecycle, ITickable, IDisposable, IEventListener<NewDayEvent>
     {
         private const float FadeSeconds = 0.3f;
-        // How close counts as already being at a place, so she doesn't walk a few pixels there.
+        // How close counts as already being at a place, so the character doesn't walk a few pixels there.
         private const float AtPlaceDistance = 0.1f;
 
         private sealed class Day
         {
             public RoutineTimetable Timetable;
             /// <summary>
-            /// The segment in which she last left the current map through a door. She isn't brought back before her
-            /// timetable moves past it, even when she reached the door earlier than planned.
+            /// The segment in which the character last left the current map through a door. They aren't brought back before
+            /// their timetable moves past it, even when they reached the door earlier than planned.
             /// </summary>
             public int LeftAt = -1;
         }
@@ -52,7 +52,7 @@ namespace Core.Routines
             public SpriteRenderer[] Sprites;
             /// <summary>What talking to the character starts; the routine changes its dialogue through the day.</summary>
             public ShowVulcanusDialogueInteractable Talk;
-            /// <summary>Index of the timetable segment she is living through.</summary>
+            /// <summary>Index of the timetable segment the character is living through.</summary>
             public int Index;
             /// <summary>Set once the character has entered the location; until then its entry idle would replace any pose.</summary>
             public bool Settled;
@@ -62,6 +62,18 @@ namespace Core.Routines
             /// <summary>A plain looping animation or set is playing, which has no end to wait for.</summary>
             public bool PlainActivity;
             public NavigationRoute Route;
+            /// <summary>Where the character walks to; they stop while the clock is paused and walk on from where they stand.</summary>
+            public Vector2 WalkTarget;
+            public bool Halted;
+            /// <summary>Someone talked to the character while the clock was paused; they stay put a moment once it runs again.</summary>
+            public bool Talked;
+            /// <summary>Real seconds the character still stays put after a conversation.</summary>
+            public float PauseLeft;
+            /// <summary>
+            /// In-game minutes conversations have held the character up since they last caught up at a stay. At the limit
+            /// they move on and can't be talked to until they catch up.
+            /// </summary>
+            public float DelayMinutes;
             /// <summary>Seconds into a fade; negative when not fading.</summary>
             public float FadeTime = -1;
             public bool FadingOut;
@@ -71,7 +83,9 @@ namespace Core.Routines
 
         private readonly IObjectResolver _resolver;
         private readonly GameState _state;
+        private readonly GameClock _clock;
         private readonly ClockSettings _clockSettings;
+        private readonly RoutineSettings _settings;
         private readonly MapManager _maps;
         private readonly RoutineCatalog _routines;
         private readonly CharacterCatalog _characters;
@@ -87,13 +101,16 @@ namespace Core.Routines
         private Transform _root;
         private string _mapId;
 
-        public RoutineNpcService(IObjectResolver resolver, GameState state, ClockSettings clockSettings,
+        public RoutineNpcService(IObjectResolver resolver, GameState state, GameClock clock, ClockSettings clockSettings, RoutineSettings settings,
             MapManager maps, RoutineCatalog routines, CharacterCatalog characters, CharacterAnimationCatalog animations,
             WorldObjectSpawner spawner, LuaRuntime lua, WorldCatalog worlds)
         {
             _resolver = resolver;
             _state = state;
+            _clock = clock;
             _clockSettings = clockSettings;
+            settings.Validate();
+            _settings = settings;
             _maps = maps;
             _routines = routines;
             _characters = characters;
@@ -142,6 +159,16 @@ namespace Core.Routines
         public void Tick()
         {
             if (_mapId == null) return;
+            if (_clock.IsPaused)
+            {
+                // Game time stands still (a dialogue, a menu, a cutscene): so do the routine characters.
+                foreach (var npc in _npcs)
+                {
+                    Halt(npc);
+                    if (npc.Talk && npc.Talk.IsTalking) npc.Talked = true;
+                }
+                return;
+            }
             var minute = Minute();
             // Iterate a copy: a character who leaves through a door is removed.
             foreach (var npc in _npcs.ToArray())
@@ -150,7 +177,12 @@ namespace Core.Routines
                 if (!npc.Settled) Settle(npc);
                 Fade(npc, Time.deltaTime);
                 if (npc.FadingOut) continue;
-                Advance(npc, minute, Time.deltaTime);
+                if (!HeldUpAfterTalking(npc, Time.deltaTime))
+                {
+                    if (npc.Halted) Walk(npc, npc.WalkTarget);
+                    Advance(npc, minute, Time.deltaTime);
+                }
+                if (npc.Talk) npc.Talk.Busy = npc.DelayMinutes >= _settings.maxDelayMinutes;
             }
             // Characters whose timetable now brings them onto this map, usually through one of its doors.
             foreach (var day in _days)
@@ -190,7 +222,7 @@ namespace Core.Routines
                     if (goal.DepartMinute < dayStart || goal.DepartMinute >= dayEnd)
                         throw new InvalidOperationException($"Routine '{routine.RoutineId}': goal '{goal.Id}' departs at " +
                             $"{goal.DepartMinute / 60:00}:{goal.DepartMinute % 60:00}, outside the day ({_clockSettings.startOfDay:00}:00-{_clockSettings.endOfDay:00}:00).");
-                // The timetable uses the authored walk speed; boons change only how fast she walks in sight.
+                // The timetable uses the authored walk speed; boons change only how fast the character walks in sight.
                 var timetable = RoutineTimetablePlanner.Plan(plan, _world, _characters.Require(routine.CharacterId).WalkSpeed,
                     _clockSettings.SecondsPerMinute);
                 foreach (var warning in timetable.Warnings) Debug.LogWarning(warning);
@@ -213,7 +245,7 @@ namespace Core.Routines
 
         // ── Placing ─────────────────────────────────────────────────────────────────
 
-        /// <summary>Puts the character where the segment has her at this minute: at its place, or along its walk.</summary>
+        /// <summary>Puts the character where the segment has them at this minute: at its place, or along its walk.</summary>
         private void Spawn(Day day, int index, float minute, bool fadeIn)
         {
             var routine = day.Timetable.Plan.Routine;
@@ -249,7 +281,7 @@ namespace Core.Routines
             }
         }
 
-        /// <summary>Puts the character at her segment's place, facing its anchor's direction, with its activity to start.</summary>
+        /// <summary>Puts the character at their segment's place, facing its anchor's direction, with its activity to start.</summary>
         private void StandAt(Npc npc)
         {
             var anchor = Anchor(npc.Segment.Place);
@@ -276,7 +308,7 @@ namespace Core.Routines
             {
                 npc.Route.Tick(deltaTime);
                 if (npc.Route.Status == NavigationMoveStatus.Moving) return;
-                // Something stopped her on the way; carry on as if she had arrived, like an NPC catching up off-screen.
+                // Something stopped the walk on the way; carry on as if it had arrived, like an NPC catching up off-screen.
                 if (npc.Route.Status != NavigationMoveStatus.Arrived)
                     Debug.LogWarning($"Routine '{npc.Day.Timetable.Plan.Routine.RoutineId}': walking on '{_mapId}' stopped " +
                         $"({npc.Route.Error}). Placing the character at the end of the walk.", npc.Character);
@@ -284,7 +316,7 @@ namespace Core.Routines
                 npc.Route = null;
                 if (segment.IsWalk && segment.Leaves != null)
                 {
-                    // Through the door: she fades out here and goes on in her timetable.
+                    // Through the door: the character fades out here and goes on in their timetable.
                     PlaceFeet(npc.Character, ToWorld(segment.Route[^1]));
                     npc.Day.LeftAt = npc.Index;
                     npc.FadingOut = true;
@@ -296,7 +328,13 @@ namespace Core.Routines
                 return;
             }
 
-            if (segment.IsWalk || minute < segment.EndMinute) return;
+            if (segment.IsWalk) return;
+            if (minute < segment.EndMinute)
+            {
+                // At the place before it's time to leave: the stay has absorbed any delay.
+                npc.DelayMinutes = 0;
+                return;
+            }
             // Finish the current activity before setting off; its end animation may take a moment.
             if (npc.Activity != null && !npc.Activity.IsCompleted && !npc.Activity.IsInterrupted)
             {
@@ -310,8 +348,8 @@ namespace Core.Routines
         }
 
         /// <summary>
-        /// The segment after the current one, or the one the timetable has reached if she is behind it: a late arrival
-        /// sets off again at once, and after the clock jumps she heads straight for where she should be.
+        /// The segment after the current one, or the one the timetable has reached if the character is behind it: a late
+        /// arrival sets off again at once, and after the clock jumps they head straight for where they should be.
         /// </summary>
         private static int Next(Npc npc, float minute) => Mathf.Max(npc.Index + 1, npc.Day.Timetable.IndexAt(minute));
 
@@ -321,7 +359,7 @@ namespace Core.Routines
             var segment = npc.Segment;
             if (segment.MapId != _mapId)
             {
-                // Only after the clock jumped past her walk to a door: she leaves without walking there.
+                // Only after the clock jumped past the walk to a door: the character leaves without walking there.
                 npc.Day.LeftAt = index - 1;
                 npc.FadingOut = true;
                 npc.FadeTime = 0;
@@ -339,11 +377,41 @@ namespace Core.Routines
 
         private void Walk(Npc npc, Vector2 feet)
         {
+            npc.Halted = false;
+            npc.WalkTarget = feet;
             npc.Route = CharacterNavigation.NavigateTo(npc.Character, feet, _maps);
             UpdateDialogue(npc, walking: true);
         }
 
-        /// <summary>At her segment's place: on the exact spot, which activities such as sitting need, playing its activity.</summary>
+        /// <summary>
+        /// After a conversation the character stays put a moment while the clock runs, falling behind their timetable.
+        /// Once conversations have held them up <see cref="RoutineSettings.maxDelayMinutes"/>, they move on at once.
+        /// </summary>
+        private bool HeldUpAfterTalking(Npc npc, float deltaTime)
+        {
+            if (npc.Talked)
+            {
+                npc.Talked = false;
+                npc.PauseLeft = _settings.pauseAfterTalkingSeconds;
+            }
+            if (npc.DelayMinutes >= _settings.maxDelayMinutes) npc.PauseLeft = 0;
+            if (npc.PauseLeft <= 0 || npc.FadingOut) return false;
+            Halt(npc);
+            npc.PauseLeft -= deltaTime;
+            npc.DelayMinutes += deltaTime / _clockSettings.SecondsPerMinute;
+            return true;
+        }
+
+        /// <summary>Stops the character's walk where they are; they walk on when the clock runs again.</summary>
+        private static void Halt(Npc npc)
+        {
+            if (npc.Route == null) return;
+            npc.Route.Dispose();
+            npc.Route = null;
+            npc.Halted = true;
+        }
+
+        /// <summary>At the segment's place: on the exact spot, which activities such as sitting need, playing its activity.</summary>
         private void Arrive(Npc npc)
         {
             var anchor = Anchor(npc.Segment.Place);
@@ -377,7 +445,7 @@ namespace Core.Routines
             }
         }
 
-        /// <summary>Fades her in after arriving through a door, or out after leaving through one; then she is removed.</summary>
+        /// <summary>Fades the character in after arriving through a door, or out after leaving through one; then removes them.</summary>
         private void Fade(Npc npc, float deltaTime)
         {
             if (npc.FadeTime < 0) return;

@@ -61,7 +61,7 @@ map's local space.
 - A link is used at the walkable tile nearest the middle of its trigger, among those the trigger covers or borders.
   Walking resumes at the link's arrival anchor; crossing takes no time.
 - A walk that is still going at the next departure sets off again on arrival.
-- A goal with no walkable route is reached as soon as she sets off, with a warning in `Warnings`.
+- A goal with no walkable route is reached as soon as the character sets off, with a warning in `Warnings`.
 - Minutes are real minutes. The clock advances in steps of `ClockSettings.MinutesPerStep`, one step every
   `secondsPerInGameMinute` seconds, so one minute lasts `ClockSettings.SecondsPerMinute`.
 
@@ -100,9 +100,9 @@ dialogue on their own prefab.
 `RoutineNpcService` plans every enabled routine's day and timetable when it starts, when a game is started or loaded
 (`GameState.Restored`) and at each `NewDayEvent`. Overnight the player returns home before the new day begins, so the
 new day also re-places the characters in the current location, behind the overnight blackout. The timetable uses the
-walk speed from the character's definition; boons only change how fast she walks in sight.
+walk speed from the character's definition; boons only change how fast the character walks in sight.
 
-On entering a location, every character whose timetable has her on its map now is placed where it says: at her place
+On entering a location, every character whose timetable has them on its map now is placed where it says: at their place
 with its activity, or partway along a walk, walking on. Characters are spawned from their spawnable prefab (the same
 lookup as `characters.spawn`) and never saved: the timetable and the clock place them again after loading. A character
 with a routine must not also be placed on a map; catalog validation reports it. Departures must fall within the
@@ -110,15 +110,24 @@ clock's day (`startOfDay`-`endOfDay`).
 
 While the location stays loaded, the characters on it live through their timetable:
 
-- When a stay ends, its activity's end plays first (activity animations), then she walks the next segment with
+- When a stay ends, its activity's end plays first (activity animations), then the character walks the next segment with
   `CharacterNavigation.NavigateTo`. A walk that ends at a goal starts that goal's stay and activity.
-- A walk that ends at a door: she walks to the door's tile and fades out. She isn't brought back to this map until her
-  timetable has moved past that walk, even if she got to the door early.
-- When her timetable brings her onto the map, usually through a door, she fades in where it puts her (the arrival
+- A walk that ends at a door: the character walks to the door's tile and fades out. They aren't brought back to this
+  map until their timetable has moved past that walk, even if they got to the door early.
+- When a character's timetable brings them onto the map, usually through a door, they fade in where it puts them (the arrival
   anchor, or further along if the clock jumped) and walks on.
-- Live walking can run ahead of or behind the timetable. Arriving late, she sets off again at once if her next
-  departure has passed; after the clock jumps, she heads for where the timetable has reached.
-- If walking stops on the way (no route, or something blocks a segment), she is placed at the end of the walk with a
+- Live walking can run ahead of or behind the timetable. Arriving late, the character sets off again at once if
+  their next departure has passed; after the clock jumps, they head for where the timetable has reached.
+- If walking stops on the way (no route, or something blocks a segment), the character is placed at the end of the walk with a
   warning, like an NPC catching up off-screen.
+- While the game clock is paused (every dialogue, menus that pause it, cutscenes), routine characters stand still
+  and walk on when it runs again.
+- After someone talks to a routine character, they stay put for `RoutineSettings.pauseAfterTalkingSeconds` (real
+  seconds, 3 by default) while the clock runs, so they fall behind their timetable. Once conversations have held them
+  up `maxDelayMinutes` (20 in-game minutes by default), they move on and can't be talked to
+  (`ShowVulcanusDialogueInteractable.Busy`) until they catch up. Reaching a place before the stay there ends clears
+  the delay, and they can be talked to again; they still leave at the scheduled time. Delays aren't saved, and
+  re-entering the map places them where their timetable says. Both settings are on the `SystemRoot` prefab.
+- Only the player uses location links by walking into them; characters change maps only through their timetable.
 
-Not yet built: interruptions and delays (talking, cutscenes; STO-87).
+Not yet built: cutscenes that take over a routine character and hand them back (STO-68).

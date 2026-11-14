@@ -70,15 +70,15 @@ namespace Core.Routines
     }
 
     /// <summary>
-    /// One character's planned day, minute by minute across maps: where she stays, and every walk between, split at the
-    /// doors she crosses. Built from the baked navigation data, so it answers for maps that aren't loaded.
+    /// One character's planned day, minute by minute across maps: where they stay, and every walk between, split at the
+    /// doors they cross. Built from the baked navigation data, so it answers for maps that aren't loaded.
     /// </summary>
     public sealed class RoutineTimetable
     {
         public DayPlan Plan { get; }
         /// <summary>In time order, covering the whole day without gaps. Crossing a door takes no time.</summary>
         public IReadOnlyList<TimetableSegment> Segments { get; }
-        /// <summary>Goals the character could not walk to; she is at their destination as soon as she sets off.</summary>
+        /// <summary>Goals the character could not walk to; they are at the destination as soon as they set off.</summary>
         public IReadOnlyList<string> Warnings { get; }
 
         internal RoutineTimetable(DayPlan plan, IReadOnlyList<TimetableSegment> segments, IReadOnlyList<string> warnings)
@@ -140,7 +140,7 @@ namespace Core.Routines
             for (var i = 0; i < plan.Goals.Count; i++)
             {
                 var goal = plan.Goals[i];
-                // Still walking when the next departure comes, she sets off again on arrival.
+                // Still walking when the next departure comes, the character sets off again on arrival.
                 var departure = Mathf.Max(goal.DepartMinute, minute);
                 if (departure > minute) segments.Add(StayAt(world, goalIndex, place, minute, departure));
                 minute = departure;
@@ -148,7 +148,7 @@ namespace Core.Routines
                 var legs = FindLegs(world, place, goal.Destination);
                 if (legs == null)
                     warnings.Add($"Routine '{plan.Routine.RoutineId}': no walkable route from '{place}' to '{goal.Destination}' " +
-                        $"for goal '{goal.Id}'. The character is there as soon as she sets off.");
+                        $"for goal '{goal.Id}'. The character is there as soon as they set off.");
                 else
                     foreach (var leg in legs)
                     {
@@ -175,7 +175,7 @@ namespace Core.Routines
             public float Distance;
             /// <summary>Links crossed to get here.</summary>
             public int Crossings;
-            /// <summary>The link that brought her here; null at the start.</summary>
+            /// <summary>The link that led here; null at the start.</summary>
             public MapLink Entered;
             public Stop Previous;
             /// <summary>The walk from <see cref="Previous"/> to the door of <see cref="Entered"/>.</summary>
