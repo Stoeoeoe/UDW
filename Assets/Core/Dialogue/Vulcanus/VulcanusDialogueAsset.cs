@@ -1,240 +1,110 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Core.Tile.Vulcanus;
+using Core.Common;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Core.Dialogue.Vulcanus
 {
+    /// <summary>A Vulcanus dialogue: its node graph, read straight from *.runtime.dialogue.json, and its texts.</summary>
     [CreateAssetMenu(fileName = "VulcanusDialogue", menuName = "Game/Vulcanus/Dialogue")]
-    public class VulcanusDialogueAsset : ScriptableObject
+    public sealed class VulcanusDialogueAsset : ValidatedScriptableObject<VulcanusDialogueValidator>
     {
+        /// <summary>A translated text, from the dialogue's sibling .i18n.json.</summary>
         [Serializable]
-        public class ImportedMessage
+        public sealed class Message
         {
             [SerializeField] private string msgKey;
             [SerializeField] private string text;
-            [SerializeField] private string nodeId;
-            [SerializeField] private string sourceType;
-            [SerializeField] private string optionId;
-
             public string MsgKey => msgKey;
             public string Text => text;
-            public string NodeId => nodeId;
-            public string SourceType => sourceType;
-            public string OptionId => optionId;
-
-            public ImportedMessage() { }
-            public ImportedMessage(string msgKey, string text, string nodeId, string sourceType, string optionId)
-            {
-                this.msgKey = msgKey;
-                this.text = text;
-                this.nodeId = nodeId;
-                this.sourceType = sourceType;
-                this.optionId = optionId;
-            }
         }
 
-        [SerializeField] private VulcanusProject project;
-        [SerializeField] private int version;
-        [SerializeField] private string dialogueId;
-        [SerializeField] private string dialogueName;
-        [SerializeField] private string folderPath;
-        [SerializeField] private bool oneShot;
-        [SerializeField] private string dialogueTypeId;
-        [SerializeField] private string startNodeId;
-        [SerializeField] private string[] tags = Array.Empty<string>();
-        [SerializeField] private string createdAt;
-        [SerializeField] private string updatedAt;
-        [SerializeField] private ImportedMessage[] importedMessages = Array.Empty<ImportedMessage>();
-        [SerializeReference] private VulcanusDialogueNode[] nodes = Array.Empty<VulcanusDialogueNode>();
+        internal const string NodesField = nameof(nodes);
 
-        [NonSerialized] private Dictionary<string, VulcanusDialogueNode> _nodeById;
+        [SerializeField, ReadOnly] private string id;
+        [SerializeField, ReadOnly, Validation.OneOf(NodesField, nameof(VulcanusDialogueNode.Id))] private string startNodeId;
+        [SerializeReference, ReadOnly, Validation.Nested, Validation.Unique(nameof(VulcanusDialogueNode.Id)),
+         JsonProperty(ItemConverterType = typeof(DialogueNodeJsonConverter))]
+        private VulcanusDialogueNode[] nodes = Array.Empty<VulcanusDialogueNode>();
+        [SerializeField, ReadOnly] private Message[] messages = Array.Empty<Message>();
+
         [NonSerialized] private Dictionary<string, int> _nodeIndexById;
-        [NonSerialized] private Dictionary<string, ImportedMessage> _messageByKey;
-        [NonSerialized] private IReadOnlyList<VulcanusDialogueNode> _nodesView;
+        [NonSerialized] private Dictionary<string, string> _textByKey;
 
-        public VulcanusProject Project => project;
-        public int Version => version;
-        public string DialogueId => dialogueId;
-        public string DialogueName => dialogueName;
-        public string FolderPath => folderPath;
-        public bool OneShot => oneShot;
-        public string DialogueTypeId => dialogueTypeId;
+        public string DialogueId => id;
         public string StartNodeId => startNodeId;
-        public string[] Tags => tags == null ? Array.Empty<string>() : (string[])tags.Clone();
-        public string CreatedAt => createdAt;
-        public string UpdatedAt => updatedAt;
-        public ImportedMessage[] ImportedMessages => importedMessages == null
-            ? Array.Empty<ImportedMessage>()
-            : (ImportedMessage[])importedMessages.Clone();
-        public IReadOnlyList<VulcanusDialogueNode> Nodes => _nodesView ?? Array.Empty<VulcanusDialogueNode>();
-
-        public void Configure(
-            VulcanusProject sourceProject,
-            int fileVersion,
-            string id,
-            string name,
-            string sourceFolderPath,
-            bool isOneShot,
-            string typeId,
-            string entryNodeId,
-            string[] dialogueTags,
-            string created,
-            string updated,
-            VulcanusDialogueNode[] importedNodes,
-            ImportedMessage[] messages)
-        {
-            project = sourceProject;
-            version = Mathf.Max(1, fileVersion);
-            dialogueId = id ?? string.Empty;
-            dialogueName = name ?? string.Empty;
-            folderPath = sourceFolderPath ?? string.Empty;
-            oneShot = isOneShot;
-            dialogueTypeId = typeId ?? string.Empty;
-            startNodeId = entryNodeId ?? string.Empty;
-            tags = dialogueTags == null ? Array.Empty<string>() : (string[])dialogueTags.Clone();
-            createdAt = created ?? string.Empty;
-            updatedAt = updated ?? string.Empty;
-            nodes = importedNodes == null ? Array.Empty<VulcanusDialogueNode>() : (VulcanusDialogueNode[])importedNodes.Clone();
-            importedMessages = messages == null ? Array.Empty<ImportedMessage>() : (ImportedMessage[])messages.Clone();
-            RebuildCaches();
-        }
+        public IReadOnlyList<VulcanusDialogueNode> Nodes => nodes;
 
         public bool TryGetNode(string nodeId, out VulcanusDialogueNode node)
         {
-            RebuildCachesIfNeeded();
-            if (string.IsNullOrWhiteSpace(nodeId))
-            {
-                node = null;
-                return false;
-            }
-
-            return _nodeById.TryGetValue(nodeId, out node);
+            node = nodeId != null && NodeIndexById.TryGetValue(nodeId, out var index) ? nodes[index] : null;
+            return node != null;
         }
 
+        /// <summary>The next executable node in authored order, skipping comments.</summary>
         public bool TryGetExecutableNodeAfter(string nodeId, out VulcanusDialogueNode node)
         {
-            RebuildCachesIfNeeded();
-            node = null;
-
-            if (string.IsNullOrWhiteSpace(nodeId))
-            {
-                for (var i = 0; i < nodes.Length; i++)
-                {
-                    if (nodes[i] == null || !nodes[i].IsExecutable)
-                        continue;
-
-                    node = nodes[i];
-                    return true;
-                }
-
-                return false;
-            }
-
-            if (!_nodeIndexById.TryGetValue(nodeId, out var startIndex))
-                return false;
-
-            for (var i = startIndex + 1; i < nodes.Length; i++)
-            {
-                if (nodes[i] == null || !nodes[i].IsExecutable)
-                    continue;
-
-                node = nodes[i];
-                return true;
-            }
-
-            return false;
+            var start = nodeId != null && NodeIndexById.TryGetValue(nodeId, out var index) ? index + 1 : 0;
+            node = nodes.Skip(start).FirstOrDefault(candidate => candidate.IsExecutable);
+            return node != null;
         }
 
         public string ResolveLocalizedText(string msgKey, string fallbackText)
         {
-            RebuildCachesIfNeeded();
-            if (!string.IsNullOrWhiteSpace(msgKey) &&
-                _messageByKey.TryGetValue(msgKey, out var message) &&
-                !string.IsNullOrEmpty(message.Text))
-                return message.Text;
-
-            return fallbackText ?? string.Empty;
+            _textByKey ??= messages.ToDictionary(message => message.MsgKey, message => message.Text);
+            return !string.IsNullOrEmpty(msgKey) && _textByKey.TryGetValue(msgKey, out var text) && !string.IsNullOrEmpty(text)
+                ? text : fallbackText ?? string.Empty;
         }
 
-        private void OnEnable()
+        private Dictionary<string, int> NodeIndexById =>
+            _nodeIndexById ??= nodes.Select((node, index) => (node.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index);
+    }
+
+    public sealed class VulcanusDialogueValidator : ScriptableObjectValidator<VulcanusDialogueAsset>
+    {
+        protected override void CollectConfigurationErrors(VulcanusDialogueAsset asset, List<ConfigurationError> errors) { }
+    }
+
+    /// <summary>Reads a dialogue node as the class its "type" names.</summary>
+    public sealed class DialogueNodeJsonConverter : JsonConverter
+    {
+        private static readonly Dictionary<string, Type> Types = new()
         {
-            RebuildCaches();
-        }
+            ["line"] = typeof(VulcanusDialogueLineNode),
+            ["choice"] = typeof(VulcanusDialogueChoiceNode),
+            ["action"] = typeof(VulcanusDialogueActionNode),
+            ["jump"] = typeof(VulcanusDialogueJumpNode),
+            ["comment"] = typeof(VulcanusDialogueCommentNode),
+            ["end"] = typeof(VulcanusDialogueEndNode)
+        };
 
-        private void OnValidate()
+        public override bool CanConvert(Type objectType) => typeof(VulcanusDialogueNode).IsAssignableFrom(objectType);
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            RebuildCaches();
+            var json = JObject.Load(reader);
+            var type = (string)json["type"];
+            if (type == null || !Types.TryGetValue(type, out var nodeType))
+                throw new FormatException($"Unknown dialogue node type '{type}'.");
+            var node = Activator.CreateInstance(nodeType);
+            serializer.Populate(json.CreateReader(), node);
+            return node;
         }
 
-        private void RebuildCachesIfNeeded()
-        {
-            if (_nodeById == null || _nodeIndexById == null || _messageByKey == null)
-                RebuildCaches();
-        }
-
-        private void RebuildCaches()
-        {
-            _nodesView = Array.AsReadOnly(nodes ?? Array.Empty<VulcanusDialogueNode>());
-            _nodeById = new Dictionary<string, VulcanusDialogueNode>(StringComparer.OrdinalIgnoreCase);
-            _nodeIndexById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            _messageByKey = new Dictionary<string, ImportedMessage>(StringComparer.OrdinalIgnoreCase);
-
-            if (nodes != null)
-            {
-                for (var i = 0; i < nodes.Length; i++)
-                {
-                    var node = nodes[i];
-                    if (node == null || string.IsNullOrWhiteSpace(node.Id))
-                        continue;
-
-                    if (!_nodeById.ContainsKey(node.Id))
-                        _nodeById.Add(node.Id, node);
-
-                    if (!_nodeIndexById.ContainsKey(node.Id))
-                        _nodeIndexById.Add(node.Id, i);
-                }
-            }
-
-            if (importedMessages == null)
-                return;
-
-            foreach (var message in importedMessages.Where(m => m != null && !string.IsNullOrWhiteSpace(m.MsgKey)))
-            {
-                if (!_messageByKey.ContainsKey(message.MsgKey))
-                    _messageByKey.Add(message.MsgKey, message);
-            }
-        }
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) =>
+            throw new NotSupportedException("Definitions are only read.");
     }
 
     [Serializable]
     public abstract class VulcanusDialogueNode
     {
         [SerializeField] private string id;
-
         public string Id => id;
-        public abstract VulcanusDialogueNodeType NodeType { get; }
         public virtual bool IsExecutable => true;
-
-        protected VulcanusDialogueNode()
-        {
-        }
-
-        protected VulcanusDialogueNode(string nodeId)
-        {
-            id = nodeId ?? string.Empty;
-        }
-    }
-
-    public enum VulcanusDialogueNodeType
-    {
-        Line,
-        Choice,
-        Action,
-        Jump,
-        Comment,
-        End
     }
 
     [Serializable]
@@ -245,129 +115,56 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private string emotion;
         [SerializeField] private string text;
         [SerializeField] private string msgKey;
-        [SerializeField] private string next;
+        [SerializeField, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id))] private string next;
 
         public string Speaker => speaker;
         public string Emotion => emotion;
         public string Text => text;
         public string MsgKey => msgKey;
         public string Next => next;
-        public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.Line;
-
-        public VulcanusDialogueLineNode()
-        {
-        }
-
-        public VulcanusDialogueLineNode(string id, string speakerId, string emotionId, string rawText, string messageKey, string nextNodeId)
-            : base(id)
-        {
-            speaker = speakerId ?? string.Empty;
-            emotion = emotionId ?? string.Empty;
-            text = rawText ?? string.Empty;
-            msgKey = messageKey ?? string.Empty;
-            next = nextNodeId;
-        }
     }
 
     [Serializable]
     public sealed class VulcanusDialogueChoiceNode : VulcanusDialogueNode
     {
-        [SerializeField] private VulcanusDialogueChoiceOption[] options = Array.Empty<VulcanusDialogueChoiceOption>();
-
-        public VulcanusDialogueChoiceOption[] Options => options == null
-            ? Array.Empty<VulcanusDialogueChoiceOption>()
-            : (VulcanusDialogueChoiceOption[])options.Clone();
-        public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.Choice;
-
-        public VulcanusDialogueChoiceNode()
-        {
-        }
-
-        public VulcanusDialogueChoiceNode(string id, VulcanusDialogueChoiceOption[] choiceOptions)
-            : base(id)
-        {
-            options = choiceOptions ?? Array.Empty<VulcanusDialogueChoiceOption>();
-        }
+        [SerializeField, Validation.NotEmpty, Validation.Nested]
+        private VulcanusDialogueChoiceOption[] options = Array.Empty<VulcanusDialogueChoiceOption>();
+        public IReadOnlyList<VulcanusDialogueChoiceOption> Options => options;
     }
 
     [Serializable]
     public sealed class VulcanusDialogueActionNode : VulcanusDialogueNode
     {
-        [SerializeField] private string lua;
-        [SerializeField] private string next;
+        [SerializeField, Validation.LuaChunk] private string lua;
+        [SerializeField, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id))] private string next;
 
         public string Lua => lua;
         public string Next => next;
-        public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.Action;
-
-        public VulcanusDialogueActionNode()
-        {
-        }
-
-        public VulcanusDialogueActionNode(string id, string luaChunk, string nextNodeId)
-            : base(id)
-        {
-            lua = luaChunk ?? string.Empty;
-            next = nextNodeId;
-        }
     }
 
     [Serializable]
     public sealed class VulcanusDialogueJumpNode : VulcanusDialogueNode
     {
+        [Tooltip("Empty jumps within this dialogue.")]
         [SerializeField] private string targetDialogueId;
-        [SerializeField] private string targetNodeId;
+        [SerializeField, Validation.NotEmpty,
+         Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id), UnlessSet = nameof(targetDialogueId))]
+        private string targetNodeId;
 
         public string TargetDialogueId => targetDialogueId;
         public string TargetNodeId => targetNodeId;
-        public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.Jump;
-
-        public VulcanusDialogueJumpNode()
-        {
-        }
-
-        public VulcanusDialogueJumpNode(string id, string destinationDialogueId, string destinationNodeId)
-            : base(id)
-        {
-            targetDialogueId = destinationDialogueId;
-            targetNodeId = destinationNodeId ?? string.Empty;
-        }
     }
 
     [Serializable]
     public sealed class VulcanusDialogueCommentNode : VulcanusDialogueNode
     {
         [SerializeField] private string text;
-
         public string Text => text;
-        public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.Comment;
         public override bool IsExecutable => false;
-
-        public VulcanusDialogueCommentNode()
-        {
-        }
-
-        public VulcanusDialogueCommentNode(string id, string commentText)
-            : base(id)
-        {
-            text = commentText ?? string.Empty;
-        }
     }
 
     [Serializable]
-    public sealed class VulcanusDialogueEndNode : VulcanusDialogueNode
-    {
-        public override VulcanusDialogueNodeType NodeType => VulcanusDialogueNodeType.End;
-
-        public VulcanusDialogueEndNode()
-        {
-        }
-
-        public VulcanusDialogueEndNode(string id)
-            : base(id)
-        {
-        }
-    }
+    public sealed class VulcanusDialogueEndNode : VulcanusDialogueNode { }
 
     [Serializable]
     public sealed class VulcanusDialogueChoiceOption
@@ -375,26 +172,14 @@ namespace Core.Dialogue.Vulcanus
         [SerializeField] private string id;
         [SerializeField] private string text;
         [SerializeField] private string msgKey;
-        [SerializeField] private string condition;
-        [SerializeField] private string targetNodeId;
+        [SerializeField, Validation.LuaExpression] private string condition;
+        [SerializeField, Validation.NotEmpty, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(VulcanusDialogueNode.Id))]
+        private string targetNodeId;
 
         public string Id => id;
         public string Text => text;
         public string MsgKey => msgKey;
         public string Condition => condition;
         public string TargetNodeId => targetNodeId;
-
-        public VulcanusDialogueChoiceOption()
-        {
-        }
-
-        public VulcanusDialogueChoiceOption(string optionId, string rawText, string messageKey, string conditionExpression, string destinationNodeId)
-        {
-            id = optionId ?? string.Empty;
-            text = rawText ?? string.Empty;
-            msgKey = messageKey ?? string.Empty;
-            condition = string.IsNullOrWhiteSpace(conditionExpression) ? null : conditionExpression;
-            targetNodeId = destinationNodeId ?? string.Empty;
-        }
     }
 }

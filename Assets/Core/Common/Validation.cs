@@ -194,6 +194,23 @@ namespace Core.Common
             public UniqueAttribute(string member, string message = null) : base(message) => Member = member;
         }
 
+        /// <summary>
+        /// A set value equals the <see cref="Member"/> of one entry in the asset's <see cref="Collection"/>, such as a link
+        /// to a node ID. Empty values are allowed.
+        /// </summary>
+        public sealed class OneOfAttribute : RuleAttribute
+        {
+            public string Collection { get; }
+            public string Member { get; }
+            /// <summary>Skips the check while this member of the same object is set, such as a jump into another dialogue.</summary>
+            public string UnlessSet { get; set; }
+            public OneOfAttribute(string collection, string member, string message = null) : base(message)
+            {
+                Collection = collection;
+                Member = member;
+            }
+        }
+
         /// <summary>Strictly increasing numeric values in a collection, with an optional exact first value.</summary>
         public sealed class IncreasingAttribute : RuleAttribute
         {

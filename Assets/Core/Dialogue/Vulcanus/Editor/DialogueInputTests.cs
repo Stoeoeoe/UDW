@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
+using Core.Tile.Editor.Vulcanus;
 using Input;
 using NUnit.Framework;
 using UI.Shared;
@@ -86,12 +87,11 @@ namespace Core.Dialogue.Vulcanus.Editor
 
         private void Start(bool choice = false, string speaker = "")
         {
-            var dialogue = Game.Asset<VulcanusDialogueAsset>();
-            VulcanusDialogueNode entry = choice
-                ? new VulcanusDialogueChoiceNode("entry", new[] { new VulcanusDialogueChoiceOption("yes", "Yes", "", "", "end") })
-                : new VulcanusDialogueLineNode("entry", speaker, "", "A line of dialogue.", "", "end");
-            dialogue.Configure(null, 1, "test:dialogue", "Test", "", false, "", "entry", Array.Empty<string>(), "", "",
-                new[] { entry, new VulcanusDialogueEndNode("end") }, Array.Empty<VulcanusDialogueAsset.ImportedMessage>());
+            var entry = choice
+                ? "{ id: 'entry', type: 'choice', options: [{ id: 'yes', text: 'Yes', targetNodeId: 'end' }] }"
+                : $"{{ id: 'entry', type: 'line', speaker: '{speaker}', text: 'A line of dialogue.', next: 'end' }}";
+            var dialogue = VulcanusJson.Populate(Game.Asset<VulcanusDialogueAsset>(),
+                $"{{ id: 'test:dialogue', startNodeId: 'entry', nodes: [{entry}, {{ id: 'end', type: 'end' }}] }}");
             _catalog.Synchronize(new[] { dialogue });
             Assert.That(_runner.StartDialogue(dialogue.DialogueId, _character), Is.True);
             Assert.That(_input.PlayerControls.enabled, Is.False);

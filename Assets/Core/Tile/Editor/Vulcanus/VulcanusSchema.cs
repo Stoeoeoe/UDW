@@ -38,21 +38,22 @@ namespace Core.Tile.Editor.Vulcanus
         /// <summary>The file's JSON once its schema has accepted it.</summary>
         public static string ReadChecked(AssetImportContext ctx) => ReadChecked(ctx.assetPath);
 
-        public static string ReadChecked(string sourcePath)
+        public static string ReadChecked(string sourcePath) => ReadChecked(sourcePath, SchemaName(sourcePath));
+
+        /// <summary>The file's JSON once the named schema has accepted it, for files whose suffix is shared, such as texts.</summary>
+        public static string ReadChecked(string sourcePath, string schema)
         {
             var json = File.ReadAllText(sourcePath);
-            Check(json, SchemaPath(sourcePath), sourcePath);
+            Check(json, $"{Folder}/{schema}.schema.json", sourcePath);
             return json;
         }
 
         /// <summary>The schema for a Vulcanus file, by its type.</summary>
-        public static string SchemaPath(string sourcePath)
-        {
-            var match = SchemaBySuffix.FirstOrDefault(entry => sourcePath.EndsWith(entry.Key, StringComparison.OrdinalIgnoreCase));
-            return match.Value == null
-                ? throw new FormatException($"{sourcePath}: no schema for this kind of file.")
-                : $"{Folder}/{match.Value}.schema.json";
-        }
+        public static string SchemaPath(string sourcePath) => $"{Folder}/{SchemaName(sourcePath)}.schema.json";
+
+        private static string SchemaName(string sourcePath) =>
+            SchemaBySuffix.FirstOrDefault(entry => sourcePath.EndsWith(entry.Key, StringComparison.OrdinalIgnoreCase)).Value
+            ?? throw new FormatException($"{sourcePath}: no schema for this kind of file.");
 
         internal static T Deserialize<T>(string json, string schemaPath, string sourcePath)
         {

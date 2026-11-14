@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Character;
-using Core.Tile.Vulcanus;
 using UI.Shared;
 using UnityEngine;
 
@@ -32,7 +31,6 @@ namespace Core.Dialogue.Vulcanus
 
     public class VulcanusDialogueExecutionContext
     {
-        public VulcanusProject Project { get; internal set; }
         public VulcanusDialogueAsset CurrentDialogue { get; internal set; }
         public VulcanusDialogueNode CurrentNode { get; internal set; }
         public int StepsExecuted { get; internal set; }

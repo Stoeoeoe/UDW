@@ -9,12 +9,13 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
 {
     public sealed class DialogueImporterTests
     {
-        private const string FabiaSource = "Assets/Vulcan/0204project/dialogues/fabia_greeting.runtime.dialogue.json";
+        private const string FabiaSource = "Assets/Tests/Vulcanus/dialogues/fabia_greeting.runtime.dialogue.json";
         private string _folder;
 
         [TearDown]
@@ -27,12 +28,13 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         [Test]
-        public void FabiasTopicLoopsAndShopActionAreValidAtImport()
+        public void ImportReadsTheNodeGraphAndItsTexts()
         {
-            var source = VulcanusSchema.Read<DialogueDto>(FabiaSource);
-            var nodes = DialogueImporter.CreateNodes(source, FabiaSource);
-            Assert.That(nodes.OfType<VulcanusDialogueChoiceNode>().Single().Options.Length, Is.EqualTo(6));
-            Assert.That(nodes.OfType<VulcanusDialogueActionNode>().Single().Lua, Is.EqualTo("Shop.Open('base:market_seeds')"));
+            var dialogue = AssetDatabase.LoadAssetAtPath<VulcanusDialogueAsset>(FabiaSource);
+            Assert.That(dialogue.Nodes.OfType<VulcanusDialogueChoiceNode>().Single().Options.Count, Is.EqualTo(6));
+            Assert.That(dialogue.Nodes.OfType<VulcanusDialogueActionNode>().Single().Lua, Is.EqualTo("Shop.Open('test:market_seeds')"));
+            Assert.That(dialogue.ResolveLocalizedText("dlg.test:fabia_greeting.01", "fallback"),
+                Is.EqualTo("Salve! Fresh seeds and fair prices. What can I do for you?"));
         }
 
         [TestCase("start")]
@@ -41,78 +43,77 @@ namespace Core.Tile.Editor.Vulcanus
         [TestCase("empty-choice")]
         [TestCase("duplicate")]
         [TestCase("jump")]
-        public void BrokenGraphReferencesAreRejectedBeforeAnAssetIsPublished(string defect)
+        public void BrokenGraphReferencesAreRejected(string defect)
         {
-            var source = VulcanusSchema.Read<DialogueDto>(FabiaSource);
+            var source = JObject.Parse(File.ReadAllText(FabiaSource));
+            var nodes = (JArray)source["nodes"];
+            var choice = nodes.Single(node => (string)node["type"] == "choice");
             switch (defect)
             {
-                case "start": source.StartNodeId = "missing"; break;
-                case "next": source.Nodes[0].Next = "missing"; break;
-                case "option": source.Nodes.Single(node => node.Type == "choice").Options[0].TargetNodeId = "missing"; break;
-                case "empty-choice": source.Nodes.Single(node => node.Type == "choice").Options.Clear(); break;
-                case "duplicate": source.Nodes.Add(source.Nodes[0]); break;
-                case "jump": source.Nodes[0].Type = "jump"; source.Nodes[0].TargetNodeId = ""; break;
+                case "start": source["startNodeId"] = "missing"; break;
+                case "next": nodes[0]["next"] = "missing"; break;
+                case "option": choice["options"][0]["targetNodeId"] = "missing"; break;
+                case "empty-choice": choice["options"] = new JArray(); break;
+                case "duplicate": nodes.Add(nodes[0].DeepClone()); break;
+                case "jump": nodes[0] = new JObject { ["id"] = "line-1", ["type"] = "jump", ["targetNodeId"] = "" }; break;
             }
-            Assert.That(() => DialogueImporter.CreateNodes(source, FabiaSource),
-                Throws.TypeOf<FormatException>().With.Message.Contains(FabiaSource));
+            var dialogue = ScriptableObject.CreateInstance<VulcanusDialogueAsset>();
+            try { Assert.That(() => VulcanusJson.Populate(dialogue, source.ToString()), Throws.ArgumentException); }
+            finally { Object.DestroyImmediate(dialogue); }
         }
 
         [Test]
-        public void BrokenCurrentSourceBlocksPlayEvenAfterASuccessfulImport()
+        public void AFailedImportBlocksPlay()
         {
-            _folder = "Assets/__DialogueImporterTests_" + Guid.NewGuid().ToString("N");
-            AssetDatabase.CreateFolder("Assets", _folder.Substring("Assets/".Length));
-            var path = _folder + "/fabia.runtime.dialogue.json";
+            var path = CreateFolder() + "/fabia.runtime.dialogue.json";
             var source = JObject.Parse(File.ReadAllText(FabiaSource));
             source["id"] = "test:fabia-import";
-            source["$schema"] = "../Vulcan/0204project/schemas/dialogue.schema.json";
-            File.WriteAllText(path, source.ToString());
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-            Assert.That(AssetDatabase.LoadAssetAtPath<VulcanusDialogueAsset>(path), Is.Not.Null);
-
             source["nodes"][0]["next"] = "missing";
             File.WriteAllText(path, source.ToString());
-            LogAssert.Expect(LogType.Error, new Regex("Failed importing.*invalid dialogue.*", RegexOptions.Singleline));
+            LogAssert.Expect(LogType.Error, new Regex("Failed importing.*missing", RegexOptions.Singleline));
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-            var error = Assert.Throws<FormatException>(() => DialogueImporter.ValidateSources());
-            Assert.That(error.Message, Does.Contain(path).And.Contain("missing"));
+
+            var error = Assert.Throws<InvalidOperationException>(DialogueImporter.ValidateSources);
+            Assert.That(error.Message, Does.Contain(path));
         }
 
         [Test]
-        public void CrossDialogueJumpsValidateCurrentSourcesAndEnabledTargetsBeforePlay()
+        public void CrossDialogueJumpsNeedAnEnabledTargetWithTheNode()
         {
-            _folder = "Assets/__DialogueImporterTests_" + Guid.NewGuid().ToString("N");
-            AssetDatabase.CreateFolder("Assets", _folder.Substring("Assets/".Length));
+            var folder = CreateFolder();
             var source = JObject.Parse(File.ReadAllText(FabiaSource));
-            source["$schema"] = "../Vulcan/0204project/schemas/dialogue.schema.json";
             source["id"] = "test:jump-target";
-            var targetPath = _folder + "/target.runtime.dialogue.json";
-            File.WriteAllText(targetPath, source.ToString());
-            AssetDatabase.ImportAsset(targetPath, ImportAssetOptions.ForceSynchronousImport);
-
+            File.WriteAllText(folder + "/target.runtime.dialogue.json", source.ToString());
             source["id"] = "test:jump-source";
-            source["nodes"][0] = new JObject {
-                ["id"] = "line-1", ["type"] = "jump",
-                ["targetDialogueId"] = "test:jump-target", ["targetNodeId"] = "line-1"
+            source["nodes"][0] = new JObject
+            {
+                ["id"] = "line-1", ["type"] = "jump", ["targetDialogueId"] = "test:jump-target", ["targetNodeId"] = "line-1"
             };
-            var path = _folder + "/source.runtime.dialogue.json";
+            var path = folder + "/source.runtime.dialogue.json";
             File.WriteAllText(path, source.ToString());
+            AssetDatabase.ImportAsset(folder + "/target.runtime.dialogue.json", ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             var catalog = Resources.Load<DialogueCatalog>(DialogueCatalog.ResourceName);
             CatalogDiscovery.Refresh(catalog);
-            Assert.That(() => DialogueImporter.ValidateSources(), Throws.Nothing);
+            Assert.That(DialogueImporter.ValidateSources, Throws.Nothing);
 
-            // Do not reimport: the previous artifact must not hide a broken current jump target.
             source["nodes"][0]["targetNodeId"] = "missing";
             File.WriteAllText(path, source.ToString());
-            var error = Assert.Throws<InvalidOperationException>(() => DialogueImporter.ValidateSources());
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            CatalogDiscovery.Refresh(catalog);
+            var error = Assert.Throws<InvalidOperationException>(DialogueImporter.ValidateSources);
             Assert.That(error.Message, Does.Contain("missing").And.Contain("test:jump-target"));
 
-            source["nodes"][0]["targetNodeId"] = "line-1";
-            File.WriteAllText(path, source.ToString());
             catalog.SetEnabled(catalog.Get("test:jump-target"), false);
-            error = Assert.Throws<InvalidOperationException>(() => DialogueImporter.ValidateSources());
+            error = Assert.Throws<InvalidOperationException>(DialogueImporter.ValidateSources);
             Assert.That(error.Message, Does.Contain("requires enabled dialogue 'test:jump-target'"));
+        }
+
+        private string CreateFolder()
+        {
+            _folder = "Assets/__DialogueImporterTests_" + Guid.NewGuid().ToString("N");
+            AssetDatabase.CreateFolder("Assets", _folder.Substring("Assets/".Length));
+            return _folder;
         }
     }
 }

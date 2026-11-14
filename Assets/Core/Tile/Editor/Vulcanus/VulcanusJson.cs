@@ -98,7 +98,7 @@ namespace Core.Tile.Editor.Vulcanus
                 throw new NotSupportedException("Definitions are only read.");
         }
 
-        /// <summary>Unity's serialized fields: public ones and [SerializeField] ones, including inherited private fields.</summary>
+        /// <summary>Unity's serialized fields: public, [SerializeField] and [SerializeReference] ones, including inherited private fields.</summary>
         private sealed class SerializedFields : DefaultContractResolver
         {
             protected override List<MemberInfo> GetSerializableMembers(Type type)
@@ -106,7 +106,8 @@ namespace Core.Tile.Editor.Vulcanus
                 var fields = new List<MemberInfo>();
                 for (var current = type; current != null && current != typeof(Object) && current != typeof(object); current = current.BaseType)
                     fields.AddRange(current.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                        .Where(field => (field.IsPublic || field.IsDefined(typeof(SerializeField))) && !field.IsNotSerialized));
+                        .Where(field => (field.IsPublic || field.IsDefined(typeof(SerializeField)) || field.IsDefined(typeof(SerializeReference))) &&
+                                        !field.IsNotSerialized));
                 return fields;
             }
 

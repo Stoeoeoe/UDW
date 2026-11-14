@@ -86,6 +86,12 @@ namespace Core.Common
                             CollectUnique(asset, value, setting, unique, errors);
                             continue;
                         }
+                        if (rule is Validation.OneOfAttribute oneOf)
+                        {
+                            var missing = OneOfError(asset, instance, value, oneOf);
+                            if (missing != null) errors.Add(new ConfigurationError(asset, setting, oneOf.ResolveMessage(missing)));
+                            continue;
+                        }
                         var memberType = entry.Member is FieldInfo memberField ? memberField.FieldType : ((PropertyInfo)entry.Member).PropertyType;
                         // Collection presence is independent of entry/reference validation.
                         if (value == null && typeof(ICollection).IsAssignableFrom(memberType) &&
@@ -175,6 +181,26 @@ namespace Core.Common
                 }
                 index++;
             }
+        }
+
+        private static string OneOfError(ValidatedScriptableObject asset, object owner, object value, Validation.OneOfAttribute rule)
+        {
+            if (value == null || value is string { Length: 0 }) return null;
+            string error;
+            if (rule.UnlessSet != null)
+            {
+                if (!TryReadMember(owner, rule.UnlessSet, out var other, out error)) return error;
+                if (other != null && other is not string { Length: 0 }) return null;
+            }
+            if (!TryReadMember(asset, rule.Collection, out var collection, out error)) return error;
+            if (collection is not ICollection entries) return "OneOf requires a collection.";
+            foreach (var entry in entries)
+            {
+                if (IsMissing(entry)) continue;
+                if (!TryReadMember(entry, rule.Member, out var candidate, out error)) return error;
+                if (Equals(candidate, value)) return null;
+            }
+            return $"'{value}' is not the {rule.Member} of any entry in {rule.Collection}.";
         }
 
         private static void CollectSequence(ValidatedScriptableObject asset, object value, string setting,

@@ -104,7 +104,6 @@ namespace Core.Dialogue.Vulcanus
             _cancellation = cancellation;
             var context = _activeContext = new VulcanusDialogueExecutionContext
             {
-                Project = startingDialogue.Project,
                 CurrentDialogue = startingDialogue,
                 StepsExecuted = 0,
                 Instigator = instigator,
@@ -208,7 +207,6 @@ namespace Core.Dialogue.Vulcanus
             var targetDialogue = _catalog.Get(jump.TargetDialogueId)
                 ?? throw new InvalidOperationException($"Jump '{jump.Id}' references unknown dialogue '{jump.TargetDialogueId}'.");
             context.CurrentDialogue = targetDialogue;
-            context.Project = targetDialogue.Project != null ? targetDialogue.Project : context.Project;
             return ResolveLocalNode(targetDialogue, jump.TargetNodeId);
         }
 

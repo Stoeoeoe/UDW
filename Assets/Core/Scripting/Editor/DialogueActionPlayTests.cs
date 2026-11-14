@@ -28,6 +28,8 @@ using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
+using Core.Tile.Editor.Vulcanus;
+
 namespace Core.Scripting.Editor
 {
     [Explicit("Uses the playable map and real dialogue UI across Unity frames.")]
@@ -60,13 +62,13 @@ namespace Core.Scripting.Editor
         private void BindLiveScene()
         {
             Assert.That(LiveGame.Get<VulcanusDialogueRunner>(), Is.Not.Null, "The Systems prefab must provide the shared dialogue UI.");
-            _talk = CreateDialogue("fixture:talk",
-                new VulcanusDialogueLineNode("entry", "", "", "Hello", "", "choice"),
-                new VulcanusDialogueChoiceNode("choice", new[] { new VulcanusDialogueChoiceOption("bye", "Goodbye", "", "", "answer") }),
-                new VulcanusDialogueActionNode("answer", "GameState.Story.Set('fixture:dialogue-choice', true)", "end"),
-                new VulcanusDialogueEndNode("end"));
-            _end = CreateDialogue("fixture:end", new VulcanusDialogueEndNode("entry"));
-            _error = CreateDialogue("fixture:error", new VulcanusDialogueActionNode("entry", "error('Broken fixture script')", ""));
+            _talk = CreateDialogue("fixture:talk", @"
+                { id: 'entry', type: 'line', text: 'Hello', next: 'choice' },
+                { id: 'choice', type: 'choice', options: [{ id: 'bye', text: 'Goodbye', targetNodeId: 'answer' }] },
+                { id: 'answer', type: 'action', lua: ""GameState.Story.Set('fixture:dialogue-choice', true)"", next: 'end' },
+                { id: 'end', type: 'end' }");
+            _end = CreateDialogue("fixture:end", "{ id: 'entry', type: 'end' }");
+            _error = CreateDialogue("fixture:error", @"{ id: 'entry', type: 'action', lua: ""error('Broken fixture script')"" }");
             // The fixture dialogues join the live catalog for this run and are removed again in TearDown.
             _catalog = LiveGame.Get<DialogueCatalog>();
             _authoredDialogues = _catalog.Entries.Select(entry => entry.Definition).ToArray();
@@ -784,12 +786,12 @@ namespace Core.Scripting.Editor
         public IEnumerator DialogueChoicePersistsImmediatelyWhileCompletionActionsWait()
         {
             var service = LiveGame.Get<CutsceneRunner>();
-            var dialogue = CreateDialogue("fixture:decision-dialogue",
-                new VulcanusDialogueLineNode("entry", "", "", "May I enter?", "", "choice"),
-                new VulcanusDialogueChoiceNode("choice", new[] { new VulcanusDialogueChoiceOption("yes", "Show invitation", "", "", "answer") }),
-                new VulcanusDialogueActionNode("answer", "GameState.Story.Set('fixture:dialogue-choice', true)", "response"),
-                new VulcanusDialogueLineNode("response", "", "", "You may enter.", "", "end"),
-                new VulcanusDialogueEndNode("end"));
+            var dialogue = CreateDialogue("fixture:decision-dialogue", @"
+                { id: 'entry', type: 'line', text: 'May I enter?', next: 'choice' },
+                { id: 'choice', type: 'choice', options: [{ id: 'yes', text: 'Show invitation', targetNodeId: 'answer' }] },
+                { id: 'answer', type: 'action', lua: ""GameState.Story.Set('fixture:dialogue-choice', true)"", next: 'response' },
+                { id: 'response', type: 'line', text: 'You may enter.', next: 'end' },
+                { id: 'end', type: 'end' }");
             _catalog.Synchronize(_catalog.Entries.Select(entry => entry.Definition).Append(dialogue));
             var definition = CreateCutscene("fixture:decision", false, "fixture:completion", dialogue.DialogueId);
             try
@@ -1214,13 +1216,9 @@ namespace Core.Scripting.Editor
             return definition;
         }
 
-        private static VulcanusDialogueAsset CreateDialogue(string id, params VulcanusDialogueNode[] nodes)
-        {
-            var dialogue = ScriptableObject.CreateInstance<VulcanusDialogueAsset>();
-            dialogue.Configure(null, 1, id, id, "", false, "", "entry", Array.Empty<string>(), "", "", nodes,
-                Array.Empty<VulcanusDialogueAsset.ImportedMessage>());
-            return dialogue;
-        }
+        /// <summary>A dialogue that starts at its node with the ID "entry".</summary>
+        private static VulcanusDialogueAsset CreateDialogue(string id, string nodes) =>
+            VulcanusJson.Populate(ScriptableObject.CreateInstance<VulcanusDialogueAsset>(), $"{{ id: '{id}', startNodeId: 'entry', nodes: [{nodes}] }}");
 
     }
 }

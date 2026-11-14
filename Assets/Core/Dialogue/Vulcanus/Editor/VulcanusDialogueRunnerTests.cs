@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Core.Common.Editor;
+using Core.Tile.Editor.Vulcanus;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -35,11 +36,13 @@ namespace Core.Dialogue.Vulcanus.Editor
             return _runner = Game.Get<VulcanusDialogueRunner>();
         }
 
-        private VulcanusDialogueAsset Dialogue(string id, params VulcanusDialogueNode[] nodes)
+        private const string Hello = "{ id: 'entry', type: 'line', text: 'Hello' }";
+        private const string VillagerHello = "{ id: 'entry', type: 'line', speaker: 'base:villager', text: 'Hello', next: 'end' }, { id: 'end', type: 'end' }";
+
+        /// <summary>A dialogue that starts at its node with the ID "entry".</summary>
+        private VulcanusDialogueAsset Dialogue(string id, string nodes)
         {
-            var dialogue = Game.Asset<VulcanusDialogueAsset>();
-            dialogue.Configure(null, 1, id, id, "", false, "", nodes[0].Id, Array.Empty<string>(), "", "", nodes,
-                Array.Empty<VulcanusDialogueAsset.ImportedMessage>());
+            var dialogue = VulcanusJson.Populate(Game.Asset<VulcanusDialogueAsset>(), $"{{ id: '{id}', startNodeId: 'entry', nodes: [{nodes}] }}");
             _dialogues.Add(dialogue);
             return dialogue;
         }
@@ -47,8 +50,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void ALineWaitsForThePresenterThenTheFlowCompletes()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "base:villager", "", "Hello", "", "end"),
-                new VulcanusDialogueEndNode("end"));
+            Dialogue("test:talk", VillagerHello);
             var completed = 0;
 
             Runner().StartDialogue("test:talk", onCompleted: () => completed++);
@@ -70,8 +72,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void GameTimeStandsStillWhileADialogueRuns()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "base:villager", "", "Hello", "", "end"),
-                new VulcanusDialogueEndNode("end"));
+            Dialogue("test:talk", VillagerHello);
             Runner();
             var clock = Game.Get<TimeAndWeather.GameClock>();
 
@@ -88,7 +89,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void ADialogueWithOnlyAnEndNodeFinishesBeforeStartReturns()
         {
-            Dialogue("test:end", new VulcanusDialogueEndNode("entry"));
+            Dialogue("test:end", "{ id: 'entry', type: 'end' }");
             var completed = false;
 
             Runner().StartDialogue("test:end", onCompleted: () => completed = true);
@@ -100,15 +101,13 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void ChoicesOfferOnlyOptionsWhoseLuaConditionHolds()
         {
-            Dialogue("test:choice",
-                new VulcanusDialogueChoiceNode("entry", new[]
-                {
-                    new VulcanusDialogueChoiceOption("shown", "Shown", "", "1 == 1", "yes"),
-                    new VulcanusDialogueChoiceOption("hidden", "Hidden", "", "1 == 2", "no")
-                }),
-                new VulcanusDialogueActionNode("yes", "GameState.Story.Set('test:answer', 'yes')", "end"),
-                new VulcanusDialogueActionNode("no", "GameState.Story.Set('test:answer', 'no')", "end"),
-                new VulcanusDialogueEndNode("end"));
+            Dialogue("test:choice", @"
+                { id: 'entry', type: 'choice', options: [
+                    { id: 'shown', text: 'Shown', condition: '1 == 1', targetNodeId: 'yes' },
+                    { id: 'hidden', text: 'Hidden', condition: '1 == 2', targetNodeId: 'no' }] },
+                { id: 'yes', type: 'action', lua: ""GameState.Story.Set('test:answer', 'yes')"", next: 'end' },
+                { id: 'no', type: 'action', lua: ""GameState.Story.Set('test:answer', 'no')"", next: 'end' },
+                { id: 'end', type: 'end' }");
 
             Runner().StartDialogue("test:choice");
 
@@ -121,8 +120,8 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void JumpsContinueInTheTargetDialogue()
         {
-            Dialogue("test:first", new VulcanusDialogueJumpNode("entry", "test:second", "start"));
-            Dialogue("test:second", new VulcanusDialogueLineNode("start", "", "", "Second", "", ""));
+            Dialogue("test:first", "{ id: 'entry', type: 'jump', targetDialogueId: 'test:second', targetNodeId: 'entry' }");
+            Dialogue("test:second", "{ id: 'entry', type: 'line', text: 'Second' }");
 
             Runner().StartDialogue("test:first");
 
@@ -133,8 +132,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void ABrokenActionStopsTheFlowWithoutCompleting()
         {
-            Dialogue("test:broken", new VulcanusDialogueActionNode("entry", "error('Broken fixture script')", "end"),
-                new VulcanusDialogueEndNode("end"));
+            Dialogue("test:broken", @"{ id: 'entry', type: 'action', lua: ""error('Broken fixture script')"", next: 'end' }, { id: 'end', type: 'end' }");
             var completed = false;
             LogAssert.Expect(LogType.Error, new Regex("Action failed in 'test:broken'"));
             LogAssert.Expect(LogType.Error, new Regex("Action node 'entry' failed"));
@@ -149,7 +147,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void ARunawayLoopStopsAtTheStepLimit()
         {
-            Dialogue("test:loop", new VulcanusDialogueJumpNode("entry", "", "entry"));
+            Dialogue("test:loop", "{ id: 'entry', type: 'jump', targetNodeId: 'entry' }");
             LogAssert.Expect(LogType.Error, new Regex("exceeded 256 steps"));
 
             Runner().StartDialogue("test:loop");
@@ -160,7 +158,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void StoppingCancelsThePendingPresentationAndClosesThePresenterOnce()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
+            Dialogue("test:talk", Hello);
             var completed = false;
             Runner().StartDialogue("test:talk", onCompleted: () => completed = true);
 
@@ -176,7 +174,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void AStoppedFlowThatResumesLaterCannotCloseOrCompleteTheNextDialogue()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
+            Dialogue("test:talk", Hello);
             var firstCompleted = false;
             _presenter.IgnoreCancellation = true; // A presenter may finish its work after the runner has moved on.
             Runner().StartDialogue("test:talk", onCompleted: () => firstCompleted = true);
@@ -195,7 +193,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void TheScreenBeingDismissedEndsTheDialogue()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
+            Dialogue("test:talk", Hello);
             Runner().StartDialogue("test:talk");
 
             _presenter.Dismiss();
@@ -207,7 +205,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void StartingRequiresAKnownDialogueAndNoRunningOne()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
+            Dialogue("test:talk", Hello);
             Runner();
 
             Assert.That(() => _runner.StartDialogue("test:missing"), Throws.InvalidOperationException);
@@ -218,7 +216,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void DisposingStopsTheDialogueAndStopsListeningToThePresenter()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
+            Dialogue("test:talk", Hello);
             Runner().StartDialogue("test:talk");
 
             _runner.Dispose();
@@ -230,7 +228,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void DialogueValidationRejectsUnknownReferencesBeforeOpeningThePresenter()
         {
-            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "", "", "Hello", "", ""));
+            Dialogue("test:talk", Hello);
             Runner();
             Assert.That(() => _runner.ValidateDialogue("test:talk"), Throws.Nothing);
             Assert.That(() => _runner.ValidateDialogue("test:missing"), Throws.InvalidOperationException);
