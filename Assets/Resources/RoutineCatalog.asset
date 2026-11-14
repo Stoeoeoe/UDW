@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: RoutineCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Core.Routines.RoutineCatalog
   entries:
-  - definition: {fileID: 1980522644636190131, guid: cfadc640853cc784bb67718ab5964232, type: 3}
+  - definition: {fileID: -6750239444755058063, guid: cfadc640853cc784bb67718ab5964232, type: 3}
     enabled: 1
