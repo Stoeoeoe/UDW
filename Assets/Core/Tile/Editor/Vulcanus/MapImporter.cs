@@ -255,7 +255,7 @@ namespace Core.Tile.Editor.Vulcanus
                         x = x,
                         y = mapHeight - 1 - y,
                         terrainId = terrainId,
-                        terrainType = VulcanusImportHelpers.MapTerrainIdToTerrainType(terrainId, project)
+                        terrainType = VulcanusImportHelpers.MapTerrainIdToTerrainType(terrainId)
                     });
                 }
             }

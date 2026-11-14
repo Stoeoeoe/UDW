@@ -1,4 +1,5 @@
 using Core.Common;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Core.Inventory
@@ -9,22 +10,22 @@ namespace Core.Inventory
     /// </summary>
     public abstract class ItemDefinition : ValidatedScriptableObject<ItemDefinitionValidator>
     {
-        [SerializeField, Validation.Id("Assign a stable, nonblank item ID.")]
+        [SerializeField, Validation.Id("Assign a stable, nonblank item ID."), JsonProperty("id")]
         private string _itemId;
 
-        [SerializeField]
+        [SerializeField, JsonProperty("name")]
         private string _itemName;
 
-        [SerializeField]
+        [SerializeField, JsonProperty("category")]
         private string _category;
 
-        [SerializeField]
+        [SerializeField, JsonProperty("icon")]
         private Sprite _icon;
 
-        [SerializeField]
+        [SerializeField, JsonProperty("description")]
         private string _description;
 
-        [SerializeField, Validation.Min(1)]
+        [SerializeField, Validation.Min(1), JsonProperty("maxStackSize")]
         private int _maxStackSize = 99;
 
         [Tooltip("Protect essential tools and quest items from being left on the ground. Redundant, replaceable items can remain droppable.")]
@@ -46,7 +47,7 @@ namespace Core.Inventory
         private GameObject _worldRepresentationPrefab;
 
         [Tooltip("Pickup sound override. If null ItemManager's default sound plays.")]
-        [SerializeField]
+        [SerializeField, JsonProperty("pickupSound")]
         private AudioClip _pickupSound;
 
         public string ItemId => _itemId;

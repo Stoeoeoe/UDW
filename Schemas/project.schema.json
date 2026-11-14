@@ -71,35 +71,35 @@
       "type": "array",
       "description": "Project-level terrain type definitions used for autotiling and labeling.",
       "items": {
-        "$ref": "#/$defs/TerrainType"
+        "$ref": "#/definitions/TerrainType"
       }
     },
     "layerDefinitions": {
       "type": "array",
       "description": "Template layer definitions automatically injected into every map.",
       "items": {
-        "$ref": "#/$defs/LayerDefinition"
+        "$ref": "#/definitions/LayerDefinition"
       }
     },
     "entityTypes": {
       "type": "array",
       "description": "Deprecated legacy entity type definitions. New projects store entity types as separate files in entities/.",
       "items": {
-        "$ref": "#/$defs/EntityType"
+        "$ref": "#/definitions/EntityType"
       }
     },
     "tileMetadataDefinitions": {
       "type": "array",
       "description": "Project-level tile metadata definitions shared across all tilesets.",
       "items": {
-        "$ref": "#/$defs/PropertyDefinition"
+        "$ref": "#/definitions/PropertyDefinition"
       }
     },
     "locationMetadataDefinitions": {
       "type": "array",
       "description": "Project-level location metadata definitions shared by maps (map-level properties).",
       "items": {
-        "$ref": "#/$defs/PropertyDefinition"
+        "$ref": "#/definitions/PropertyDefinition"
       }
     },
     "storyValues": {
@@ -137,28 +137,28 @@
       "type": "array",
       "description": "Named dialogue modes that can override the default dialogue script context.",
       "items": {
-        "$ref": "#/$defs/DialogueType"
+        "$ref": "#/definitions/DialogueType"
       }
     },
     "emotions": {
       "type": "array",
       "description": "Project-level emotions, picked from dropdowns such as character portraits and dialogue lines.",
       "items": {
-        "$ref": "#/$defs/Emotion"
+        "$ref": "#/definitions/Emotion"
       }
     },
     "itemClasses": {
       "type": "array",
       "description": "Project-level item class definitions that add extra typed property schemas to items.",
       "items": {
-        "$ref": "#/$defs/ItemClass"
+        "$ref": "#/definitions/ItemClass"
       }
     },
     "$schema": {
       "type": "string"
     }
   },
-  "$defs": {
+  "definitions": {
     "TerrainType": {
       "type": "object",
       "required": [
@@ -273,7 +273,7 @@
         "properties": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/PropertyDefinition"
+            "$ref": "#/definitions/PropertyDefinition"
           }
         },
         "defaultSize": {
@@ -337,7 +337,7 @@
           ]
         },
         "defaultValue": {
-          "$ref": "#/$defs/PropertyValue"
+          "$ref": "#/definitions/PropertyValue"
         },
         "required": {
           "type": "boolean"
@@ -346,7 +346,7 @@
           "type": "string"
         },
         "constraints": {
-          "$ref": "#/$defs/PropertyConstraints"
+          "$ref": "#/definitions/PropertyConstraints"
         }
       }
     },
@@ -377,7 +377,7 @@
     },
     "PropertyValue": {
       "description": "A scalar, array, or object property value.",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "string"
         },
@@ -441,7 +441,11 @@
     },
     "Emotion": {
       "type": "object",
-      "required": ["id", "name", "icon"],
+      "required": [
+        "id",
+        "name",
+        "icon"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -477,6 +481,10 @@
           "type": "string",
           "description": "Display name shown in the editor (e.g. 'Seed', 'Weapon')."
         },
+        "className": {
+          "type": "string",
+          "description": "Full name of the C# ItemDefinition class Unity creates for items of this class, such as Plants.ProduceItem."
+        },
         "description": {
           "type": "string",
           "description": "Optional description of what this item class represents."
@@ -485,7 +493,7 @@
           "type": "array",
           "description": "Extra typed property definitions added to items assigned to this class.",
           "items": {
-            "$ref": "#/$defs/PropertyDefinition"
+            "$ref": "#/definitions/PropertyDefinition"
           }
         }
       }

@@ -19,17 +19,7 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("layerDefinitions")] public List<LayerDefinitionDto> LayerDefinitions { get; set; } = new();
         [JsonProperty("entityTypes")] public List<EntityTypeDto> EntityTypes { get; set; } = new();
         [JsonProperty("tileMetadataDefinitions")] public List<PropertyDefinitionDto> TileMetadataDefinitions { get; set; } = new();
-        [JsonProperty("itemClasses")] public List<ItemClassDto> ItemClasses { get; set; } = new();
         [JsonProperty("dialogueTypes")] public List<DialogueTypeDto> DialogueTypes { get; set; } = new();
-    }
-
-    internal class ItemClassDto
-    {
-        [JsonProperty("id")] public string Id { get; set; }
-        // Fully-qualified CLR type name for the ItemDefinition-derived class.
-        [JsonProperty("className")] public string ClassName { get; set; }
-        // Optional property schema (kept as extension data) describing class-specific fields.
-        [JsonExtensionData] public Dictionary<string, JToken> Extra { get; set; } = new();
     }
 
     internal class ItemDto

@@ -27,7 +27,9 @@ namespace Core.Tile.Editor.Vulcanus
             [".entity.json"] = "entity-type",
             [".quest.json"] = "quest",
             [".shop.json"] = "shop",
-            [".i18n.json"] = "quest-i18n"
+            [".i18n.json"] = "quest-i18n",
+            [".vproj"] = "project",
+            [".vitm"] = "item"
         };
 
         public static T Read<T>(AssetImportContext ctx) => Read<T>(ctx.assetPath);

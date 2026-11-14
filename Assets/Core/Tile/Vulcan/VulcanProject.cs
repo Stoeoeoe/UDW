@@ -1,8 +1,11 @@
 using System;
+using Core.Common;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
 {
+    /// <summary>A Vulcanus project's settings, read straight from its .vproj file.</summary>
     [CreateAssetMenu(fileName = "VulcanusProject", menuName = "Game/Vulcanus/Project")]
     public class VulcanusProject : ScriptableObject
     {
@@ -11,8 +14,7 @@ namespace Core.Tile.Vulcanus
         {
             public string id;
             public string displayName;
-            public Color color;
-            public TerrainType mappedTerrainType;
+            [JsonConverter(typeof(HexColorJsonConverter))] public Color color;
         }
 
         [Serializable]
@@ -21,7 +23,7 @@ namespace Core.Tile.Vulcanus
             public string id;
             public string name;
             public string type;
-            public Color color;
+            [JsonConverter(typeof(HexColorJsonConverter))] public Color color;
             public int zIndex;
         }
 
@@ -31,7 +33,7 @@ namespace Core.Tile.Vulcanus
             public string key;
             public string label;
             public string type;
-            public string defaultValue;
+            [JsonConverter(typeof(RawJsonJsonConverter))] public string defaultValue;
             public bool required;
         }
 
@@ -65,7 +67,7 @@ namespace Core.Tile.Vulcanus
         }
 
         [SerializeField] private string version;
-        [SerializeField] private string projectName;
+        [SerializeField, JsonProperty("name")] private string projectName;
         [SerializeField] private int tileSize;
         [SerializeField] private int defaultMapWidth;
         [SerializeField] private int defaultMapHeight;
@@ -75,7 +77,7 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private DialogueTypeDefinition[] dialogueTypes = Array.Empty<DialogueTypeDefinition>();
 
         [Header("Mappings")]
-        [SerializeField] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
+        [SerializeField, JsonProperty("itemClasses")] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
 
         [Header("Importer Diagnostics")]
         [SerializeField] private string[] mappingWarnings = Array.Empty<string>();
@@ -92,84 +94,11 @@ namespace Core.Tile.Vulcanus
         public ItemClassMapping[] ItemClassMappings => itemClassMappings;
         public string[] MappingWarnings => mappingWarnings;
 
-        public void Configure(
-            string fileVersion,
-            string name,
-            int size,
-            int mapWidth,
-            int mapHeight,
-            TerrainDefinition[] terrains,
-            LayerDefinition[] layers,
-            PropertyDefinition[] metadataDefinitions = null)
-        {
-            version = fileVersion;
-            projectName = name;
-            tileSize = size;
-            defaultMapWidth = mapWidth;
-            defaultMapHeight = mapHeight;
-            terrainTypes = terrains ?? Array.Empty<TerrainDefinition>();
-            layerDefinitions = layers ?? Array.Empty<LayerDefinition>();
-            tileMetadataDefinitions = metadataDefinitions ?? Array.Empty<PropertyDefinition>();
-        }
-
-        public void ConfigureDialogueTypes(DialogueTypeDefinition[] definitions)
-        {
-            dialogueTypes = definitions ?? Array.Empty<DialogueTypeDefinition>();
-        }
-
-        public void SetMappings(
-            ItemClassMapping[] itemMappings,
-            string[] warnings)
-        {
-            itemClassMappings = itemMappings ?? Array.Empty<ItemClassMapping>();
-            mappingWarnings = warnings ?? Array.Empty<string>();
-        }
-
         [Serializable]
         public class ItemClassMapping
         {
-            public string classId;
+            [JsonProperty("id")] public string classId;
             public string className;
-            public string[] candidateTypeNames = Array.Empty<string>();
         }
-
-        public bool TryMapTerrainId(string terrainId, out TerrainType terrainType)
-        {
-            terrainType = TerrainType.Invalid;
-            if (string.IsNullOrWhiteSpace(terrainId) || terrainTypes == null)
-                return false;
-
-            for (int i = 0; i < terrainTypes.Length; i++)
-            {
-                var terrain = terrainTypes[i];
-                if (string.Equals(terrain.id, terrainId, StringComparison.OrdinalIgnoreCase))
-                {
-                    terrainType = terrain.mappedTerrainType;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool TryGetDialogueType(string dialogueTypeId, out DialogueTypeDefinition dialogueType)
-        {
-            dialogueType = default;
-            if (string.IsNullOrWhiteSpace(dialogueTypeId) || dialogueTypes == null)
-                return false;
-
-            for (var i = 0; i < dialogueTypes.Length; i++)
-            {
-                var candidate = dialogueTypes[i];
-                if (!string.Equals(candidate.id, dialogueTypeId, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                dialogueType = candidate;
-                return true;
-            }
-
-            return false;
-        }
-
     }
 }

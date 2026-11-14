@@ -26,9 +26,8 @@ namespace Core.Tile.Editor.Vulcanus
 
         // ── Terrain mapping ───────────────────────────────────────────────────
 
-        public static TerrainType MapTerrainIdToTerrainType(string terrainId, VulcanusProject project)
+        public static TerrainType MapTerrainIdToTerrainType(string terrainId)
         {
-            if (project != null && project.TryMapTerrainId(terrainId, out var mapped)) return mapped;
             if (string.IsNullOrWhiteSpace(terrainId)) return TerrainType.Invalid;
 
             if (terrainId.Equals("grass", StringComparison.OrdinalIgnoreCase)) return TerrainType.Grass;

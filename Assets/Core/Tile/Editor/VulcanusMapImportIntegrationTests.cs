@@ -76,7 +76,7 @@ namespace Core.Tile.Editor
             AssetDatabase.CreateFolder("Assets", Path.GetFileName(_root));
             _mapPath = _root + "/" + Path.GetFileName(_root) + ".vmap";
             _scenePath = VulcanusMapScenePostprocessor.GetScenePath(_mapPath);
-            WriteAndImport(_root + "/fixture.vproj", "{\"id\":\"fixture\",\"tileSize\":16}");
+            WriteAndImport(_root + "/fixture.vproj", Project("fixture"));
 
             var texture = new Texture2D(16, 16);
             texture.SetPixels(Enumerable.Repeat(Color.green, 256).ToArray());
@@ -186,7 +186,7 @@ namespace Core.Tile.Editor
             music.cue.RequireValidConfiguration();
             var dependencies = VulcanusImporterCoordinator.GatherDependenciesFromSourceFile(_mapPath);
             Assert.That(dependencies, Does.Contain(AssetDatabase.GetAssetPath(fixture)));
-            Assert.That(dependencies, Does.Contain("Assets/Resources/MusicCatalog.asset"));
+            Assert.That(dependencies, Does.Not.Contain("Assets/Resources/MusicCatalog.asset"), "The catalog is refreshed after imports.");
             var cue = music.cue;
             Assert.That(ImportMap().GetComponent<MusicEnvironment>().cue, Is.SameAs(cue));
         }
@@ -801,7 +801,7 @@ namespace Core.Tile.Editor
             var folder = _root + "/cold";
             var mapPath = folder + "/" + Path.GetFileName(_root) + "_cold.vmap";
             _extraScenePaths.Add(VulcanusMapScenePostprocessor.GetScenePath(mapPath));
-            File.WriteAllText(Absolute(folder + "/fixture.vproj"), "{\"id\":\"cold\",\"tileSize\":16}");
+            File.WriteAllText(Absolute(folder + "/fixture.vproj"), Project("cold"));
             File.WriteAllText(Absolute(folder + "/tiles.vts"), "{\"id\":\"test:cold\",\"spriteSheet\":\"../sheet.png\",\"columns\":1,\"tileCount\":1}");
             File.WriteAllText(Absolute(mapPath), "{\"id\":\"test:cold-map\",\"width\":1,\"height\":1,\"tilesetRefs\":[\"test:cold\"],\"layers\":[{\"kind\":\"terrain\",\"data\":[[0]]}]}");
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
@@ -828,7 +828,7 @@ namespace Core.Tile.Editor
                 case "missing-music-cue":
                     _mapJson["metadata"]["musicCue"] = "test:missing-music";
                     _mapJson["metadata"]["musicPreset"] = "full";
-                    message = "references missing or disabled music cue"; break;
+                    message = "references missing music cue"; break;
                 case "missing-music-preset":
                     _mapJson["metadata"]["musicCue"] = MusicFixture().id;
                     message = "requires musicPreset"; break;
@@ -930,7 +930,7 @@ namespace Core.Tile.Editor
             ImportMap();
             yield return AwaitCatalog(() => _catalog.TryGetLocationDataByMapId("test:map", out _));
             AssetDatabase.CreateFolder(_root, "nested");
-            WriteAndImport(_root + "/nested/nested.vproj", "{\"id\":\"nested\",\"tileSize\":16}");
+            WriteAndImport(_root + "/nested/nested.vproj", Project("nested"));
             // A source move changes ownership to the nearest project. Keep the destination map
             // valid without relying on the original project's entities or tilesets.
             _mapJson = JObject.Parse("{\"id\":\"test:map\",\"width\":1,\"height\":1}");
@@ -966,6 +966,9 @@ namespace Core.Tile.Editor
             CatalogDiscovery.Refresh(Resources.Load<MusicCatalog>(MusicCatalog.ResourceName));
             return cue;
         }
+
+        private static string Project(string id) =>
+            $"{{ \"id\": \"{id}\", \"version\": \"1.0\", \"name\": \"{id}\", \"tileSize\": 16, \"defaultMapWidth\": 32, \"defaultMapHeight\": 32 }}";
 
         private void BindCatalogProject(string path = "fixture.vproj")
         {

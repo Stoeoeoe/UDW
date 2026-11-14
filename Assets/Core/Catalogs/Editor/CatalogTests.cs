@@ -192,26 +192,27 @@ namespace Core.Catalogs.Editor
             AssetDatabase.CreateAsset(_catalog, _folder + "/Catalog.asset");
             var projectPath = _folder + "/Project.vproj";
             File.WriteAllText(projectPath,
-                "{\"itemClasses\":[{\"id\":\"test\",\"className\":\"Core.Inventory.Editor.InventoryTestItem\"}]}");
+                "{ \"version\": \"1.0\", \"name\": \"Items\", \"tileSize\": 16, \"defaultMapWidth\": 32, \"defaultMapHeight\": 32, " +
+                "\"itemClasses\": [{ \"id\": \"test\", \"name\": \"Test\", \"className\": \"Core.Inventory.Editor.InventoryTestItem\", \"properties\": [] }] }");
             AssetDatabase.ImportAsset(projectPath, ImportAssetOptions.ForceSynchronousImport);
             var itemPath = _folder + "/Imported.vitm";
-            WriteImportedItem(itemPath, "imported");
-            yield return WaitFor(() => _catalog.Get("imported"));
-            Assert.That(_catalog.Get("imported").ItemName, Is.EqualTo("Imported item"));
+            WriteImportedItem(itemPath, "test:imported");
+            yield return WaitFor(() => _catalog.Get("test:imported"));
+            Assert.That(_catalog.Get("test:imported").ItemName, Is.EqualTo("Imported item"));
 
-            WriteImportedItem(itemPath, "updated");
-            yield return WaitFor(() => _catalog.Get("updated"));
-            Assert.That(_catalog.Get("imported"), Is.Null);
+            WriteImportedItem(itemPath, "test:updated");
+            yield return WaitFor(() => _catalog.Get("test:updated"));
+            Assert.That(_catalog.Get("test:imported"), Is.Null);
 
             Assert.That(AssetDatabase.DeleteAsset(itemPath), Is.True);
             yield return WaitFor(() => _catalog.Entries.Count == 1);
-            Assert.That(_catalog.Get("updated"), Is.Null);
+            Assert.That(_catalog.Get("test:updated"), Is.Null);
         }
 
         private static void WriteImportedItem(string path, string id)
         {
             File.WriteAllText(path,
-                $"{{\"id\":\"{id}\",\"name\":\"Imported item\",\"classId\":\"test\",\"maxStackSize\":99}}");
+                $"{{\"id\":\"{id}\",\"name\":\"Imported item\",\"category\":\"Test\",\"icon\":\"\",\"description\":\"\",\"classId\":\"test\",\"maxStackSize\":99}}");
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
         }
 

@@ -446,6 +446,7 @@ export interface StoryValueDefinition {
 export interface ItemClass {
   id: string; // Unique identifier (kebab-case)
   name: string; // Display name (e.g. "Seed", "Weapon", "Equipment")
+  className?: string; // C# ItemDefinition class Unity creates for these items, e.g. "Plants.ProduceItem"
   description?: string;
   properties: PropertyDefinition[]; // Extra properties for items of this class
 }

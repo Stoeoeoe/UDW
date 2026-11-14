@@ -152,7 +152,7 @@ namespace Core.Tile.Editor.Vulcanus
                 }
 
                 tile.Configure(i, tileId, terrainId,
-                    VulcanusImportHelpers.MapTerrainIdToTerrainType(terrainId, project), tags, collisionKind,
+                    VulcanusImportHelpers.MapTerrainIdToTerrainType(terrainId), tags, collisionKind,
                     metaProps, tilePivotY, shapes, waterType, meta?.NavigationCost ?? 0);
 
                 // Use Sprite collider type so TilemapCollider2D picks up the overridden physics shape.
