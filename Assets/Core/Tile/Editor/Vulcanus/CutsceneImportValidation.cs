@@ -1,4 +1,5 @@
 using System;
+using Core.Catalogs.Editor;
 using Core.Scripting;
 using UnityEditor;
 using UnityEditor.Build;
@@ -33,7 +34,9 @@ namespace Core.Tile.Editor.Vulcanus
         {
             foreach (var path in AssetDatabase.GetAllAssetPaths())
             {
-                if (path.StartsWith("Assets/", StringComparison.Ordinal) && path.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase))
+                // Test maps aren't in the game's catalogs, so their cutscene triggers aren't checked against them.
+                if (path.StartsWith("Assets/", StringComparison.Ordinal) && path.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase) &&
+                    !CatalogAssetDiscovery.IsTestContent(path))
                 {
                     var map = VulcanusImportHelpers.LoadDto<MapDto>(path);
                     var triggers = map.SpatialPrimitives?.Triggers;

@@ -1,5 +1,6 @@
 using System;
 using Character;
+using Core.Tile.Editor.Vulcanus;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -20,11 +21,9 @@ namespace Interaction.Dialog.Editor
             _fallback = Sound("test:fallback");
             _calm = Sound("test:calm");
             _harsh = Sound("test:harsh");
-            var fabia = ScriptableObject.CreateInstance<CharacterDefinition>();
-            fabia.Configure("test:fabia", "Fabia", "test:calm",
-                new[] { new EmotionTypewriterSound { emotionId = "test:angry", soundId = "test:harsh" } });
-            var mute = ScriptableObject.CreateInstance<CharacterDefinition>();
-            mute.Configure("test:mute", "Mute");
+            var fabia = VulcanusJson.Populate(ScriptableObject.CreateInstance<CharacterDefinition>(),
+                "{ id: 'test:fabia', name: 'Fabia', typewriterSound: 'test:calm', emotionTypewriterSounds: { 'test:angry': 'test:harsh' } }");
+            var mute = VulcanusJson.Populate(ScriptableObject.CreateInstance<CharacterDefinition>(), "{ id: 'test:mute', name: 'Mute' }");
             _characters = ScriptableObject.CreateInstance<CharacterCatalog>();
             _characters.Synchronize(new Object[] { fabia, mute });
             _sounds = ScriptableObject.CreateInstance<TypewriterSoundCatalog>();

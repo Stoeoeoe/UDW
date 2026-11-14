@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Core.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -22,42 +25,78 @@ namespace Core.Tile.Editor.Vulcanus
         private static readonly JsonSerializerSettings Settings = new()
         {
             ContractResolver = new SerializedFields(),
-            Converters = { new StringEnumConverter(new CamelCaseNamingStrategy()) },
+            Converters = { new StringEnumConverter(new CamelCaseNamingStrategy()), new AssetReferences() },
             DateParseHandling = DateParseHandling.None
         };
 
-        /// <summary>Imports the file as the asset's main object, named by <paramref name="name"/>.</summary>
-        public static T Import<T>(AssetImportContext ctx, Func<T, string> name) where T : ValidatedScriptableObject
+        /// <summary>
+        /// Imports the file as the asset's main object, named by <paramref name="name"/>. The <paramref name="identifier"/>
+        /// keeps the object's file ID stable, so prefabs and catalogs that reference it keep working.
+        /// </summary>
+        public static T Import<T>(AssetImportContext ctx, string identifier, Func<T, string> name) where T : ScriptableObject =>
+            (T)Import(ctx, typeof(T), identifier, VulcanusSchema.ReadChecked(ctx), definition => name((T)definition));
+
+        /// <summary>Imports already schema-checked JSON as a definition of <paramref name="type"/>, for content whose type the file chooses.</summary>
+        public static ScriptableObject Import(AssetImportContext ctx, Type type, string identifier, string json, Func<ScriptableObject, string> name)
         {
-            var definition = Read<T>(VulcanusSchema.ReadChecked(ctx), ctx.assetPath);
+            var definition = ScriptableObject.CreateInstance(type);
+            try { Populate(definition, json, ctx); }
+            catch (Exception error)
+            {
+                Object.DestroyImmediate(definition);
+                throw error is FormatException ? error : new FormatException($"{ctx.assetPath}: {error.Message}", error);
+            }
             definition.name = name(definition);
-            ctx.AddObjectToAsset("main", definition);
+            ctx.AddObjectToAsset(identifier, definition);
             ctx.SetMainObject(definition);
             return definition;
         }
 
-        /// <summary>A new definition from JSON the schema has already accepted.</summary>
-        public static T Read<T>(string json, string sourcePath) where T : ValidatedScriptableObject
+        /// <summary>
+        /// Fills a definition from JSON and checks its rules. Tests use it with short, lenient JSON; asset paths need
+        /// the import <paramref name="ctx"/>.
+        /// </summary>
+        public static T Populate<T>(T definition, string json, AssetImportContext ctx = null) where T : ScriptableObject
         {
-            var definition = ScriptableObject.CreateInstance<T>();
-            try { return Populate(definition, json); }
-            catch (Exception error) when (error is not FormatException)
-            {
-                Object.DestroyImmediate(definition);
-                throw new FormatException($"{sourcePath}: {error.Message}", error);
-            }
-        }
-
-        /// <summary>Fills a definition from JSON and checks its rules. Tests use it with short, lenient JSON.</summary>
-        public static T Populate<T>(T definition, string json) where T : ValidatedScriptableObject
-        {
-            Fill(definition, json);
-            definition.RequireValidConfiguration();
+            Fill(definition, json, ctx);
+            if (definition is ValidatedScriptableObject validated) validated.RequireValidConfiguration();
             return definition;
         }
 
         /// <summary>Fills fields from JSON without checking rules, for files that add to a definition (such as texts).</summary>
-        public static void Fill(object target, string json) => JsonConvert.PopulateObject(json, target, Settings);
+        public static void Fill(object target, string json, AssetImportContext ctx = null)
+        {
+            var serializer = JsonSerializer.Create(Settings);
+            serializer.Context = new StreamingContext(StreamingContextStates.Other, ctx);
+            using var reader = new JsonTextReader(new StringReader(json));
+            serializer.Populate(reader, target);
+        }
+
+        /// <summary>
+        /// Reads art and audio fields from paths relative to the file or project, recording each as an import dependency.
+        /// </summary>
+        private sealed class AssetReferences : JsonConverter
+        {
+            public override bool CanConvert(Type objectType) =>
+                typeof(Object).IsAssignableFrom(objectType) && !typeof(ScriptableObject).IsAssignableFrom(objectType);
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                var path = (string)reader.Value;
+                if (string.IsNullOrEmpty(path)) return null;
+                var ctx = serializer.Context.Context as AssetImportContext
+                    ?? throw new InvalidOperationException($"Reading the asset '{path}' needs an import.");
+                var assetPath = VulcanusImportHelpers.ResolveAssetReferencePath(ctx.assetPath, path,
+                        VulcanusImportHelpers.FindProjectAssetPath(ctx.assetPath))
+                    ?? throw new FormatException($"{ctx.assetPath}: '{path}' does not exist.");
+                VulcanusImportHelpers.AddDependency(ctx, assetPath);
+                return AssetDatabase.LoadAssetAtPath(assetPath, objectType)
+                    ?? throw new FormatException($"{ctx.assetPath}: '{path}' is not a {objectType.Name}.");
+            }
+
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) =>
+                throw new NotSupportedException("Definitions are only read.");
+        }
 
         /// <summary>Unity's serialized fields: public ones and [SerializeField] ones, including inherited private fields.</summary>
         private sealed class SerializedFields : DefaultContractResolver

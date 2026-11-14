@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/entity-type.schema.json",
-  "id": "chest",
+  "id": "test:chest",
   "displayName": "Player Chest",
   "category": "object",
   "placeholderColor": "#97693e",

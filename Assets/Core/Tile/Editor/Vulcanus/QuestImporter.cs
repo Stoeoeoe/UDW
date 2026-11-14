@@ -9,7 +9,7 @@ namespace Core.Tile.Editor.Vulcanus
     {
         public static void ImportQuest(AssetImportContext ctx)
         {
-            var quest = VulcanusJson.Import<QuestDefinition>(ctx, definition => definition.QuestId);
+            var quest = VulcanusJson.Import<QuestDefinition>(ctx, "quest", definition => definition.QuestId);
             var i18nPath = ctx.assetPath[..^".quest.json".Length] + ".i18n.json";
             if (!File.Exists(i18nPath)) return;
             VulcanusImportHelpers.AddDependency(ctx, i18nPath);

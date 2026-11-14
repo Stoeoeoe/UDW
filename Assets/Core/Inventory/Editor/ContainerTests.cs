@@ -23,7 +23,7 @@ namespace Core.Inventory.Editor
         public void SetUp()
         {
             _owner = ScriptableObject.CreateInstance<CharacterDefinition>();
-            ConfigurationTestData.Set(_owner, "characterId", "test:owner");
+            ConfigurationTestData.Set(_owner, "id", "test:owner");
             ConfigurationTestData.Set(_owner, "displayName", "Owner");
             ConfigurationTestData.Set(_owner, "icon", "??");
             _item = ScriptableObject.CreateInstance<ProduceItem>();

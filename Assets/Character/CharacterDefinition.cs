@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Common;
+using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -10,30 +11,33 @@ namespace Character
     /// <summary>Imported Vulcanus character identity, available without a prefab or loaded scene view.</summary>
     public sealed class CharacterDefinition : ValidatedScriptableObject<CharacterDefinitionValidator>
     {
-        [SerializeField, ReadOnly, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)] private string characterId;
-        [SerializeField, ReadOnly, Validation.Required("The source requires a display name.")] private string displayName;
+        [SerializeField, ReadOnly, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)] private string id;
+        // "name" in JSON; a field can't be called that, it would hide Unity's own Object.name.
+        [SerializeField, ReadOnly, JsonProperty("name"), Validation.Required("The source requires a display name.")] private string displayName;
         [SerializeField, ReadOnly, Tooltip("Typewriter sound used for this character's lines unless an emotion overrides it. Empty uses the dialogue's default.")]
-        private string typewriterSoundId;
-        [SerializeField, ReadOnly] private EmotionTypewriterSound[] emotionTypewriterSounds = Array.Empty<EmotionTypewriterSound>();
+        private string typewriterSound;
+        [SerializeField, ReadOnly, JsonConverter(typeof(KeyedEntriesJsonConverter))]
+        private EmotionTypewriterSound[] emotionTypewriterSounds = Array.Empty<EmotionTypewriterSound>();
         [SerializeField, ReadOnly, Tooltip("Portrait shown when the character has none for a line's emotion.")]
         private Texture2D defaultPortrait;
-        [SerializeField, ReadOnly] private EmotionPortrait[] emotionPortraits = Array.Empty<EmotionPortrait>();
+        [SerializeField, ReadOnly, JsonConverter(typeof(KeyedEntriesJsonConverter))]
+        private EmotionPortrait[] portraits = Array.Empty<EmotionPortrait>();
         [SerializeField, ReadOnly, Tooltip("Walking speed in tiles per second, before boons and other modifiers.")]
         private float walkSpeed = DefaultWalkSpeed;
 
         /// <summary>Walk speed when the Vulcanus character leaves it out; Vulcanus documents the same value.</summary>
         public const float DefaultWalkSpeed = 4f;
 
-        public string CharacterId => characterId;
+        public string CharacterId => id;
         public float WalkSpeed => walkSpeed;
         public string DisplayName => displayName;
-        public string DefaultTypewriterSoundId => typewriterSoundId;
-        public IReadOnlyList<EmotionPortrait> EmotionPortraits => emotionPortraits;
+        public string DefaultTypewriterSoundId => typewriterSound;
+        public IReadOnlyList<EmotionPortrait> EmotionPortraits => portraits;
 
         /// <summary>The portrait for a line with this emotion, else the default portrait; null when the character has none.</summary>
         public Texture2D PortraitFor(string emotionId)
         {
-            var match = emotionPortraits.FirstOrDefault(each => each.emotionId == emotionId);
+            var match = portraits.FirstOrDefault(each => each.emotionId == emotionId);
             return match != null ? match.portrait : defaultPortrait;
         }
         public IReadOnlyList<EmotionTypewriterSound> EmotionTypewriterSounds => emotionTypewriterSounds;
@@ -43,25 +47,8 @@ namespace Character
         {
             var match = emotionTypewriterSounds.FirstOrDefault(each => each.emotionId == emotionId);
             if (match != null) return match.soundId;
-            return string.IsNullOrEmpty(typewriterSoundId) ? null : typewriterSoundId;
+            return string.IsNullOrEmpty(typewriterSound) ? null : typewriterSound;
         }
-
-#if UNITY_EDITOR
-        public void Configure(string id, string characterName,
-            string defaultTypewriterSoundId = null, EmotionTypewriterSound[] emotionSounds = null,
-            Texture2D defaultPortraitTexture = null, EmotionPortrait[] emotionPortraitTextures = null,
-            float walkTilesPerSecond = DefaultWalkSpeed)
-        {
-            characterId = id;
-            displayName = characterName;
-            typewriterSoundId = defaultTypewriterSoundId;
-            emotionTypewriterSounds = emotionSounds ?? Array.Empty<EmotionTypewriterSound>();
-            defaultPortrait = defaultPortraitTexture;
-            emotionPortraits = emotionPortraitTextures ?? Array.Empty<EmotionPortrait>();
-            walkSpeed = walkTilesPerSecond;
-            RequireValidConfiguration();
-        }
-#endif
     }
 
     /// <summary>A portrait that replaces the character's default for lines with one emotion.</summary>
@@ -92,11 +79,11 @@ namespace Character
             foreach (var each in asset.EmotionPortraits)
             {
                 if (!DefinitionIdRules.IsLowercaseNamespaced(each.emotionId))
-                    Report(errors, asset, "emotionPortraits", "Emotion IDs must be lowercase namespace:name.");
+                    Report(errors, asset, "portraits", "Emotion IDs must be lowercase namespace:name.");
                 else if (!portraitEmotions.Add(each.emotionId))
-                    Report(errors, asset, "emotionPortraits", $"Emotion '{each.emotionId}' has more than one portrait.");
+                    Report(errors, asset, "portraits", $"Emotion '{each.emotionId}' has more than one portrait.");
                 if (!each.portrait)
-                    Report(errors, asset, "emotionPortraits", $"Emotion '{each.emotionId}' has no portrait image.");
+                    Report(errors, asset, "portraits", $"Emotion '{each.emotionId}' has no portrait image.");
             }
             var seen = new HashSet<string>();
             foreach (var each in asset.EmotionTypewriterSounds)

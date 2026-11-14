@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: ShopCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Core.Shops.ShopCatalog
   entries:
-  - definition: {fileID: -6750239444755058063, guid: 8fef308a879070040af8fcf1daa283b3, type: 3}
+  - definition: {fileID: -2191707107010672990, guid: 8fef308a879070040af8fcf1daa283b3, type: 3}
     enabled: 1
