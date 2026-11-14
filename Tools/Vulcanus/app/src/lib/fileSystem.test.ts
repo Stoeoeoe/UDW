@@ -28,7 +28,7 @@ describe('namespaced file persistence', () => {
         data: {
           id: 'base:mycharacter',
           name: 'My Character',
-          $schema: '../../schemas/character.schema.json',
+          $schema: '../../../../../Schemas/character.schema.json',
         },
       },
     ]);
@@ -42,7 +42,7 @@ describe('namespaced file persistence', () => {
         filename: 'mycharacter.character.json',
         data: expect.objectContaining({
           id: 'base:mycharacter',
-          $schema: '../schemas/character.schema.json',
+          $schema: '../../../../Schemas/character.schema.json',
         }),
       }),
     );
@@ -64,7 +64,7 @@ describe('namespaced file persistence', () => {
       {
         filename: 'Intro.dialogue.json',
         data: {
-          $schema: '../../schemas/dialogue.schema.json',
+          $schema: '../../../../../Schemas/dialogue.schema.json',
           id: 'base:intro',
           name: 'Intro',
           nodes: [],

@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/shop.schema.json",
+  "$schema": "../../../../Schemas/shop.schema.json",
   "id": "base:market_seeds",
   "name": "Market Stall",
   "buysGoods": true,

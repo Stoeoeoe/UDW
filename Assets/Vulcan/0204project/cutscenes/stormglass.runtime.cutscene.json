@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/cutscene.schema.json",
+  "$schema": "../../../../Schemas/cutscene.schema.json",
   "formatVersion": 2,
   "id": "base:stormglass",
   "mapId": "base:map-1",

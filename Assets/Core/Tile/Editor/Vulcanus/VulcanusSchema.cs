@@ -1,41 +1,57 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using NJsonSchema;
 using UnityEditor.AssetImporters;
 
 namespace Core.Tile.Editor.Vulcanus
 {
+    /// <summary>
+    /// Checks Vulcanus files against the schemas in the repository's Schemas folder, chosen by file type. A file's own
+    /// "$schema" is ignored, so projects carry no schema copies that could drift.
+    /// </summary>
     internal static class VulcanusSchema
     {
-        public static T Read<T>(AssetImportContext ctx) => Read<T>(ctx.assetPath, ctx.DependsOnSourceAsset);
+        /// <summary>The repository's schema folder, next to Assets.</summary>
+        public const string Folder = "Schemas";
 
-        public static T Read<T>(string sourcePath) => Read<T>(sourcePath, null);
+        // No suffix ends with another, so the first match is the only one.
+        private static readonly Dictionary<string, string> SchemaBySuffix = new()
+        {
+            [".runtime.dialogue.json"] = "dialogue",
+            [".runtime.cutscene.json"] = "cutscene",
+            [".character.json"] = "character",
+            [".routine.json"] = "routine",
+            [".entity.json"] = "entity-type",
+            [".quest.json"] = "quest",
+            [".shop.json"] = "shop",
+            [".i18n.json"] = "quest-i18n"
+        };
+
+        public static T Read<T>(AssetImportContext ctx) => Read<T>(ctx.assetPath);
+
+        public static T Read<T>(string sourcePath) =>
+            JsonConvert.DeserializeObject<T>(ReadChecked(sourcePath), new JsonSerializerSettings { DateParseHandling = DateParseHandling.None });
 
         /// <summary>The file's JSON once its schema has accepted it.</summary>
-        public static string ReadChecked(AssetImportContext ctx) => ReadChecked(ctx.assetPath, ctx.DependsOnSourceAsset);
+        public static string ReadChecked(AssetImportContext ctx) => ReadChecked(ctx.assetPath);
 
-        public static string ReadChecked(string sourcePath) => ReadChecked(sourcePath, null);
-
-        private static T Read<T>(string sourcePath, Action<string> schemaDependency) =>
-            JsonConvert.DeserializeObject<T>(ReadChecked(sourcePath, schemaDependency),
-                new JsonSerializerSettings { DateParseHandling = DateParseHandling.None });
-
-        private static string ReadChecked(string sourcePath, Action<string> schemaDependency)
+        public static string ReadChecked(string sourcePath)
         {
             var json = File.ReadAllText(sourcePath);
-            var reference = JObject.Parse(json)["$schema"];
-            if (reference?.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)reference))
-                throw new FormatException($"{sourcePath}: '$schema' must point to a local schema file.");
-
-            var absolutePath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath), (string)reference));
-            if (!VulcanusImportHelpers.TryAbsoluteToAssetPath(absolutePath, out var schemaPath))
-                throw new FormatException($"{sourcePath}: schema must be inside Assets: '{reference}'.");
-            schemaDependency?.Invoke(schemaPath);
-            Check(json, schemaPath, sourcePath);
+            Check(json, SchemaPath(sourcePath), sourcePath);
             return json;
+        }
+
+        /// <summary>The schema for a Vulcanus file, by its type.</summary>
+        public static string SchemaPath(string sourcePath)
+        {
+            var match = SchemaBySuffix.FirstOrDefault(entry => sourcePath.EndsWith(entry.Key, StringComparison.OrdinalIgnoreCase));
+            return match.Value == null
+                ? throw new FormatException($"{sourcePath}: no schema for this kind of file.")
+                : $"{Folder}/{match.Value}.schema.json";
         }
 
         internal static T Deserialize<T>(string json, string schemaPath, string sourcePath)

@@ -8,6 +8,7 @@ import {
   resourceRegistry,
   resourceFilename,
   resourceSchemaPath,
+  setSchemaRootFromProjectPath,
   getResourceDefinition,
 } from './resourceRegistry';
 import { decodeTileRef, encodeTileRef } from './tileRef';
@@ -31,7 +32,7 @@ describe('resource namespaces', () => {
       );
       expect(resourceSchemaPath(definition.kind)).toContain(definition.schemaFile);
       const schema = JSON.parse(
-        readFileSync(resolve(process.cwd(), '../schemas', definition.schemaFile), 'utf8'),
+        readFileSync(resolve(process.cwd(), '../../../Schemas', definition.schemaFile), 'utf8'),
       );
       expect(JSON.stringify(schema)).not.toContain('x-editor-');
     }
@@ -42,15 +43,15 @@ describe('resource namespaces', () => {
     expect(resourceFilename('project', 'my-project')).toBe('my-project.vproj');
   });
 
-  it('resolves every schema reference inside the exported project schemas folder', () => {
-    const projectRoot = resolve(process.cwd(), 'test-project');
+  it('resolves every schema reference to the game repo Schemas folder', () => {
+    const repo = resolve(process.cwd(), 'game');
+    const projectRoot = resolve(repo, 'Assets', 'Mods', 'example');
+    setSchemaRootFromProjectPath(projectRoot);
     for (const definition of Object.values(resourceRegistry)) {
       expect(resolve(projectRoot, definition.folder, resourceSchemaPath(definition.kind))).toBe(
-        resolve(projectRoot, 'schemas', definition.schemaFile),
+        resolve(repo, 'Schemas', definition.schemaFile),
       );
     }
-    expect(resourceSchemaPath('character')).toBe('../schemas/character.schema.json');
-    expect(resourceSchemaPath('project')).toBe('schemas/project.schema.json');
   });
 
   it('qualifies the maps, character and dialogues a routine refers to', () => {
@@ -138,7 +139,7 @@ describe('resource namespaces', () => {
       'dialogue',
     ]) {
       const schema = JSON.parse(
-        readFileSync(resolve(process.cwd(), '../schemas', `${resource}.schema.json`), 'utf8'),
+        readFileSync(resolve(process.cwd(), '../../../Schemas', `${resource}.schema.json`), 'utf8'),
       );
       const pattern = new RegExp(schema.properties.id.pattern);
       expect(pattern.test('base:mycharacter'), resource).toBe(true);

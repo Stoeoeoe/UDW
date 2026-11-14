@@ -10,5 +10,5 @@
       "sourceType": "line"
     }
   ],
-  "$schema": "../schemas/dialogue-i18n.schema.json"
+  "$schema": "../../../../Schemas/dialogue-i18n.schema.json"
 }

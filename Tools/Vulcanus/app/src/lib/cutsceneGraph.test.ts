@@ -19,7 +19,7 @@ import type { Map as GameMap } from '../types/schema';
 
 const actions = readCutsceneActions(manifest);
 const scene = (): Cutscene => ({
-  $schema: '../schemas/cutscene.schema.json',
+  $schema: '../../../../Schemas/cutscene.schema.json',
   formatVersion: 2,
   id: 'base:graph-test',
   mapId: 'base:map',

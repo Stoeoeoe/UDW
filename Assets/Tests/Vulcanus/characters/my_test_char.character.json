@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/character.schema.json",
+  "$schema": "../../../../Schemas/character.schema.json",
   "id": "test:my_test_char",
   "name": "My Test Char",
   "folderPath": ""

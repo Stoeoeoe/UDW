@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/quest.schema.json",
+  "$schema": "../../../../Schemas/quest.schema.json",
   "formatVersion": 1,
   "id": "test:fixture",
   "title": "Wine for the festival",

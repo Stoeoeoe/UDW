@@ -37,7 +37,7 @@ const face: CutsceneStep = {
   arguments: { character: 'guest', direction: 'East' },
 };
 const scene = (): Cutscene => ({
-  $schema: '../schemas/cutscene.schema.json',
+  $schema: '../../../../Schemas/cutscene.schema.json',
   formatVersion: 2,
   id: 'base:test',
   mapId: map.id,

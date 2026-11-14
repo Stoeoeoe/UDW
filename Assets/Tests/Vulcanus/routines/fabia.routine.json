@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/routine.schema.json",
+  "$schema": "../../../../Schemas/routine.schema.json",
   "formatVersion": 1,
   "id": "test:fabia_routine",
   "character": "test:fabia",

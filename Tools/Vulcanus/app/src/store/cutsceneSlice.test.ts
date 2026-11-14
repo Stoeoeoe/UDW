@@ -265,11 +265,6 @@ describe('cutscene document lifecycle', () => {
     });
     await useEditorStore.getState().saveCutscene('base:second');
     expect(fileSystem.saveJson).toHaveBeenCalledWith(
-      'schemas',
-      'cutscene.schema.json',
-      expect.any(Object),
-    );
-    expect(fileSystem.saveJson).toHaveBeenCalledWith(
       'cutscenes',
       'base:second.runtime.cutscene.json',
       expect.objectContaining({ id: 'base:second', onComplete: prototype.onComplete }),

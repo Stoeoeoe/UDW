@@ -16,7 +16,7 @@ namespace Core.Tile.Editor.Vulcanus
 {
     public sealed class CutsceneImporterTests
     {
-        private const string SchemaPath = "Assets/Vulcan/0204project/schemas/cutscene.schema.json";
+        private const string SchemaPath = VulcanusSchema.Folder + "/cutscene.schema.json";
         private string _folder;
 
         [Test]

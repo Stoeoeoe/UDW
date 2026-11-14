@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/tileset.schema.json",
+  "$schema": "../../../../Schemas/tileset.schema.json",
   "version": 1,
   "id": "test:villagetileset",
   "name": "VillageTileset Test",

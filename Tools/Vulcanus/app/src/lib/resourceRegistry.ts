@@ -450,9 +450,22 @@ export function normalizeResourceDocument<K extends ResourceDocumentKind>(
 ): ResourceDocuments[K] {
   return resourceRegistry[kind].normalize(document, normalizeIdPrefix(prefix));
 }
+/** Relative path from the open project's folder to the game repo's Schemas folder. */
+let schemaRoot = '../../../Schemas';
+
+/**
+ * Projects live inside the game's Unity Assets folder, and the Schemas folder sits next to it.
+ * Outside a game repo there is no Schemas folder, so the default stays.
+ */
+export function setSchemaRootFromProjectPath(projectPath: string): void {
+  const segments = projectPath.split(/[\\/]/).filter(Boolean);
+  const assets = segments.lastIndexOf('Assets');
+  if (assets >= 0) schemaRoot = [...segments.slice(assets).map(() => '..'), 'Schemas'].join('/');
+}
+
 export function resourceSchemaPath(kind: ResourceDocumentKind): string {
   const definition = resourceRegistry[kind];
-  return `${definition.folder ? '../' : ''}schemas/${definition.schemaFile}`;
+  return `${definition.folder ? '../' : ''}${schemaRoot}/${definition.schemaFile}`;
 }
 /** Logical filename used for original-file lookup; physical filenames are resolved separately. */
 export function resourceFileKey(kind: ResourceDocumentKind, id: string): string {

@@ -194,13 +194,12 @@ namespace Core.Tile.Editor.Vulcanus
             }
             if (string.IsNullOrWhiteSpace(metadata.MusicPreset))
                 throw new InvalidOperationException($"Map '{mapId}' requires musicPreset for music cue '{metadata.MusicCue}'.");
-            var catalogPath = $"Assets/Resources/{MusicCatalog.ResourceName}.asset";
-            VulcanusImportHelpers.AddDependency(ctx, catalogPath);
-            var catalog = AssetDatabase.LoadAssetAtPath<MusicCatalog>(catalogPath);
-            if (!catalog) throw new InvalidOperationException("Map music requires the generated MusicCatalog.");
-            var cue = catalog.Get(metadata.MusicCue);
-            if (!cue) throw new InvalidOperationException($"Map '{mapId}' references missing or disabled music cue '{metadata.MusicCue}'.");
-            VulcanusImportHelpers.AddDependency(ctx, AssetDatabase.GetAssetPath(cue));
+            // Loaded by path, not through the MusicCatalog: the catalog is refreshed after imports, so a full reimport
+            // could reach this map first. Whether the cue is enabled is checked at world catalog refresh.
+            var cuePath = MusicCuePath(metadata.MusicCue);
+            VulcanusImportHelpers.AddDependency(ctx, cuePath);
+            var cue = AssetDatabase.LoadAssetAtPath<MusicCue>(cuePath);
+            if (!cue) throw new InvalidOperationException($"Map '{mapId}' references missing music cue '{metadata.MusicCue}' ({cuePath}).");
             cue.RequireValidConfiguration();
             if (cue.presets.All(preset => preset.id != metadata.MusicPreset))
                 throw new InvalidOperationException($"Map '{mapId}' references unknown music preset '{metadata.MusicPreset}' on '{cue.id}'.");
@@ -208,6 +207,8 @@ namespace Core.Tile.Editor.Vulcanus
             environment.cue = cue;
             environment.preset = metadata.MusicPreset;
         }
+
+        internal static string MusicCuePath(string cueId) => "Assets/Content/Music/" + cueId.Replace(':', '/') + "/cue.apollocue";
 
         private static LocationData BuildLocationData(string mapId, string mapName, MapMetadataDto metadata, string mapAssetPath)
         {

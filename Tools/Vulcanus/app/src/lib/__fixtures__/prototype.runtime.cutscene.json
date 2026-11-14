@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/cutscene.schema.json",
+  "$schema": "../../../../Schemas/cutscene.schema.json",
   "formatVersion": 1,
   "id": "base:cutscene-prototype",
   "mapId": "base:map-1",

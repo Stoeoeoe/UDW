@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/entity-type.schema.json",
+  "$schema": "../../../../Schemas/entity-type.schema.json",
   "id": "base:market_stall_bread",
   "displayName": "Bread Stall",
   "category": "object",

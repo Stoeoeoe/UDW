@@ -1,5 +1,5 @@
 {
-  "$schema": "../schemas/dialogue.schema.json",
+  "$schema": "../../../../Schemas/dialogue.schema.json",
   "version": 1,
   "id": "base:dlg_cutscene_test",
   "name": "Cutscene Test",

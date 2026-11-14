@@ -4,6 +4,7 @@ import {
   resourceRegistry,
   resourceFileKey,
   resourceSchemaPath,
+  setSchemaRootFromProjectPath,
   type ResourceDocuments,
   type ResourceDocumentKind,
   type ResourceFolder,
@@ -131,6 +132,7 @@ export class FileSystemManager {
       if (!result) throw new Error('Open project cancelled.');
 
       this.projectPath = result.projectPath;
+      setSchemaRootFromProjectPath(result.projectPath);
       return {
         project: this.acceptProject(result.project, result.projectFilename),
         path: result.projectPath,
@@ -166,6 +168,7 @@ export class FileSystemManager {
     if (this.isElectron()) {
       const result = await window.ipcRenderer.invoke('app:load-project-by-path', path);
       this.projectPath = result.projectPath;
+      setSchemaRootFromProjectPath(result.projectPath);
       return {
         project: this.acceptProject(result.project, result.projectFilename),
         path: result.projectPath,
@@ -185,6 +188,7 @@ export class FileSystemManager {
       if (!result) throw new Error('Create project cancelled.');
 
       this.projectPath = result.projectPath;
+      setSchemaRootFromProjectPath(result.projectPath);
       return { path: result.projectPath };
     } else {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -309,7 +313,7 @@ export class FileSystemManager {
    * Save a JSON file (Map, Tileset, or Project)
    */
   async saveJson(
-    subDir: ResourceFolder | 'schemas',
+    subDir: ResourceFolder,
     filename: string,
     data: unknown,
   ): Promise<void> {

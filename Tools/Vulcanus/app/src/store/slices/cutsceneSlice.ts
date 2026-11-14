@@ -1,4 +1,3 @@
-import cutsceneJsonSchema from '../../../../schemas/cutscene.schema.json';
 import { castDraft } from 'immer';
 import type { StateCreator } from 'zustand';
 import type { EditorStore } from '../useEditorStore';
@@ -11,7 +10,7 @@ import {
   validateCutsceneTriggers,
 } from '../../lib/cutscenes';
 import { fileSystem } from '../../lib/fileSystem';
-import { resourceFileKey } from '../../lib/resourceRegistry';
+import { resourceFileKey, resourceSchemaPath } from '../../lib/resourceRegistry';
 import { qualifyResourceId } from '../../lib/resourceIds';
 import { cancelPendingSaveUnit, scheduleSaveUnit, useSaveStore } from '../../lib/saveManager';
 import {
@@ -166,7 +165,7 @@ export const createCutsceneSlice: Creator = (set, get) => {
         throw new Error(`Cutscene ${id} already exists.`);
       get().editCutscenes((documents, labels, folders) => {
         documents.push({
-          $schema: '../schemas/cutscene.schema.json',
+          $schema: resourceSchemaPath('cutscene'),
           formatVersion: 2,
           id,
           mapId: '',
@@ -308,7 +307,6 @@ export const createCutsceneSlice: Creator = (set, get) => {
                 tileSize: state.project?.tileSize ?? 16,
               },
             );
-            await fileSystem.saveJson('schemas', 'cutscene.schema.json', cutsceneJsonSchema);
             await fileSystem.saveJson('cutscenes', resourceFileKey('cutscene', id), source);
           } else await fileSystem.deleteJson('cutscenes', resourceFileKey('cutscene', id));
           const saved = { ...get().savedCutscenes };

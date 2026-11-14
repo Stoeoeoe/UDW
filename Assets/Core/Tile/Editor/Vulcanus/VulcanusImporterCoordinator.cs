@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Core.Music;
 using Newtonsoft.Json;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(19, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json", "runtime.cutscene.json", "npc.json", "character.json", "shop.json", "routine.json", "quest.json" }, 6100)]
+    [ScriptedImporter(21, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json", "runtime.cutscene.json", "npc.json", "character.json", "shop.json", "routine.json", "quest.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
         [SerializeField, Range(1, 128), Tooltip("Maximum baked shoreline distance in logical pixels. Appearance widths can change within this range without recalculating distances.")]
@@ -31,8 +30,7 @@ namespace Core.Tile.Editor.Vulcanus
                     var map = VulcanusImportHelpers.LoadDto<MapDto>(assetPath);
                     if (!string.IsNullOrEmpty(map.Metadata?.MusicCue))
                     {
-                        dependencies.Add($"Assets/Resources/{MusicCatalog.ResourceName}.asset");
-                        var musicSource = "Assets/Content/Music/" + map.Metadata.MusicCue.Replace(':', '/') + "/cue.apollocue";
+                        var musicSource = MapImporter.MusicCuePath(map.Metadata.MusicCue);
                         if (File.Exists(VulcanusImportHelpers.ToAbsolutePath(musicSource))) dependencies.Add(musicSource);
                     }
                     foreach (var id in map.TilesetRefs)

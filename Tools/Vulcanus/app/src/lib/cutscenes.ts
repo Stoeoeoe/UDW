@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { matchesStoryType, storyDataSchema, STORY_VALUE_TYPE } from './storyValues';
 import { validateLuaChunk } from './luaRunner';
+import { resourceSchemaPath } from './resourceRegistry';
 import {
   CUTSCENE_CONDITION_ACTION,
   CUTSCENE_PARALLEL_ACTION,
@@ -820,7 +821,7 @@ export function exportCutscene(
             ...(step.resultVariables ? { resultVariables: [...step.resultVariables] } : {}),
           };
   return {
-    $schema: '../schemas/cutscene.schema.json',
+    $schema: resourceSchemaPath('cutscene'),
     formatVersion: 2,
     id: scene.id,
     mapId: scene.mapId,

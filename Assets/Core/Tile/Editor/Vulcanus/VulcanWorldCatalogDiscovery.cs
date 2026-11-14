@@ -5,6 +5,7 @@ using System.Linq;
 using Core.Catalogs;
 using Core.Catalogs.Editor;
 using Core.Location;
+using Core.Music;
 using Core.Tile.Vulcanus;
 using UnityEditor;
 using UnityEditor.Build;
@@ -117,6 +118,9 @@ namespace Core.Tile.Editor.Vulcanus
                     throw new InvalidOperationException($"Cannot refresh world catalog: map '{path}' has not imported successfully.");
                 }
                 if (!ids.Add(map.MapId)) throw new InvalidOperationException($"Duplicate map ID '{map.MapId}' in project '{projectPath}'.");
+                var music = prefab.GetComponent<MusicEnvironment>();
+                if (music && Resources.Load<MusicCatalog>(MusicCatalog.ResourceName).Get(music.cue.id) != music.cue)
+                    throw new InvalidOperationException($"Map '{map.MapId}' uses music cue '{music.cue.id}', which is not enabled in the MusicCatalog.");
                 result.Add(new VulcanusWorldCatalog.MapBinding(map.MapId, prefab, location, AssetDatabase.AssetPathToGUID(path)));
                 existing.Remove(map.MapId);
             }
