@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Core.Common.Editor;
+using Core.Tile.Editor.Vulcanus;
 using Core.Tile.Vulcanus;
 using NUnit.Framework;
 using UnityEditor;
@@ -16,9 +17,9 @@ namespace Core.Routines.Editor
         private const int Eight = 8 * 60;
 
         // A 10x5 town and a 5x5 shop. Cell (x, y)'s drawn tile has its middle at (x + 0.5, y).
-        private static readonly RoutinePlace Home = new("base:town", "home");
-        private static readonly RoutinePlace Well = new("base:town", "well");
-        private static readonly RoutinePlace Counter = new("base:shop", "counter");
+        private const string Home = "{ map: 'base:town', anchor: 'home' }";
+        private const string Well = "{ map: 'base:town', anchor: 'well' }";
+        private const string Counter = "{ map: 'base:shop', anchor: 'counter' }";
 
         private static readonly Dictionary<string, Vector2> TownAnchors = new()
         {
@@ -47,14 +48,18 @@ namespace Core.Routines.Editor
                 new NavigationMap("base:shop", Grid(5, 5), ShopAnchors)
             }, new MapLinkGraph(links));
 
-        private DayPlan Day(params RoutineGoal[] goals)
+        /// <summary>A day of these goals, starting at <paramref name="home"/>.</summary>
+        private DayPlan DayFrom(string home, params string[] goals)
         {
-            var routine = Game.Asset<RoutineDefinition>();
-            routine.Configure("base:fabia_routine", "base:fabia", Home, null, new[] { new RoutineEntry("default", null, goals, null) });
-            return new DayPlan(routine, "default", goals.Select(goal => new PlannedGoal(goal, Home)).ToArray());
+            var routine = VulcanusJson.Populate(Game.Asset<RoutineDefinition>(),
+                $"{{ id: 'base:fabia_routine', character: 'base:fabia', home: {home}, variants: [{{ id: 'default', goals: [{string.Join(",", goals)}] }}] }}");
+            return new DayPlan(routine, "default", routine.Variants[0].Goals.Select(goal => new PlannedGoal(goal, routine.Home)).ToArray());
         }
 
-        private static RoutineGoal Goal(string id, int minute, RoutinePlace destination) => new(id, minute, null, destination, null);
+        private DayPlan Day(params string[] goals) => DayFrom(Home, goals);
+
+        private static string Goal(string id, int minute, string destination) =>
+            $"{{ id: '{id}', departAt: '{minute / 60:00}:{minute % 60:00}', destination: {destination ?? "'home'"} }}";
 
         private static RoutineTimetable Plan(DayPlan day, WorldNavigation world) =>
             RoutineTimetablePlanner.Plan(day, world, WalkSpeed, SecondsPerMinute);
@@ -68,7 +73,7 @@ namespace Core.Routines.Editor
             {
                 (false, -1, 0f, 480f), (true, 0, 480f, 486f), (false, 0, 486f, 1440f)
             }), "Six tiles at one tile per minute.");
-            Assert.That(timetable.Segments[2].Place, Is.SameAs(Well));
+            Assert.That(timetable.Segments[2].Place.ToString(), Is.EqualTo("base:town/well"));
             Assert.That(timetable.Warnings, Is.Empty);
 
             var walking = timetable.At(483);
@@ -145,11 +150,8 @@ namespace Core.Routines.Editor
             {
                 AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>("Assets/Vulcan/0204project/vulcan.project.world.asset")
             });
-            var routine = Game.Asset<RoutineDefinition>();
-            var home = new RoutinePlace("base:indoor", "anchor-1793894673996");
-            var goal = Goal("visit", Eight, new RoutinePlace("base:map-2", "anchor-1793894643329"));
-            routine.Configure("base:fabia_routine", "base:fabia", home, null, new[] { new RoutineEntry("default", null, new[] { goal }, null) });
-            var day = new DayPlan(routine, "default", new[] { new PlannedGoal(goal, home) });
+            var day = DayFrom("{ map: 'base:indoor', anchor: 'anchor-1793894673996' }",
+                Goal("visit", Eight, "{ map: 'base:map-2', anchor: 'anchor-1793894643329' }"));
 
             var timetable = RoutineTimetablePlanner.Plan(day, world, WalkSpeed, SecondsPerMinute);
 

@@ -1,0 +1,5 @@
+{
+  "$schema": "../schemas/quest-i18n.schema.json",
+  "questId": "test:fixture",
+  "messages": [ { "msgKey": "quest.test:fixture.title", "text": "Vinum für das Fest" } ]
+}

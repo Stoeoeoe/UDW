@@ -1,5 +1,6 @@
 using System.Linq;
 using Core.Common.Editor;
+using Core.Tile.Editor.Vulcanus;
 using Core.Tile.Vulcanus;
 using NUnit.Framework;
 using UnityEditor;
@@ -19,16 +20,12 @@ namespace Core.Routines.Editor
         // Where the trigger is doesn't matter for which maps are joined.
         private static MapLink Link(string from, string to, string arrivalAnchor) => new(from, to, arrivalAnchor, default);
 
-        private RoutineDefinition Routine(params RoutineGoal[] goals)
-        {
-            var routine = Game.Asset<RoutineDefinition>();
-            routine.Configure("base:fabia_routine", "base:fabia", new RoutinePlace("base:map-1", "home"), null,
-                new[] { new RoutineEntry("default", null, goals, null) });
-            return routine;
-        }
+        private RoutineDefinition Routine(params string[] goals) => VulcanusJson.Populate(Game.Asset<RoutineDefinition>(),
+            "{ id: 'base:fabia_routine', character: 'base:fabia', home: { map: 'base:map-1', anchor: 'home' }, " +
+            $"variants: [{{ id: 'default', goals: [{string.Join(",", goals)}] }}] }}");
 
-        private static RoutineGoal Goal(string id, int hour, string map) =>
-            new(id, hour * 60, null, map == null ? null : new RoutinePlace(map, "spot"), null);
+        private static string Goal(string id, int hour, string map) =>
+            $"{{ id: '{id}', departAt: '{hour:00}:00', destination: {(map == null ? "'home'" : $"{{ map: '{map}', anchor: 'spot' }}")} }}";
 
         [Test]
         public void ChainsOfLinksReachOtherMaps()

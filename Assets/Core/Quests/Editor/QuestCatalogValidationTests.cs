@@ -1,14 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using Core.Common.Editor;
+using Core.Tile.Editor.Vulcanus;
 using NUnit.Framework;
 
 namespace Core.Quests.Editor
 {
     public sealed class QuestCatalogValidationTests : GameTest
     {
-        private static string Text(string name) => $"Text for {name}";
-
         private static QuestCatalogValidation.KnownContent Known()
         {
             var known = new QuestCatalogValidation.KnownContent();
@@ -19,32 +18,27 @@ namespace Core.Quests.Editor
             return known;
         }
 
-        private QuestDefinition Quest(string giver, params QuestObjective[] objectives)
-        {
-            var quest = Game.Asset<QuestDefinition>();
-            quest.Configure("base:festival_wine", Text("title"), Text("description"), giver,
-                new[] { new QuestStep("bring", Text("bring"), objectives) });
-            return quest;
-        }
+        private QuestDefinition Quest(string giver, string objectives) => VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
+            $"{{ id: 'base:festival_wine', giver: '{giver}', steps: [{{ id: 'bring', objectives: [{objectives}] }}] }}");
 
         [Test]
         public void KnownReferencesPass()
         {
-            var quest = Quest("base:fabia",
-                QuestObjective.Talk("ask", Text("ask"), "base:fabia", "base:fabia_greeting"),
-                QuestObjective.Deliver("give", Text("give"), "base:fabia", "base:wine", 2),
-                QuestObjective.Reach("go", Text("go"), "base:map-1", "temple"));
+            var quest = Quest("base:fabia", @"
+                { id: 'ask', kind: 'talk', character: 'base:fabia', dialogue: 'base:fabia_greeting' },
+                { id: 'give', kind: 'deliver', character: 'base:fabia', item: 'base:wine', count: 2 },
+                { id: 'go', kind: 'reach', map: 'base:map-1', trigger: 'temple' }");
             Assert.That(QuestCatalogValidation.Problems(quest, Known()), Is.Empty);
         }
 
         [Test]
         public void UnknownReferencesAreReportedWithTheirPlace()
         {
-            var quest = Quest("base:nobody",
-                QuestObjective.Talk("ask", Text("ask"), "base:fabia", "base:missing_dialogue"),
-                QuestObjective.Have("carry", Text("carry"), "base:amphora", 1),
-                QuestObjective.Reach("go", Text("go"), "base:map-1", "harbour"),
-                QuestObjective.Reach("sail", Text("sail"), "base:island"));
+            var quest = Quest("base:nobody", @"
+                { id: 'ask', kind: 'talk', character: 'base:fabia', dialogue: 'base:missing_dialogue' },
+                { id: 'carry', kind: 'have', item: 'base:amphora', count: 1 },
+                { id: 'go', kind: 'reach', map: 'base:map-1', trigger: 'harbour' },
+                { id: 'sail', kind: 'reach', map: 'base:island' }");
             Assert.That(QuestCatalogValidation.Problems(quest, Known()).ToArray(), Is.EqualTo(new[]
             {
                 "Quest 'base:festival_wine': the giver 'base:nobody' is not a known character.",

@@ -1,5 +1,7 @@
 using System;
 using Core.Common;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -9,18 +11,37 @@ namespace Core.Routines
     [Serializable]
     public sealed class RoutinePlace
     {
-        [SerializeField, ReadOnly] private string mapId;
-        [SerializeField, ReadOnly] private string anchorId;
-        public string MapId => mapId;
-        public string AnchorId => anchorId;
+        [SerializeField, ReadOnly] private string map;
+        [SerializeField, ReadOnly] private string anchor;
+        public string MapId => map;
+        public string AnchorId => anchor;
 
-        public RoutinePlace(string mapId, string anchorId)
+        public override string ToString() => $"{map}/{anchor}";
+
+        /// <summary>Reads a goal's destination: "home" as an empty place, otherwise a map anchor.</summary>
+        public sealed class DestinationJsonConverter : JsonConverter<RoutinePlace>
         {
-            this.mapId = mapId;
-            this.anchorId = anchorId;
-        }
+            public override RoutinePlace ReadJson(JsonReader reader, Type objectType, RoutinePlace existingValue, bool hasExistingValue,
+                JsonSerializer serializer)
+            {
+                var place = new RoutinePlace();
+                var token = JToken.Load(reader);
+                if (token.Type == JTokenType.Object) serializer.Populate(token.CreateReader(), place);
+                return place;
+            }
 
-        public override string ToString() => $"{mapId}/{anchorId}";
+            public override void WriteJson(JsonWriter writer, RoutinePlace value, JsonSerializer serializer) =>
+                throw new NotSupportedException("Routines are only read.");
+        }
+    }
+
+    /// <summary>What a character does at a goal's destination.</summary>
+    [Serializable]
+    public sealed class RoutineActivity
+    {
+        [SerializeField, ReadOnly] private string animation;
+        /// <summary>Character animation played at the destination; empty for none.</summary>
+        public string AnimationId => animation;
     }
 
     /// <summary>One stop of a day: when to set off, where to go and what to do there.</summary>
@@ -28,40 +49,29 @@ namespace Core.Routines
     public sealed class RoutineGoal
     {
         [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly, Tooltip("Minutes after midnight.")] private int departMinute;
-        [SerializeField, ReadOnly] private string condition;
-        [SerializeField, ReadOnly, Tooltip("Goes to the routine's home instead of a destination.")] private bool toHome;
-        [SerializeField, ReadOnly] private RoutinePlace destination;
-        [SerializeField, ReadOnly] private string activityAnimationId;
-        [SerializeField, ReadOnly, Tooltip("Dialogue while walking here; empty keeps the one before.")] private string walkingDialogueId;
-        [SerializeField, ReadOnly, Tooltip("Dialogue once arrived; empty keeps the one before.")] private string dialogueId;
+        [SerializeField, ReadOnly, JsonConverter(typeof(ClockTimeJsonConverter)), Tooltip("Minutes after midnight.")]
+        private int departAt;
+        [SerializeField, ReadOnly, Validation.LuaExpression] private string condition;
+        [SerializeField, ReadOnly, JsonConverter(typeof(RoutinePlace.DestinationJsonConverter)),
+         Tooltip("Empty for the routine's home.")]
+        private RoutinePlace destination = new();
+        [SerializeField, ReadOnly] private RoutineActivity activity = new();
+        [SerializeField, ReadOnly, Tooltip("Dialogue while walking here; empty keeps the one before.")] private string walkingDialogue;
+        [SerializeField, ReadOnly, Tooltip("Dialogue once arrived; empty keeps the one before.")] private string dialogue;
 
         public string Id => id;
-        public int DepartMinute => departMinute;
+        public int DepartMinute => departAt;
         /// <summary>Read-only Lua expression; empty means always.</summary>
         public string Condition => condition;
-        public bool ToHome => toHome;
+        public bool ToHome => string.IsNullOrEmpty(destination.MapId);
         /// <summary>Null when <see cref="ToHome"/>.</summary>
-        public RoutinePlace Destination => toHome ? null : destination;
+        public RoutinePlace Destination => ToHome ? null : destination;
         /// <summary>Character animation played at the destination; empty for none.</summary>
-        public string ActivityAnimationId => activityAnimationId;
+        public string ActivityAnimationId => activity.AnimationId;
         /// <summary>Dialogue ID while walking to this goal; empty keeps the dialogue in effect before.</summary>
-        public string WalkingDialogueId => walkingDialogueId;
+        public string WalkingDialogueId => walkingDialogue;
         /// <summary>Dialogue ID once arrived; empty keeps the dialogue in effect before.</summary>
-        public string DialogueId => dialogueId;
-
-        public RoutineGoal(string id, int departMinute, string condition, RoutinePlace destination, string activityAnimationId,
-            string walkingDialogueId = null, string dialogueId = null)
-        {
-            this.id = id;
-            this.departMinute = departMinute;
-            this.condition = condition ?? "";
-            toHome = destination == null;
-            this.destination = destination;
-            this.activityAnimationId = activityAnimationId ?? "";
-            this.walkingDialogueId = walkingDialogueId ?? "";
-            this.dialogueId = dialogueId ?? "";
-        }
+        public string DialogueId => dialogue;
     }
 
     /// <summary>Goals for one kind of day: an override, a variant or a member of a <c>pickOne</c> pool.</summary>
@@ -69,79 +79,52 @@ namespace Core.Routines
     public abstract class RoutineDay
     {
         [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly] private string condition;
-        [SerializeField, ReadOnly] private RoutineGoal[] goals;
+        [SerializeField, ReadOnly, Validation.LuaExpression] private string condition;
+        [SerializeField, ReadOnly, Validation.Nested] private RoutineGoal[] goals = Array.Empty<RoutineGoal>();
 
         public string Id => id;
         /// <summary>Read-only Lua expression; empty means always.</summary>
         public string Condition => condition;
         public RoutineGoal[] Goals => goals;
-
-        protected RoutineDay(string id, string condition, RoutineGoal[] goals)
-        {
-            this.id = id;
-            this.condition = condition ?? "";
-            this.goals = goals ?? Array.Empty<RoutineGoal>();
-        }
     }
 
     /// <summary>A member of a <c>pickOne</c> pool.</summary>
     [Serializable]
     public sealed class RoutineChoice : RoutineDay
     {
-        [SerializeField, ReadOnly] private float weight;
+        [SerializeField, ReadOnly] private float weight = 1f;
         /// <summary>Relative chance of being chosen among the pool's matching members.</summary>
         public float Weight => weight;
-
-        public RoutineChoice(string id, string condition, float weight, RoutineGoal[] goals) : base(id, condition, goals) =>
-            this.weight = weight;
     }
 
     /// <summary>An override or variant: its own goals, or a pool of choices when <see cref="IsPool"/>.</summary>
     [Serializable]
     public sealed class RoutineEntry : RoutineDay
     {
-        [SerializeField, ReadOnly] private RoutineChoice[] pickOne;
+        [SerializeField, ReadOnly, Validation.Nested] private RoutineChoice[] pickOne = Array.Empty<RoutineChoice>();
         public RoutineChoice[] PickOne => pickOne;
         public bool IsPool => pickOne is { Length: > 0 };
-
-        public RoutineEntry(string id, string condition, RoutineGoal[] goals, RoutineChoice[] pickOne) : base(id, condition, goals) =>
-            this.pickOne = pickOne ?? Array.Empty<RoutineChoice>();
     }
 
     /// <summary>An NPC's daily routine authored in Vulcanus (*.routine.json). Plan a day with <see cref="RoutinePlanner"/>.</summary>
     public sealed class RoutineDefinition : ValidatedScriptableObject<RoutineValidator>
     {
         [SerializeField, ReadOnly, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
-        private string routineId;
+        private string id;
         [SerializeField, ReadOnly, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true)]
-        private string characterId;
+        private string character;
         [SerializeField, ReadOnly, Validation.Required("The source requires a home.")] private RoutinePlace home;
         [SerializeField, ReadOnly, Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
-        private string dialogueId;
-        [SerializeField, ReadOnly] private RoutineEntry[] overrides = Array.Empty<RoutineEntry>();
-        [SerializeField, ReadOnly] private RoutineEntry[] variants = Array.Empty<RoutineEntry>();
+        private string dialogue;
+        [SerializeField, ReadOnly, Validation.Nested] private RoutineEntry[] overrides = Array.Empty<RoutineEntry>();
+        [SerializeField, ReadOnly, Validation.Nested] private RoutineEntry[] variants = Array.Empty<RoutineEntry>();
 
-        public string RoutineId => routineId;
-        public string CharacterId => characterId;
+        public string RoutineId => id;
+        public string CharacterId => character;
         public RoutinePlace Home => home;
         /// <summary>Dialogue ID at the start of each day; empty when the character cannot be talked to until a goal sets one.</summary>
-        public string DialogueId => dialogueId;
+        public string DialogueId => dialogue;
         public RoutineEntry[] Overrides => overrides;
         public RoutineEntry[] Variants => variants;
-
-#if UNITY_EDITOR
-        public void Configure(string id, string character, RoutinePlace homePlace, RoutineEntry[] overrideEntries,
-            RoutineEntry[] variantEntries, string startDialogueId = null)
-        {
-            dialogueId = startDialogueId ?? "";
-            routineId = id;
-            characterId = character;
-            home = homePlace;
-            overrides = overrideEntries ?? Array.Empty<RoutineEntry>();
-            variants = variantEntries ?? Array.Empty<RoutineEntry>();
-            RequireValidConfiguration();
-        }
-#endif
     }
 }

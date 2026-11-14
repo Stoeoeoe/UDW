@@ -1,0 +1,30 @@
+{
+  "$schema": "../schemas/quest.schema.json",
+  "formatVersion": 1,
+  "id": "test:fixture",
+  "title": "Wine for the festival",
+  "description": "A quest using every objective kind.",
+  "giver": "test:fabia",
+  "onComplete": "Wallet.AddMoney(50)",
+  "steps": [
+    {
+      "id": "prepare",
+      "journal": "Get ready.",
+      "objectives": [
+        { "id": "ask", "kind": "talk", "text": "Ask Fabia", "character": "test:fabia", "dialogue": "test:fabia_greeting" },
+        { "id": "carry", "kind": "have", "text": "Wine", "item": "test:gugu", "count": 2 }
+      ],
+      "deadline": { "days": 2, "at": "18:30" },
+      "failWhen": "GameState.Story.Has('festival_over')"
+    },
+    {
+      "id": "bring",
+      "journal": "Bring the wine.",
+      "objectives": [
+        { "id": "go", "kind": "reach", "text": "Go to the square", "map": "test:map-1" },
+        { "id": "give", "kind": "deliver", "text": "Give Fabia the wine", "character": "test:fabia", "item": "test:gugu", "count": 2 },
+        { "id": "pray", "kind": "condition", "text": "Pray", "condition": "GameState.Story.Has('prayed')" }
+      ]
+    }
+  ]
+}

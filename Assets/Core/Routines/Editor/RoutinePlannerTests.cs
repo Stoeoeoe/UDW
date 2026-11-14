@@ -1,32 +1,39 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Core.Common.Editor;
+using Core.Tile.Editor.Vulcanus;
 using NUnit.Framework;
 
 namespace Core.Routines.Editor
 {
     public sealed class RoutinePlannerTests : GameTest
     {
-        private static readonly RoutinePlace Home = new("base:map-1", "right-sie");
-        private static readonly RoutinePlace Square = new("base:map-1", "fabia-destination");
+        private const string Square = "{ map: 'base:map-1', anchor: 'fabia-destination' }";
 
-        private RoutineDefinition Routine(RoutineEntry[] variants, RoutineEntry[] overrides = null, string dialogue = null)
-        {
-            var routine = Game.Asset<RoutineDefinition>();
-            routine.Configure("base:fabia_routine", "base:fabia", Home, overrides, variants, dialogue);
-            return routine;
-        }
+        private RoutineDefinition Routine(string[] variants, string[] overrides = null, string dialogue = null) =>
+            VulcanusJson.Populate(Game.Asset<RoutineDefinition>(),
+                "{ id: 'base:fabia_routine', character: 'base:fabia', home: { map: 'base:map-1', anchor: 'right-sie' }" +
+                Property("dialogue", dialogue) + $", variants: [{string.Join(",", variants)}]" +
+                (overrides == null ? "" : $", overrides: [{string.Join(",", overrides)}]") + " }");
 
-        private static RoutineGoal Goal(string id, int hour, RoutinePlace destination = null, string condition = null,
-            string activity = null) => new(id, hour * 60, condition, destination, activity);
+        private static string Goal(string id, int hour, string destination = "'home'", string condition = null,
+            string activity = null, string walkingDialogue = null, string dialogue = null) =>
+            $"{{ id: '{id}', departAt: '{hour:00}:00', destination: {destination}" + Property("condition", condition) +
+            (activity == null ? "" : $", activity: {{ animation: '{activity}' }}") +
+            Property("walkingDialogue", walkingDialogue) + Property("dialogue", dialogue) + " }";
 
-        private static RoutineEntry Fixed(string id, string condition, params RoutineGoal[] goals) => new(id, condition, goals, null);
+        private static string Fixed(string id, string condition, params string[] goals) =>
+            $"{{ id: '{id}'{Property("condition", condition)}, goals: [{string.Join(",", goals)}] }}";
 
-        private static RoutineEntry Pool(string id, string condition, params RoutineChoice[] choices) => new(id, condition, null, choices);
+        private static string Pool(string id, string condition, params string[] choices) =>
+            $"{{ id: '{id}'{Property("condition", condition)}, pickOne: [{string.Join(",", choices)}] }}";
 
-        private static RoutineChoice Choice(string id, float weight, string condition = null) =>
-            new(id, condition, weight, new[] { Goal(id, 9, Square) });
+        private static string Choice(string id, float weight, string condition = null) =>
+            $"{{ id: '{id}', weight: {weight.ToString(CultureInfo.InvariantCulture)}{Property("condition", condition)}, goals: [{Goal(id, 9, Square)}] }}";
+
+        private static string Property(string name, string value) => value == null ? "" : $", {name}: \"{value}\"";
 
         private static readonly string[] StoryFlags = { "rain", "sun", "festival", "wedding", "hungry", "dry" };
 
@@ -54,7 +61,7 @@ namespace Core.Routines.Editor
             Assert.That(plan.Goals[1].Destination, Is.SameAs(routine.Home), "\"home\" resolves to the routine's home.");
 
             Assert.That(plan.Goals.Select(goal => (goal.Id, goal.DepartMinute)), Is.EqualTo(new[] { ("visit", 480), ("back_home", 600) }));
-            Assert.That(plan.Goals[0].Destination, Is.SameAs(Square));
+            Assert.That(plan.Goals[0].Destination.ToString(), Is.EqualTo("base:map-1/fabia-destination"));
             Assert.That(plan.Goals[0].ActivityAnimationId, Is.EqualTo("base:wave2"));
         }
 
@@ -136,9 +143,9 @@ namespace Core.Routines.Editor
             var routine = Routine(new[]
             {
                 Fixed("default", null,
-                    new RoutineGoal("market", 8 * 60, null, Square, null, walkingDialogueId: "base:hurrying", dialogueId: "base:selling"),
-                    new RoutineGoal("lunch", 12 * 60, Story("hungry"), Square, null, dialogueId: "base:eating"),
-                    new RoutineGoal("back_home", 14 * 60, null, null, null))
+                    Goal("market", 8, Square, walkingDialogue: "base:hurrying", dialogue: "base:selling"),
+                    Goal("lunch", 12, Square, Story("hungry"), dialogue: "base:eating"),
+                    Goal("back_home", 14))
             }, dialogue: "base:morning");
 
             var hungry = Planner("hungry").PlanDay(routine, 1);

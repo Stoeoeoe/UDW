@@ -4,6 +4,7 @@ using Core.Common.Editor;
 using Core.Events;
 using Core.Game;
 using Core.Inventory;
+using Core.Tile.Editor.Vulcanus;
 using NUnit.Framework;
 using static Core.Common.Editor.Reflect;
 
@@ -29,7 +30,7 @@ namespace Core.Shops.Editor
             _seed = Item("test:seed", sellPrice: 0);
             _bean = Item("test:bean", sellPrice: 4);
             Game.Catalog<ItemCatalog>(_seed, _bean);
-            _shop = Shop(buysGoods: true, new ShopOffering("test:seed", 15), new ShopOffering("test:bean", 9));
+            _shop = Shop(buysGoods: true, "{ itemId: 'test:seed', price: 15 }, { itemId: 'test:bean', price: 9 }");
             Game.Catalog<ShopCatalog>(_shop);
             _shops = Game.Get<ShopService>();
             Game.State.Player.Inventory.Slots = new InventorySlotState[2];
@@ -58,12 +59,8 @@ namespace Core.Shops.Editor
             return item;
         }
 
-        private Shop Shop(bool buysGoods, params ShopOffering[] offerings)
-        {
-            var shop = Game.Asset<Shop>();
-            shop.Configure("test:shop", "Test shop", buysGoods, offerings);
-            return shop;
-        }
+        private Shop Shop(bool buysGoods, string offerings) => VulcanusJson.Populate(Game.Asset<Shop>(),
+            $"{{ id: 'test:shop', name: 'Test shop', buysGoods: {(buysGoods ? "true" : "false")}, offerings: [{offerings}] }}");
 
         [Test]
         public void OfferingsResolveTheirItemsInAuthoredOrder()
@@ -137,7 +134,7 @@ namespace Core.Shops.Editor
         [Test]
         public void AShopThatDoesNotBuyGoodsRefusesEverySale()
         {
-            var closed = Shop(buysGoods: false, new ShopOffering("test:seed", 15));
+            var closed = Shop(buysGoods: false, "{ itemId: 'test:seed', price: 15 }");
             _inventory.AddItem(_bean, 2);
             Assert.That(_shops.Sell(closed, 0, _wallet, _inventory), Is.EqualTo(ShopTradeResult.NotAccepted));
             Assert.That(_wallet.Balance, Is.EqualTo(100));
@@ -146,7 +143,7 @@ namespace Core.Shops.Editor
         [Test]
         public void AnOfferingForAnUnknownItemFailsClearly()
         {
-            var broken = Shop(buysGoods: true, new ShopOffering("test:unknown", 1));
+            var broken = Shop(buysGoods: true, "{ itemId: 'test:unknown', price: 1 }");
             Assert.That(() => _shops.GetOfferings(broken), Throws.InvalidOperationException.With.Message.Contains("test:unknown"));
         }
     }

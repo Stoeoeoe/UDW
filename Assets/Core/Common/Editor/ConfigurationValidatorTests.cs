@@ -129,7 +129,8 @@ namespace Core.Common.Editor
         public void ShopReportsDuplicateAndInvalidOfferingsTogether()
         {
             var shop = Asset<Shop>();
-            Set(shop, "offerings", new[] { new ShopOffering("test:a", 1), new ShopOffering("test:a", -1), new ShopOffering("", 1) });
+            Core.Tile.Editor.Vulcanus.VulcanusJson.Fill(shop,
+                "{ offerings: [{ itemId: 'test:a', price: 1 }, { itemId: 'test:a', price: -1 }, { itemId: '', price: 1 }] }");
             AssertError(shop, "offerings[1].itemId"); AssertError(shop, "offerings[1].price"); AssertError(shop, "offerings[2].itemId");
         }
 

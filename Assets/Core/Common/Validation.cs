@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Globalization;
+using MoonSharp.Interpreter;
 using Object = UnityEngine.Object;
 
 namespace Core.Common
@@ -160,6 +161,30 @@ namespace Core.Common
                 var memberError = new NotEmptyAttribute().GetError(memberValue);
                 return memberError == null ? null : $"Referenced member '{Member}': {memberError}";
             }
+        }
+
+        /// <summary>A Lua expression that parses, such as a condition; empty is allowed.</summary>
+        public sealed class LuaExpressionAttribute : RuleAttribute
+        {
+            public LuaExpressionAttribute(string message = null) : base(message) { }
+            internal override string GetError(object value) =>
+                LuaSyntaxError(value is string lua && !string.IsNullOrWhiteSpace(lua) ? "return (" + lua + "\n)" : null);
+        }
+
+        /// <summary>Lua statements that parse, such as actions; empty is allowed.</summary>
+        public sealed class LuaChunkAttribute : RuleAttribute
+        {
+            public LuaChunkAttribute(string message = null) : base(message) { }
+            internal override string GetError(object value) =>
+                LuaSyntaxError(value is string lua && !string.IsNullOrWhiteSpace(lua) ? lua : null);
+        }
+
+        private static string LuaSyntaxError(string chunk)
+        {
+            if (chunk == null) return null;
+            try { new Script(CoreModules.Preset_HardSandbox).LoadString(chunk); }
+            catch (InterpreterException error) { return $"Invalid Lua: {error.DecoratedMessage ?? error.Message}"; }
+            return null;
         }
 
         /// <summary>No two entries of a collection share the same value of a member, such as an ID.</summary>
