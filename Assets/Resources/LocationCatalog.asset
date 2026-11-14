@@ -25,7 +25,3 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 447913706122126786, guid: ef40c5f321e7ffe43b545e477b7f6c57, type: 3}
     enabled: 1
-  - definition: {fileID: 447913706122126786, guid: 369140c4811b0fe498847e5872798968, type: 3}
-    enabled: 1
-  - definition: {fileID: 447913706122126786, guid: de6b29fcf78341f48b889c29d07f4cfb, type: 3}
-    enabled: 1
