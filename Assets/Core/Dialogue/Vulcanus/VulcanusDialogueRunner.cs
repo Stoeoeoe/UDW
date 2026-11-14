@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Character;
 using Core.Scripting;
+using Core.TimeAndWeather;
 using UI.Shared;
 using UnityEngine;
 
@@ -10,7 +11,8 @@ namespace Core.Dialogue.Vulcanus
 {
     /// <summary>
     /// Walks an authored dialogue graph and hands each line and choice to the presenter. It is a plain session service:
-    /// the presenter, catalog and Lua runtime are injected, and the flow is an awaitable that stopping cancels.
+    /// the presenter, catalog and Lua runtime are injected, and the flow is an awaitable that stopping cancels. Game time
+    /// stands still while a dialogue runs, however it was started.
     /// </summary>
     public sealed class VulcanusDialogueRunner : IDisposable
     {
@@ -19,13 +21,15 @@ namespace Core.Dialogue.Vulcanus
         private readonly DialogueCatalog _catalog;
         private readonly IDialoguePresenter _presenter;
         private readonly VulcanusLuaDialogueScriptEngine _scriptEngine;
+        private readonly GameClock _clock;
         private CancellationTokenSource _cancellation;
         private VulcanusDialogueExecutionContext _activeContext;
         private Action _onCompleted;
 
-        public VulcanusDialogueRunner(DialogueCatalog catalog, IDialoguePresenter presenter, LuaRuntime lua)
+        public VulcanusDialogueRunner(DialogueCatalog catalog, IDialoguePresenter presenter, LuaRuntime lua, GameClock clock)
         {
             _catalog = catalog;
+            _clock = clock;
             _presenter = presenter;
             _scriptEngine = new VulcanusLuaDialogueScriptEngine(lua.CreateEngine());
             _presenter.Dismissed += StopDialogue;
@@ -106,6 +110,7 @@ namespace Core.Dialogue.Vulcanus
                 Instigator = instigator,
                 PauseWhileOpen = pauseWhileOpen
             };
+            _clock.Pause(context);
 
             var completed = false;
             var stepsWithoutInput = 0;
@@ -246,6 +251,7 @@ namespace Core.Dialogue.Vulcanus
             if (_activeContext != context) return;
             _activeContext = null;
             _onCompleted = null;
+            _clock.Resume(context);
             _presenter.OnDialogueFinished(context);
         }
     }

@@ -68,6 +68,24 @@ namespace Core.Dialogue.Vulcanus.Editor
         }
 
         [Test]
+        public void GameTimeStandsStillWhileADialogueRuns()
+        {
+            Dialogue("test:talk", new VulcanusDialogueLineNode("entry", "base:villager", "", "Hello", "", "end"),
+                new VulcanusDialogueEndNode("end"));
+            Runner();
+            var clock = Game.Get<TimeAndWeather.GameClock>();
+
+            _runner.StartDialogue("test:talk");
+            Assert.That(clock.IsPaused, Is.True, "However the dialogue was started.");
+            _presenter.FinishLine();
+            Assert.That(clock.IsPaused, Is.False);
+
+            _runner.StartDialogue("test:talk");
+            _runner.StopDialogue();
+            Assert.That(clock.IsPaused, Is.False, "Stopping a dialogue lets time run again too.");
+        }
+
+        [Test]
         public void ADialogueWithOnlyAnEndNodeFinishesBeforeStartReturns()
         {
             Dialogue("test:end", new VulcanusDialogueEndNode("entry"));

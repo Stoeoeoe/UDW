@@ -31,9 +31,8 @@ namespace Interaction.Dialogue
             if (runner.IsDialogueActive)
                 return false;
 
-            var pause = ScreenPauseMode.None;
-            if (!options.CanMoveWhileTalking) pause |= ScreenPauseMode.Character;
-            if (options.PauseGameClockWhileTalking) pause |= ScreenPauseMode.GameClock;
+            // The runner stops game time for every dialogue.
+            var pause = options.CanMoveWhileTalking ? ScreenPauseMode.None : ScreenPauseMode.Character;
             if (!runner.StartDialogue(dialogueId, instigator, pause)) return false;
 
             return true;
