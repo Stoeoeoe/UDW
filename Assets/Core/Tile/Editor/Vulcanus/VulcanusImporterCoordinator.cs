@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(17, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json", "runtime.cutscene.json", "npc.json", "character.json", "shop.json", "routine.json" }, 6100)]
+    [ScriptedImporter(17, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json", "runtime.cutscene.json", "npc.json", "character.json", "shop.json", "routine.json", "quest.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
         [SerializeField, Range(1, 128), Tooltip("Maximum baked shoreline distance in logical pixels. Appearance widths can change within this range without recalculating distances.")]
@@ -81,6 +81,12 @@ namespace Core.Tile.Editor.Vulcanus
                 if (ctx.assetPath.EndsWith(".routine.json", StringComparison.OrdinalIgnoreCase))
                 {
                     RoutineImporter.ImportRoutine(ctx);
+                    return;
+                }
+
+                if (ctx.assetPath.EndsWith(".quest.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    QuestImporter.ImportQuest(ctx);
                     return;
                 }
 

@@ -122,6 +122,9 @@ nested object's owning path; nonempty suffixes extend that path.
 - `Increasing(nameof(EntryConfiguration.Day), First = 0)`: checks finite numeric values
   in strictly increasing collection order. `First` optionally requires an exact value
   at index zero. Null collections/entries are skipped; presence rules remain separate.
+- `Unique(nameof(StepConfiguration.Id))`: reports each collection entry whose named
+  member repeats an earlier entry's value, such as duplicate IDs. Null collections,
+  entries and values are skipped; presence rules remain separate.
 
 These rules support custom messages. Only explicitly named getters are invoked;
 missing members, unreadable properties, and incompatible value types produce errors.

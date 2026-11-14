@@ -1,0 +1,301 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "quest.schema.json",
+  "title": "Quest",
+  "description": "A story quest (*.quest.json): steps run in order, each with objectives the game checks. Texts are in the source language; their message keys are derived from the IDs (quest.<quest>.title, .description, .<step>.journal, .<step>.<objective>.text), and Vulcanus writes the texts to the sibling <name>.i18n.json.",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "id",
+    "title",
+    "description",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "id": {
+      "$ref": "#/definitions/resourceId",
+      "description": "Stable identifier for this quest, with a required namespace (for example base:festival_wine)."
+    },
+    "title": {
+      "$ref": "#/definitions/text",
+      "description": "Shown in the journal and in notices."
+    },
+    "description": {
+      "$ref": "#/definitions/text",
+      "description": "What the quest is about, shown at the top of its journal entry."
+    },
+    "giver": {
+      "$ref": "#/definitions/resourceId",
+      "description": "ID of the character who gives the quest. Omit for none."
+    },
+    "onStart": {
+      "$ref": "#/definitions/lua",
+      "description": "Lua actions run when the quest starts."
+    },
+    "onComplete": {
+      "$ref": "#/definitions/lua",
+      "description": "Lua actions run when the last step is completed."
+    },
+    "onFail": {
+      "$ref": "#/definitions/lua",
+      "description": "Lua actions run when the quest fails."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Steps run in this order; the next begins when all objectives of the current one are met.",
+      "items": {
+        "$ref": "#/definitions/step"
+      }
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization. Empty string or absent = root."
+    }
+  },
+  "definitions": {
+    "resourceId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "localId": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "text": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Text in the source language, translated through its derived message key."
+    },
+    "condition": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Read-only Lua expression, for example GameState.Story.Has('festival_over')."
+    },
+    "lua": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Lua statements, like a dialogue action node."
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "id",
+        "journal",
+        "objectives"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/localId"
+        },
+        "journal": {
+          "$ref": "#/definitions/text",
+          "description": "Journal text shown when the step begins."
+        },
+        "objectives": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The step completes when all of them are met.",
+          "items": {
+            "$ref": "#/definitions/objective"
+          }
+        },
+        "deadline": {
+          "type": "object",
+          "required": [
+            "days"
+          ],
+          "additionalProperties": false,
+          "description": "The quest fails if the step isn't completed in time.",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Days after the step begins; 0 is the same day."
+            },
+            "at": {
+              "type": "string",
+              "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+              "description": "Time of day (HH:MM) on that day. Omit for the end of the day."
+            }
+          }
+        },
+        "failWhen": {
+          "$ref": "#/definitions/condition",
+          "description": "The quest fails while this holds during the step."
+        },
+        "onComplete": {
+          "$ref": "#/definitions/lua",
+          "description": "Lua actions run when the step is completed."
+        }
+      }
+    },
+    "objective": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Talk to a character, optionally playing a quest dialogue instead of their usual one.",
+          "required": [
+            "id",
+            "kind",
+            "text",
+            "character"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/localId"
+            },
+            "kind": {
+              "const": "talk"
+            },
+            "text": {
+              "$ref": "#/definitions/text"
+            },
+            "character": {
+              "$ref": "#/definitions/resourceId"
+            },
+            "dialogue": {
+              "$ref": "#/definitions/resourceId"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Talk to a character while carrying the items, which are taken.",
+          "required": [
+            "id",
+            "kind",
+            "text",
+            "character",
+            "item",
+            "count"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/localId"
+            },
+            "kind": {
+              "const": "deliver"
+            },
+            "text": {
+              "$ref": "#/definitions/text"
+            },
+            "character": {
+              "$ref": "#/definitions/resourceId"
+            },
+            "item": {
+              "$ref": "#/definitions/resourceId"
+            },
+            "count": {
+              "$ref": "#/definitions/count"
+            },
+            "dialogue": {
+              "$ref": "#/definitions/resourceId"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Carry the items.",
+          "required": [
+            "id",
+            "kind",
+            "text",
+            "item",
+            "count"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/localId"
+            },
+            "kind": {
+              "const": "have"
+            },
+            "text": {
+              "$ref": "#/definitions/text"
+            },
+            "item": {
+              "$ref": "#/definitions/resourceId"
+            },
+            "count": {
+              "$ref": "#/definitions/count"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Enter a map, or a trigger area on it.",
+          "required": [
+            "id",
+            "kind",
+            "text",
+            "map"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/localId"
+            },
+            "kind": {
+              "const": "reach"
+            },
+            "text": {
+              "$ref": "#/definitions/text"
+            },
+            "map": {
+              "$ref": "#/definitions/resourceId"
+            },
+            "trigger": {
+              "type": "string",
+              "pattern": "\\S",
+              "description": "ID of a trigger on that map. Omit for anywhere on the map."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "A read-only Lua condition holds.",
+          "required": [
+            "id",
+            "kind",
+            "text",
+            "condition"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/localId"
+            },
+            "kind": {
+              "const": "condition"
+            },
+            "text": {
+              "$ref": "#/definitions/text"
+            },
+            "condition": {
+              "$ref": "#/definitions/condition"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -5,6 +5,8 @@ using Character.Editor;
 using Core.Common;
 using Core.Music;
 using Core.Music.Editor;
+using Core.Quests;
+using Core.Quests.Editor;
 using Core.Routines;
 using Core.Routines.Editor;
 using Core.Shops;
@@ -40,6 +42,7 @@ namespace Core.Catalogs.Editor
                 case CharacterCatalog: CharacterCatalogValidation.Validate(definitions.Cast<CharacterDefinition>()); break;
                 case MusicCatalog: MusicCatalogValidation.Validate(definitions.Cast<MusicCue>()); break;
                 case RoutineCatalog: RoutineCatalogValidation.Validate(definitions.Cast<RoutineDefinition>().ToArray()); break;
+                case QuestCatalog: QuestCatalogValidation.Validate(definitions.Cast<QuestDefinition>()); break;
             }
         }
 

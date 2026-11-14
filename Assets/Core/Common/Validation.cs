@@ -162,6 +162,13 @@ namespace Core.Common
             }
         }
 
+        /// <summary>No two entries of a collection share the same value of a member, such as an ID.</summary>
+        public sealed class UniqueAttribute : RuleAttribute
+        {
+            public string Member { get; }
+            public UniqueAttribute(string member, string message = null) : base(message) => Member = member;
+        }
+
         /// <summary>Strictly increasing numeric values in a collection, with an optional exact first value.</summary>
         public sealed class IncreasingAttribute : RuleAttribute
         {

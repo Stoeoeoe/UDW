@@ -81,6 +81,11 @@ namespace Core.Common
                             CollectSequence(asset, value, setting, sequence, errors);
                             continue;
                         }
+                        if (rule is Validation.UniqueAttribute unique)
+                        {
+                            CollectUnique(asset, value, setting, unique, errors);
+                            continue;
+                        }
                         var memberType = entry.Member is FieldInfo memberField ? memberField.FieldType : ((PropertyInfo)entry.Member).PropertyType;
                         // Collection presence is independent of entry/reference validation.
                         if (value == null && typeof(ICollection).IsAssignableFrom(memberType) &&
@@ -145,6 +150,31 @@ namespace Core.Common
             }
             error = $"No readable instance member named '{name}' on {instance.GetType().Name}.";
             return false;
+        }
+
+        private static void CollectUnique(ValidatedScriptableObject asset, object value, string setting,
+            Validation.UniqueAttribute rule, List<ConfigurationError> errors)
+        {
+            if (value == null) return; // Collection presence and entries have their own rules.
+            if (value is not ICollection collection)
+            {
+                errors.Add(new ConfigurationError(asset, setting, rule.ResolveMessage("Unique requires an ICollection.")));
+                return;
+            }
+            var seen = new HashSet<object>();
+            var index = 0;
+            foreach (var element in collection)
+            {
+                var path = $"{setting}[{index}].{rule.Member}";
+                if (!IsMissing(element))
+                {
+                    if (!TryReadMember(element, rule.Member, out var memberValue, out var error))
+                        errors.Add(new ConfigurationError(asset, path, rule.ResolveMessage(error)));
+                    else if (memberValue != null && !seen.Add(memberValue))
+                        errors.Add(new ConfigurationError(asset, path, rule.ResolveMessage($"'{memberValue}' is used more than once.")));
+                }
+                index++;
+            }
         }
 
         private static void CollectSequence(ValidatedScriptableObject asset, object value, string setting,

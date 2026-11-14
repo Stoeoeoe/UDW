@@ -202,6 +202,16 @@ namespace Core.Common.Editor
         }
 
         [Test]
+        public void UniqueReportsEachRepeatedValueAndSkipsMissingEntries()
+        {
+            var asset = Create<TraversalTestAsset>();
+            asset.Distinct = new[] { new SequenceTestNode { Day = 3 }, null, new SequenceTestNode { Day = 5 }, new SequenceTestNode { Day = 3 } };
+            var error = asset.ValidateConfiguration().Single();
+            Assert.That(error.Setting, Is.EqualTo("Distinct[3].Day"));
+            Assert.That(error.Message, Is.EqualTo("'3' is used more than once."));
+        }
+
+        [Test]
         public void SequenceSkipsMissingEntriesWhileRequiredElementsReportsThem()
         {
             var asset = Create<TraversalTestAsset>();
@@ -289,6 +299,7 @@ namespace Core.Common.Editor
         [Validation.AtLeast(nameof(Minimum), "Maximum too small.")] public int Maximum = 1;
         [Validation.RequiredElements, Validation.Increasing(nameof(SequenceTestNode.Day), First = 0)]
         public SequenceTestNode[] Sequence;
+        [Validation.Unique(nameof(SequenceTestNode.Day))] public SequenceTestNode[] Distinct;
         [Validation.MemberNotEmpty(nameof(AttributeTestBase.Code))] public AttributeTestAsset Identity;
         [Validation.Nested] public NestedTestConfiguration CustomConfiguration;
     }
