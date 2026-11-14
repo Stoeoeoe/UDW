@@ -44,7 +44,7 @@
     "properties": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/PropertyDefinition"
+        "$ref": "#/definitions/PropertyDefinition"
       }
     },
     "defaultSize": {
@@ -76,7 +76,7 @@
       "type": "string"
     }
   },
-  "$defs": {
+  "definitions": {
     "PropertyDefinition": {
       "type": "object",
       "required": ["key", "label", "type", "defaultValue", "required"],
@@ -103,7 +103,7 @@
           ]
         },
         "defaultValue": {
-          "$ref": "#/$defs/PropertyValue"
+          "$ref": "#/definitions/PropertyValue"
         },
         "required": {
           "type": "boolean"
@@ -112,7 +112,7 @@
           "type": "string"
         },
         "constraints": {
-          "$ref": "#/$defs/PropertyConstraints"
+          "$ref": "#/definitions/PropertyConstraints"
         }
       }
     },
@@ -143,7 +143,7 @@
     },
     "PropertyValue": {
       "description": "A scalar, array, or object property value.",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "string"
         },
