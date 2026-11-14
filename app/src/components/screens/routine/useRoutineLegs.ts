@@ -2,22 +2,39 @@ import { useMemo } from 'react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { useProject } from '../../../hooks/useProject';
-import { computeMapNavigation, planRoute, type MapNavigation } from '../../../lib/navigationPath';
+import { computeMapNavigation, type MapNavigation } from '../../../lib/navigationPath';
+import { planWorldRoute, routeLength, type WorldLeg } from '../../../lib/worldGraph';
 import { goalRuns, resolvePlace } from '../../../lib/routines';
 import { timeLegs, walkMinutes } from '../../../lib/routineTiming';
-import { DEFAULT_WALK_SPEED, type Map as GameMap, type Tileset } from '../../../types/schema';
+import {
+  DEFAULT_WALK_SPEED,
+  type LocationLink,
+  type Map as GameMap,
+  type Tileset,
+} from '../../../types/schema';
 import type { Routine, RoutineGoal, RoutinePlace } from '../../../types/routine';
 
 type Point = [number, number];
+
+/** The part of a walk on one map, in tile units. */
+export interface LegPart {
+  mapId: string;
+  points: Point[];
+  /** The link this part ends at, to go on on another map. */
+  leaves?: LocationLink;
+}
 
 export interface RoutineLeg {
   goalIndex: number;
   from: RoutinePlace;
   to: RoutinePlace;
-  /** The walked route in tile units, or a straight stand-in when `found` is false; null without both anchors. */
-  points: Point[] | null;
+  /**
+   * The walk, one part per map. Without a walkable route on one map it is a single straight stand-in (`found` false);
+   * empty without both anchors, or when no walkable chain of links leads to another map.
+   */
+  parts: LegPart[];
   found: boolean;
-  /** In-game minutes of walking, or null when unknown (no route, another map, or no clock exported). */
+  /** In-game minutes of walking, or null when unknown (no route or no clock exported). */
   minutes: number | null;
   arriveMinute: number | null;
   problem?: string;
@@ -60,8 +77,9 @@ export function useRoutineLegs(
 
   return useMemo(() => {
     // The map open in the map editor may be newer than the copy in the map list.
-    const mapById = (id: string) =>
-      currentMap?.id === id ? currentMap : maps.find((map) => map.id === id);
+    const allMaps = maps.map((map) => (currentMap?.id === map.id ? currentMap : map));
+    if (currentMap && !maps.some((map) => map.id === currentMap.id)) allMaps.push(currentMap);
+    const mapById = (id: string) => allMaps.find((map) => map.id === id);
     const anchor = (place: RoutinePlace): Point | null =>
       mapById(place.map)?.spatialPrimitives?.anchors?.find((entry) => entry.id === place.anchor)
         ?.position ?? null;
@@ -71,24 +89,40 @@ export function useRoutineLegs(
     goals.forEach((goal, goalIndex) => {
       if (preview && !goalRuns(goal, preview)) return;
       const to = resolvePlace(routine, goal.destination);
-      const map = from.map === to.map ? mapById(to.map) : undefined;
-      const start = map ? anchor(from) : null;
-      const end = map ? anchor(to) : null;
-      let points: Point[] | null = null;
+      const start = anchor(from);
+      const end = anchor(to);
+      let parts: LegPart[] = [];
       let found = false;
-      if (map && start && end) {
-        const route = planRoute(navigationFor(map, tilesets, tileSize), start, end, tileSize);
+      if (start && end) {
+        const route: WorldLeg[] | null = planWorldRoute(
+          allMaps,
+          (map) => navigationFor(map, tilesets, tileSize),
+          { mapId: from.map, position: start },
+          { mapId: to.map, position: end },
+          tileSize,
+        );
         found = route !== null;
-        points = route ?? [
-          [start[0] / tileSize, start[1] / tileSize],
-          [end[0] / tileSize, end[1] / tileSize],
-        ];
+        if (route) parts = route.map(({ mapId, points, leaves }) => ({ mapId, points, leaves }));
+        else if (from.map === to.map)
+          parts = [
+            {
+              mapId: to.map,
+              points: [
+                [start[0] / tileSize, start[1] / tileSize],
+                [end[0] / tileSize, end[1] / tileSize],
+              ],
+            },
+          ];
       }
       const minutes =
-        found && points && clock
-          ? walkMinutes(routeLength(points), speed, clock.secondsPerInGameMinute)
+        found && clock
+          ? walkMinutes(
+              parts.reduce((sum, part) => sum + routeLength(part.points), 0),
+              speed,
+              clock.secondsPerInGameMinute,
+            )
           : null;
-      legs.push({ goalIndex, from, to, points, found, minutes });
+      legs.push({ goalIndex, from, to, parts, found, minutes });
       from = to;
     });
 
@@ -106,16 +140,24 @@ export function useRoutineLegs(
       ...timings[i],
       problem:
         timings[i].problem ??
-        (leg.points && !leg.found
-          ? 'No walkable route: check collisions around both anchors.'
+        (anchor(leg.from) && anchor(leg.to) && !leg.found
+          ? leg.from.map === leg.to.map
+            ? 'No walkable route: check collisions around both anchors.'
+            : `No walkable route to ${leg.to.map}: check the doors on the way and the collisions around them.`
           : undefined),
     }));
   }, [routine, goals, preview, maps, currentMap, tilesets, tileSize, speed, clock]);
 }
 
-function routeLength(points: Point[]): number {
-  let length = 0;
-  for (let i = 1; i < points.length; i++)
-    length += Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]);
-  return length;
+/** The doors a walk goes through, as "via "To House" to base:indoor"; null for a walk on one map. */
+export function describeDoors(leg: RoutineLeg): string | null {
+  const doors = leg.parts.flatMap((part) =>
+    part.leaves ? [`"${part.leaves.label || part.leaves.id}" to ${part.leaves.targetMapId}`] : [],
+  );
+  return doors.length ? `via ${doors.join(', then ')}` : null;
+}
+
+/** Length of the whole walk in tiles. */
+export function legLength(leg: RoutineLeg): number {
+  return leg.parts.reduce((sum, part) => sum + routeLength(part.points), 0);
 }

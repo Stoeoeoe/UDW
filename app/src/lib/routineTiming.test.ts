@@ -3,7 +3,7 @@ import { formatWalk, timeLegs, walkMinutes } from './routineTiming';
 
 describe('routine timing', () => {
   it('turns tiles into in-game minutes through walk speed and the clock rate', () => {
-    // 40 tiles at 4 tiles/s is 10 real seconds; at 5 s per in-game minute that is 2 minutes.
+    // 40 tiles at 4 tiles/s is 10 real seconds; at 5 real seconds per in-game minute that is 2 minutes.
     expect(walkMinutes(40, 4, 5)).toBe(2);
   });
 
@@ -20,7 +20,8 @@ describe('routine timing', () => {
         arriveMinute: 6 * 60 + 65,
         problem: 'Still walking until about 07:05, but back_home leaves at 07:00.',
       },
-      { goalIndex: 1, arriveMinute: 7 * 60 + 3, problem: undefined },
+      // Still walking at 07:00, she sets off home on arrival at 07:05.
+      { goalIndex: 1, arriveMinute: 7 * 60 + 8, problem: undefined },
       {
         goalIndex: 2,
         arriveMinute: 23 * 60 + 3,

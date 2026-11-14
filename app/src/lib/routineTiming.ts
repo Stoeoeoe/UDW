@@ -31,13 +31,18 @@ export interface LegTiming {
 
 /**
  * Arrival times for legs in departure order, and the legs that cannot finish before the next one starts or
- * before the day ends (the NPC goes home overnight).
+ * before the day ends (the NPC goes home overnight). A character still walking at a departure sets off again on
+ * arrival, as in Unity's timetable, so one late walk delays the ones after it.
  */
 export function timeLegs(legs: readonly TimedLeg[], endOfDayHour: number): LegTiming[] {
+  let ready = 0;
   return legs.map((leg, i) => {
-    if (leg.minutes === null || !TIME_PATTERN.test(leg.departAt))
+    if (leg.minutes === null || !TIME_PATTERN.test(leg.departAt)) {
+      ready = 0; // Unknown from here on; later legs start from their own departure.
       return { goalIndex: leg.goalIndex, arriveMinute: null };
-    const arriveMinute = minutesOf(leg.departAt) + leg.minutes;
+    }
+    const arriveMinute = Math.max(minutesOf(leg.departAt), ready) + leg.minutes;
+    ready = arriveMinute;
     const next = legs[i + 1];
     const arrival = timeOf(Math.ceil(arriveMinute) % (24 * 60));
     let problem: string | undefined;

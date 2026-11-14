@@ -141,7 +141,7 @@ describe('RoutineEditor', () => {
     renderEditor();
     expect(screen.getAllByText(/^Arrives about 06:1\d after <1 min on foot\.$/)).toHaveLength(1);
 
-    // A very slow Fabia needs hours to cross the field, so she is still walking when she should go home.
+    // A very slow Fabia needs hours to cross the field, so Fabia is still walking when it's time to go home.
     act(() => useEditorStore.setState({ characters: [{ ...fabia, walkSpeed: 0.01 }] }));
     expect(
       screen.getByText(/^Still walking until about \d\d:\d\d, but back_home leaves at 07:00\.$/),
@@ -183,7 +183,7 @@ describe('RoutineEditor', () => {
       target: { value: 'base:selling' },
     });
     expect(current().variants[0].goals![0].dialogue).toBe('base:selling');
-    // Walking home keeps what she said at the square.
+    // Walking home keeps what was said at the square.
     expect(
       (screen.getAllByLabelText('Dialogue while walking there')[1] as HTMLSelectElement).options[0]
         .text,

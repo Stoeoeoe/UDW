@@ -17,9 +17,10 @@ the routine is named after its character.
 - **Day** (middle): the selected day's ID and condition, a 24-hour strip of where the NPC is, and the goals. A goal
   can go home or to a place (map + anchor), play an activity animation from Unity's bindings, and be limited to
   some days with its own condition.
-- **Map** (right): the map of the selected goal, with every anchor, the home (⌂) and each leg of the day that stays
-  on this map. Legs show the route Unity's pathfinder would walk; a red dashed line means there is no walkable
-  route and is only a straight stand-in. Travel between maps is not drawn.
+- **Map** (right): the map of the selected goal, with every anchor, the home (⌂) and the part of each walk on this
+  map. Walks show the route Unity's pathfinder would walk; a red dashed line means there is no walkable route and is
+  only a straight stand-in. A walk across maps is drawn on each map it crosses; its part ending at a door is labelled
+  with the map it goes on to ("2 → base:indoor").
 
 ## Moving between maps
 
@@ -28,14 +29,21 @@ player. A goal on another map must be reachable through a chain of links from wh
 or the goal before); otherwise it is reported, here and at Unity's catalog refresh. `lib/worldGraph.ts` and Unity's
 `MapLinkGraph` build the same graph from the maps' links.
 
+A walk to another map goes through as few maps as possible, and is the shortest of those; links within one map are
+ignored. The goal card names the doors ("via "To House" to base:indoor"). A door is used at the walkable tile nearest
+the middle of its trigger, among the tiles the trigger covers or borders, and the walk goes on from the link's arrival
+anchor; crossing takes no time. `planWorldRoute` and `doorPosition` mirror Unity's `RoutineTimetablePlanner` and
+`NavigationMap.DoorPosition`.
+
 ## Walking times
 
 Each goal card says when the character arrives, and the day strip shows walking as a hatched part of each
-segment. Walking time is the route length divided by the character's **walk speed** (tiles per second, set in the
-character editor; empty means 4) and converted with the game clock (`clock.secondsPerInGameMinute` in Unity's
-`bindings.json`, from the `SystemRoot` prefab). A goal turns orange when the character is still walking at the
-next departure or after the day ends, or when no walkable route exists. Without the clock in the bindings,
-walking times are not shown. Walks to another map have no known duration yet.
+segment. Walking time is the length of the whole walk, across every map, divided by the character's **walk speed**
+(tiles per second, set in the character editor; empty means 4) and converted with the game clock
+(`clock.secondsPerInGameMinute` in Unity's `bindings.json`: real seconds per in-game minute, from the `SystemRoot`
+prefab). A goal turns orange when the character is still walking at the next departure or after the day ends, or
+when no walkable route exists. A character still walking at a departure sets off again on arrival, so a late
+walk delays the ones after it, as in Unity. Without the clock in the bindings, walking times are not shown.
 
 The same walk speed drives the game: Unity imports it into the character definition and uses it as the base
 walk speed (boons still modify it).

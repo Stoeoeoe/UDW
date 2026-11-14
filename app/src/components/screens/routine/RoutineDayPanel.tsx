@@ -44,6 +44,7 @@ import type { Routine, RoutineGoal } from '../../../types/routine';
 import { PlaceField } from './PlaceField';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { DialogueSelect } from './DialogueSelect';
+import { describeDoors } from './useRoutineLegs';
 import type { RoutineLeg } from './useRoutineLegs';
 import { formatWalk } from '../../../lib/routineTiming';
 import type { PlaceTarget } from './RoutineEditor';
@@ -319,23 +320,23 @@ const DayTimeline: React.FC<{
 
 /** When the NPC gets there, and why that does not work if it does not. */
 const WalkSummary: React.FC<{ leg: RoutineLeg }> = ({ leg }) => {
-  if (leg.from.map !== leg.to.map)
-    return (
-      <Text fontSize="xs" color="editorMutedText">
-        Walks to another map; travel time between maps is not known yet.
-      </Text>
-    );
   if (leg.problem)
     return (
       <Text fontSize="xs" color="orange.300">
         {leg.problem}
       </Text>
     );
-  if (leg.minutes === null || leg.arriveMinute === null) return null;
+  const doors = describeDoors(leg);
+  if (leg.minutes === null || leg.arriveMinute === null)
+    return doors ? (
+      <Text fontSize="xs" color="editorMutedText">
+        Walks {doors}.
+      </Text>
+    ) : null;
   return (
     <Text fontSize="xs" color="editorMutedText">
       Arrives about {timeOf(Math.ceil(leg.arriveMinute) % (24 * 60))} after{' '}
-      {formatWalk(leg.minutes)} on foot.
+      {formatWalk(leg.minutes)} on foot{doors ? ` ${doors}` : ''}.
     </Text>
   );
 };

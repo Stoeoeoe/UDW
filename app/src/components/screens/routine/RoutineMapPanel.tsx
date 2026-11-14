@@ -6,7 +6,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { useProject } from '../../../hooks/useProject';
 import { dayAt, resolvePlace, unusedId, type RoutineDayRef } from '../../../lib/routines';
 import { formatWalk } from '../../../lib/routineTiming';
-import type { RoutineLeg } from './useRoutineLegs';
+import { describeDoors, legLength, type RoutineLeg } from './useRoutineLegs';
 import { setDayGoals } from '../../../lib/routineEditing';
 import { LOCAL_ID_PATTERN } from '../../../lib/resourceIds';
 import type { Map as GameMap } from '../../../types/schema';
@@ -58,8 +58,17 @@ export const RoutineMapPanel: React.FC<{
   }, [focusPlace.map, selectedGoal]);
   const map = mapById(viewMapId);
 
-  // Legs that stay on the shown map; the others are described in words.
-  const routes = legs.filter((leg) => leg.points && leg.to.map === viewMapId);
+  // The parts of each walk on the shown map; a walk across maps is drawn on each map it crosses.
+  const routes = legs.flatMap((leg) =>
+    leg.parts
+      .filter((part) => part.mapId === viewMapId)
+      .map((part) => ({
+        ...part,
+        goalIndex: leg.goalIndex,
+        found: leg.found,
+        problem: leg.problem,
+      })),
+  );
   const toTiles = ([x, y]: Point): Point => [x / tileSize, y / tileSize];
 
   const overlays: MapPreviewOverlay[] = [];
@@ -77,16 +86,18 @@ export const RoutineMapPanel: React.FC<{
     const selected = selectedGoal === route.goalIndex;
     overlays.push({
       kind: 'route',
-      points: route.points!,
+      points: route.points,
       color: route.found && !route.problem ? ROUTE_COLOR : MISSING_COLOR,
       dashed: !route.found,
       opacity: selectedGoal === null || selected ? 1 : 0.35,
     });
-    const end = route.points![route.points!.length - 1];
+    const end = route.points[route.points.length - 1];
     overlays.push({
       kind: 'waypoint',
       position: [end[0], end[1] - 0.9],
-      label: String(route.goalIndex + 1),
+      label: route.leaves
+        ? `${route.goalIndex + 1} → ${route.leaves.targetMapId}`
+        : String(route.goalIndex + 1),
     });
   }
 
@@ -94,13 +105,12 @@ export const RoutineMapPanel: React.FC<{
     if (selectedGoal === null) return null;
     const leg = legs.find((entry) => entry.goalIndex === selectedGoal);
     if (!leg) return 'This goal is skipped in the previewed day.';
-    if (leg.from.map !== leg.to.map)
-      return `Goes from ${leg.from.map} to ${leg.to.map}; travel between maps is not drawn.`;
-    if (leg.to.map !== viewMapId) return null;
-    if (!leg.points) return 'The start or destination anchor is missing on this map.';
+    if (!leg.found && leg.from.map !== leg.to.map) return leg.problem ?? null;
+    if (!leg.parts.length) return 'The start or destination anchor is missing.';
     if (!leg.found)
       return 'No walkable route: the dashed line is only a straight stand-in. Check collisions around both anchors.';
-    const length = `Route of ${Math.round(routeLength(leg.points))} tiles`;
+    const doors = describeDoors(leg);
+    const length = `Route of ${Math.round(legLength(leg))} tiles${doors ? ` ${doors}` : ''}`;
     return leg.minutes === null
       ? `${length}. Walking time needs the game clock from Unity's bindings.`
       : `${length}, ${formatWalk(leg.minutes)} on foot.`;
@@ -185,7 +195,7 @@ export const RoutineMapPanel: React.FC<{
 
   const focus: Point[] = routes
     .filter((route) => selectedGoal === null || route.goalIndex === selectedGoal)
-    .flatMap((route) => route.points ?? []);
+    .flatMap((route) => route.points);
 
   return (
     <VStack align="stretch" spacing={2} h="full" minH={0} p={3}>
@@ -275,10 +285,3 @@ export const RoutineMapPanel: React.FC<{
     </VStack>
   );
 };
-
-function routeLength(points: Point[]): number {
-  let length = 0;
-  for (let i = 1; i < points.length; i++)
-    length += Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]);
-  return length;
-}
