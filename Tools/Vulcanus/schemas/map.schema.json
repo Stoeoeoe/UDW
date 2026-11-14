@@ -1,0 +1,1096 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "map.schema.json",
+  "title": "Map",
+  "description": "A map file (.vmap). Layer tile data may be dense (2D array) or sparse (object with 'sparse: true'). Terrain data uses a palette index when 'terrainPalette' is present.",
+  "type": "object",
+  "required": [
+    "version",
+    "id",
+    "name",
+    "width",
+    "height",
+    "baseTilesetId",
+    "tilesetRefs",
+    "layers",
+    "entities"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "File format version.",
+      "minimum": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Lowercase qualified resource ID, e.g. base:mycharacter."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name."
+    },
+    "width": {
+      "type": "integer",
+      "description": "Map width in tiles.",
+      "minimum": 1
+    },
+    "height": {
+      "type": "integer",
+      "description": "Map height in tiles.",
+      "minimum": 1
+    },
+    "baseTilesetId": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
+      "description": "ID of the primary tileset for this map."
+    },
+    "tilesetRefs": {
+      "type": "array",
+      "description": "Ordered list of tileset IDs referenced by encoded tile data. A tile ref encodes as (tilesetIndex << 16) | tileIndex.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Layer"
+      }
+    },
+    "entities": {
+      "type": "array",
+      "description": "Top-level entity instances (not bound to an entity layer).",
+      "items": {
+        "$ref": "#/$defs/EntityInstance"
+      }
+    },
+    "locationLinks": {
+      "type": "array",
+      "description": "Map transition links (doors, exits, portals).",
+      "items": {
+        "$ref": "#/$defs/LocationLink"
+      }
+    },
+    "spatialPrimitives": {
+      "$ref": "#/$defs/SpatialPrimitives"
+    },
+    "variations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Variation"
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/MapMetadata"
+    },
+    "folderPath": {
+      "type": "string",
+      "description": "Virtual folder path for workspace organization (e.g. 'World/Dungeon'). Empty string or absent = root."
+    },
+    "$schema": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "Layer": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "visible",
+        "locked",
+        "opacity",
+        "zOrder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "visual",
+            "object",
+            "collision",
+            "navigation",
+            "metadata",
+            "entity",
+            "terrain",
+            "water"
+          ]
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "zOrder": {
+          "type": "integer"
+        },
+        "sortingLayer": {
+          "type": "string",
+          "enum": ["ground", "above"],
+          "description": "Sorting bucket at runtime for visual/tile layers. 'ground' uses fixed zOrder; 'above' always renders on top. Default 'ground'. Object layers (kind='object') handle their own Y-sorting."
+        },
+        "icon": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
+          "description": "Reference to a LayerDefinition in project"
+        },
+        "data": {
+          "description": "Encoded tile IDs, row-major [y][x]. Either a dense 2D array of integers/nulls or a sparse encoding object.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": ["integer", "null"]
+                }
+              }
+            },
+            {
+              "$ref": "#/$defs/SparseLayerData"
+            }
+          ]
+        },
+        "waterBodies": {
+          "type": "array",
+          "description": "Water layers only: the named bodies of water. A mask value n refers to waterBodies[n - 1].",
+          "maxItems": 255,
+          "items": {
+            "$ref": "#/$defs/WaterBody"
+          }
+        },
+        "waterMask": {
+          "$ref": "#/$defs/WaterMask"
+        },
+        "objectGroups": {
+          "type": "array",
+          "description": "Connected painted tiles stored as first-class groups for object-sorted layers.",
+          "items": {
+            "$ref": "#/$defs/ObjectGroup"
+          }
+        },
+        "objectInstances": {
+          "type": "array",
+          "description": "Placed reusable object instances for object-sorted layers. Instance positions are stored in pixels.",
+          "items": {
+            "$ref": "#/$defs/MapObjectInstance"
+          }
+        },
+        "terrainPalette": {
+          "type": "array",
+          "description": "Unique terrain IDs used in this layer (sorted). Present only when terrain data uses palette encoding.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "terrainData": {
+          "description": "Parallel grid of terrain IDs per cell. When 'terrainPalette' is present, values are integer indices into the palette; otherwise values are terrain ID strings (legacy format).",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": ["integer", "null"]
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": ["string", "null"]
+                }
+              }
+            }
+          ]
+        },
+        "entities": {
+          "type": "array",
+          "description": "Entity instances on this layer (entity layers only).",
+          "items": {
+            "$ref": "#/$defs/EntityInstance"
+          }
+        }
+      }
+    },
+    "ObjectGroup": {
+      "type": "object",
+      "required": ["id", "tiles"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "tiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ObjectGroupTile"
+          }
+        }
+      }
+    },
+    "ObjectGroupTile": {
+      "type": "object",
+      "required": ["x", "y", "tilesetId", "tileIndex"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tilesetId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "tileIndex": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "MapObjectInstance": {
+      "type": "object",
+      "required": ["id", "tilesetId", "objectDefinitionId", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "tilesetId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "objectDefinitionId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "x": {
+          "type": "integer",
+          "description": "Pixel X coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map."
+        },
+        "y": {
+          "type": "integer",
+          "description": "Pixel Y coordinate of the object's top-left origin. May be negative when an object intentionally overhangs the map."
+        }
+      }
+    },
+    "SparseLayerData": {
+      "type": "object",
+      "description": "Compact encoding for layers where >50% of cells are null.",
+      "required": ["sparse", "width", "height", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "sparse": {
+          "type": "boolean",
+          "const": true
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "entries": {
+          "type": "array",
+          "description": "Non-null cell values. Cells not listed are implicitly null.",
+          "items": {
+            "type": "object",
+            "required": ["x", "y", "v"],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "v": {
+                "type": "integer",
+                "description": "Encoded tile ref: (tilesetIndex << 16) | tileIndex."
+              }
+            }
+          }
+        }
+      }
+    },
+    "EntityInstance": {
+      "type": "object",
+      "required": ["id", "typeId", "position", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "typeId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y].",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": {
+          "type": "number",
+          "description": "Degrees, 0â€“360.",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "layerId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "description": "Key-value property bag.",
+          "additionalProperties": {
+            "$ref": "#/$defs/PropertyValue"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeScope": {
+          "$ref": "#/$defs/TimeScope"
+        }
+      }
+    },
+    "TimeScope": {
+      "type": "object",
+      "required": ["startTime", "endTime"],
+      "additionalProperties": false,
+      "properties": {
+        "startTime": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "endTime": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "seasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "LocationLink": {
+      "type": "object",
+      "required": ["id", "triggerId", "targetMapId", "targetAnchorId"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "linkType": {
+          "type": "string",
+          "enum": ["door", "open"],
+          "default": "door",
+          "description": "Door requires Interact; open activates on player contact."
+        },
+        "triggerId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
+          "description": "References a MapTrigger on this map."
+        },
+        "targetMapId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
+          "description": "ID of the target map."
+        },
+        "targetAnchorId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
+          "description": "ID of an Anchor on the target map. Defines arrival position/facing."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SpatialPrimitives": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Path"
+          }
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Area"
+          }
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Anchor"
+          }
+        },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MapTrigger"
+          }
+        },
+        "collisions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MapCollision"
+          }
+        }
+      }
+    },
+    "MapTrigger": {
+      "type": "object",
+      "required": ["id", "type", "shape", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["locationLinkTrigger", "cutscene"]
+        },
+        "shape": {
+          "type": "string",
+          "enum": ["rectangle", "polygon"]
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y]. Top-left for rectangle, first vertex for polygon.",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "size": {
+          "type": "array",
+          "description": "Pixel [width, height]. Only for rectangle shape.",
+          "items": {
+            "type": "number",
+            "minimum": 1
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "points": {
+          "type": "array",
+          "description": "Absolute pixel vertices. Only for polygon shape.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cutsceneId": {
+          "type": "string",
+          "pattern": "^[^\\s:]+:[^\\s]+$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cutscene"
+              }
+            }
+          },
+          "then": {
+            "required": ["cutsceneId"]
+          },
+          "else": {
+            "not": {
+              "required": ["cutsceneId"]
+            }
+          }
+        }
+      ]
+    },
+    "MapCollision": {
+      "type": "object",
+      "required": ["id", "shape", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "shape": {
+          "type": "string",
+          "enum": ["rectangle", "polygon", "circle"]
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y]. Top-left for rectangle, center for circle, first vertex for polygon.",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "size": {
+          "type": "array",
+          "description": "Pixel [width, height]. Only for rectangle shape.",
+          "items": {
+            "type": "number",
+            "minimum": 1
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "radius": {
+          "type": "number",
+          "description": "Radius in pixels. Only for circle shape.",
+          "minimum": 1
+        },
+        "points": {
+          "type": "array",
+          "description": "Absolute pixel vertices. Only for polygon shape.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "WaterMask": {
+      "type": "object",
+      "description": "Hand-drawn water at the project's logical resolution (tileSize pixels per tile), row-major from the top-left.",
+      "required": ["width", "height", "rle"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "rle": {
+          "type": "array",
+          "description": "Flat [value, run, value, run, ...] pairs. Value 0 is empty; value n is waterBodies[n - 1]. Runs sum to width*height.",
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "WaterBody": {
+      "type": "object",
+      "required": ["id", "name", "waterType", "isFreshwater", "flow"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Unique within the layer." },
+        "name": { "type": "string" },
+        "waterType": { "type": "string", "description": "WaterProfile name, e.g. Lake_1." },
+        "isFreshwater": { "type": "boolean", "description": "Cells that are mostly this body refill watering cans." },
+        "bankProfile": { "type": "string", "description": "Unity bank profile name. Empty or absent draws no bank." },
+        "flow": {
+          "type": "array",
+          "description": "Freehand currents. None means the water type's uniform flow applies.",
+          "items": { "$ref": "#/$defs/FlowStroke" }
+        }
+      }
+    },
+    "FlowStroke": {
+      "type": "object",
+      "description": "A current drawn along the water. The first point is where water enters and the last is where it leaves.",
+      "required": ["id", "points", "width", "speed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "width": { "type": "number", "exclusiveMinimum": 0, "description": "Influence radius in map pixels." },
+        "speed": { "type": "number", "exclusiveMinimum": 0, "description": "Relative speed; 1 is the water type's flow speed." }
+      }
+    },
+    "Path": {
+      "type": "object",
+      "required": ["id", "name", "points", "closed", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Area": {
+      "type": "object",
+      "required": ["id", "name", "shape", "points", "priority", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "shape": {
+          "type": "string",
+          "enum": ["rectangle", "polygon"]
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Anchor": {
+      "type": "object",
+      "required": ["id", "name", "position", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "description": "Absolute pixel coordinates [x, y].",
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "facing": {
+          "type": "array",
+          "description": "Normalized facing vector [x, y].",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Variation": {
+      "type": "object",
+      "required": ["id", "kind", "displayName"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["season", "generic"]
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "tilesetSuffix": {
+          "type": "string"
+        },
+        "layerOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/LayerOverride"
+          },
+          "propertyNames": {
+            "type": "string"
+          }
+        },
+        "entityOverrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityOverride"
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/PropertyValue"
+          },
+          "properties": {
+            "baseTilesetIdOverride": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "LayerOverride": {
+      "type": "object",
+      "required": ["data", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": ["string", "null"]
+            }
+          }
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["replace", "merge"]
+        }
+      }
+    },
+    "EntityOverride": {
+      "type": "object",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["add", "remove", "modify"]
+        },
+        "entityId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "entity": {
+          "$ref": "#/$defs/PartialEntityInstance"
+        }
+      }
+    },
+    "MapMetadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/PropertyValue"
+      },
+      "properties": {
+        "locationType": {
+          "type": "string",
+          "enum": ["Indoor", "Outdoor"],
+          "default": "Outdoor"
+        },
+        "muteWeatherAudio": {
+          "type": "boolean",
+          "default": false,
+          "description": "Mute weather ambience in this location without muting other game audio."
+        },
+        "description": {
+          "type": "string"
+        },
+        "music": {
+          "type": "string"
+        },
+        "musicCue": {
+          "type": "string",
+          "description": "Namespaced enabled MusicCue ID. Requires musicPreset when assigned."
+        },
+        "musicPreset": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Preset ID belonging to the assigned music cue."
+        },
+        "ambience": {
+          "type": "string"
+        },
+        "world": {
+          "$ref": "#/$defs/WorldMapMetadata"
+        },
+        "entryPoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "position"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+              },
+              "position": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        },
+        "exitPoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "targetMap", "targetPosition"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+              },
+              "targetMap": {
+                "type": "string",
+                "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+              },
+              "targetPosition": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    "WorldMapMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "included": {
+          "type": "boolean"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["world", "indoor", "special"]
+        }
+      }
+    },
+    "PropertyValue": {
+      "description": "A scalar, array, or object property value.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean", "null"]
+          }
+        }
+      ]
+    },
+    "PartialEntityInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "typeId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "position": {
+          "type": "array",
+          "description": "Absolute pixel coordinates [x, y].",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rotation": {
+          "type": "number",
+          "description": "Degrees, 0â€“360.",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "layerId": {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "description": "Key-value property bag.",
+          "additionalProperties": {
+            "$ref": "#/$defs/PropertyValue"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeScope": {
+          "$ref": "#/$defs/TimeScope"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,891 @@
+import { z } from 'zod';
+import { matchesStoryType, storyDataSchema, STORY_VALUE_TYPE } from './storyValues';
+import { validateLuaChunk } from './luaRunner';
+import {
+  CUTSCENE_CONDITION_ACTION,
+  CUTSCENE_PARALLEL_ACTION,
+  isConditionalStep,
+  isParallelStep,
+} from '../types/cutscene';
+import { allCutsceneSteps } from './cutsceneBranches';
+import {
+  cutsceneGraphSchema,
+  graphPhases,
+  phaseSteps as graphPhaseSteps,
+  validateGraphPlan,
+} from './cutsceneGraph';
+import {
+  cutsceneVariableSchema,
+  cutsceneDataSchema,
+  actionForCutsceneStep,
+  variableCompatible,
+  validVariableValue,
+  parallelVariableConflicts,
+} from './cutsceneVariables';
+import {
+  mapPositionSchema,
+  pixelPositionSchema,
+  positionPickerMetadata,
+  isAnchorPosition,
+  mapPathSchema,
+  pathPickerMetadata,
+} from './mapPosition';
+import {
+  getManifestActions,
+  parseScriptingManifest,
+  type ScriptingResources,
+} from './scriptingManifest';
+import type {
+  Cutscene,
+  CutsceneAction,
+  CutsceneDiagnostic,
+  CutsceneStep,
+  CompletionPlacement,
+  CompletionFacing,
+} from '../types/cutscene';
+import type { PositionArgument } from './mapPosition';
+import type { EntityInstance, EntityType, Map as GameMap } from '../types/schema';
+
+const nonblank = z.string().regex(/\S/, 'Must not be blank');
+const completionFacing = z.enum(['preserve', 'North', 'East', 'South', 'West']).optional();
+const completionPlacementSchema = z.union([
+  z.object({ character: nonblank, anchor: nonblank, facing: completionFacing }).strict(),
+  z
+    .object({ character: nonblank, position: pixelPositionSchema, facing: completionFacing })
+    .strict(),
+]);
+
+export function completionPosition(placement: CompletionPlacement): PositionArgument | '' {
+  return placement.anchor !== undefined
+    ? placement.anchor
+      ? { anchor: placement.anchor }
+      : ''
+    : placement.position;
+}
+
+export function completionPlacement(
+  character: string,
+  position: PositionArgument | '',
+  facing?: CompletionFacing,
+): CompletionPlacement {
+  const placement: CompletionPlacement = isAnchorPosition(position)
+    ? { character, anchor: position.anchor }
+    : { character, position };
+  if (facing !== undefined) placement.facing = facing;
+  return placement;
+}
+const stepSchema = z
+  .object({
+    id: nonblank,
+    action: nonblank.refine(
+      (action) => action !== CUTSCENE_CONDITION_ACTION && action !== CUTSCENE_PARALLEL_ACTION,
+      'Control blocks require their child action lists',
+    ),
+    arguments: z.record(
+      z.string(),
+      z.union([
+        z.string(), // Story values allow empty strings; required IDs are checked against the action signature.
+        z.number().finite(),
+        z.boolean(),
+        mapPositionSchema,
+        mapPathSchema,
+        storyDataSchema,
+        z.null(),
+        cutsceneDataSchema,
+      ]),
+    ),
+    argumentVariables: z.record(z.string(), nonblank).optional(),
+    resultVariables: z.array(nonblank.nullable()).optional(),
+  })
+  .strict();
+const conditionalSchema = z
+  .object({
+    id: nonblank,
+    action: z.literal(CUTSCENE_CONDITION_ACTION),
+    arguments: z.object({ condition: nonblank }).strict(),
+    then: z.array(stepSchema),
+    else: z.array(stepSchema),
+  })
+  .strict();
+const parallelSchema = z
+  .object({
+    id: nonblank,
+    action: z.literal(CUTSCENE_PARALLEL_ACTION),
+    arguments: z.object({}).strict(),
+    tracks: z
+      .array(z.array(stepSchema).min(1, 'Add at least one action to each track'))
+      .min(2, 'Parallel blocks require at least two tracks'),
+  })
+  .strict();
+export function actionsForCutscenePhase(
+  actions: CutsceneAction[],
+  phase: 'setup' | 'sequence' | 'completion',
+) {
+  return actions.filter(
+    (action) =>
+      action.contexts.includes('cutscene') &&
+      action.phases?.includes(phase) &&
+      (phase === 'sequence' || action.execution === 'immediate'),
+  );
+}
+const editorMetadataSchema = z
+  .object({
+    labels: z.record(z.string(), z.string()),
+    folders: z.record(z.string(), z.string()).optional(),
+  })
+  .strict();
+export function readCutsceneMetadata(raw: unknown) {
+  if (raw === null) return { labels: {}, folders: {} };
+  const metadata = editorMetadataSchema.parse(raw);
+  return { labels: metadata.labels, folders: metadata.folders ?? {} };
+}
+export function readCutsceneLabels(raw: unknown): Record<string, string> {
+  return readCutsceneMetadata(raw).labels;
+}
+export const cutsceneSchema = z
+  .object({
+    $schema: nonblank,
+    formatVersion: z.literal(2),
+    id: z.string().regex(/^[^\s:]+:[^\s]+$/, 'Use namespace:name'),
+    mapId: nonblank,
+    allowSkip: z.boolean(),
+    variables: z.array(cutsceneVariableSchema).optional(),
+    transition: z
+      .object({
+        enabled: z.boolean(),
+      })
+      .strict()
+      .optional(),
+    onStart: z.array(stepSchema).optional(),
+    onComplete: z
+      .object({
+        steps: z.array(stepSchema),
+        characterPlacements: z.array(completionPlacementSchema),
+      })
+      .strict(),
+    sequence: z.array(z.union([stepSchema, conditionalSchema, parallelSchema])),
+    graphs: z
+      .object({
+        onStart: cutsceneGraphSchema.optional(),
+        sequence: cutsceneGraphSchema.optional(),
+        completion: cutsceneGraphSchema.optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+export function readCutsceneActions(raw: unknown): CutsceneAction[] {
+  return getManifestActions(parseScriptingManifest(raw), 'cutscene');
+}
+
+export function parseCutscene(raw: unknown): Cutscene {
+  if (raw && typeof raw === 'object' && 'formatVersion' in raw && raw.formatVersion === 1) {
+    const legacy = cutsceneSchema
+      .extend({
+        formatVersion: z.literal(1),
+        onComplete: z
+          .object({
+            actions: z.string(),
+            characterPlacements: z.array(
+              z.object({ character: nonblank, anchor: nonblank }).strict(),
+            ),
+          })
+          .strict(),
+      })
+      .parse(raw);
+    if (legacy.onComplete.actions.trim())
+      throw new Error(
+        `Cutscene ${legacy.id}: version 1 completion Lua requires manual conversion to typed completion steps. The source file has not been changed.`,
+      );
+    raw = {
+      ...legacy,
+      formatVersion: 2,
+      onComplete: { steps: [], characterPlacements: legacy.onComplete.characterPlacements },
+    };
+  }
+
+  const result = cutsceneSchema.safeParse(raw);
+  if (!result.success) throw new Error(`Invalid cutscene source: ${result.error.message}`);
+  if (!result.data.sequence.length && !result.data.graphs?.sequence)
+    throw new Error('The sequence needs at least one step or an execution graph');
+  for (const phase of graphPhases)
+    if (result.data.graphs?.[phase] && graphPhaseSteps(result.data, phase).length)
+      throw new Error(`${phase}: a graph and list cannot both own a phase`);
+  const ids = [
+    ...allCutsceneSteps(result.data).map((step) => step.id),
+    ...Object.values(result.data.graphs ?? {}).flatMap(
+      (graph) =>
+        graph?.nodes
+          .filter((n) => ['action', 'lua', 'branch', 'parallel'].includes(n.kind))
+          .map((n) => n.id) ?? [],
+    ),
+  ];
+  const variableNames = result.data.variables?.map((variable) => variable.name) ?? [];
+  if (new Set(variableNames).size !== variableNames.length)
+    throw new Error(`Cutscene ${result.data.id}: duplicate variable name`);
+  if (new Set(ids).size !== ids.length)
+    throw new Error(
+      `Cutscene ${result.data.id}: duplicate step ID across setup, sequence and completion`,
+    );
+  const characters = result.data.onComplete.characterPlacements.map((p) => p.character);
+  if (new Set(characters).size !== characters.length)
+    throw new Error(`Cutscene ${result.data.id}: duplicate endpoint character`);
+  return result.data;
+}
+
+export function mapCharacterInstances(map: GameMap, entityTypes: EntityType[]): EntityInstance[] {
+  // The shipped importer creates characters for NPC entities. Ordinary props and
+  // character definitions are not live character bindings.
+  const npcTypes = new Set(entityTypes.filter((t) => t.category === 'npc').map((t) => t.id));
+  const byId = new Map<string, EntityInstance>();
+  for (const entity of [...map.entities, ...map.layers.flatMap((l) => l.entities ?? [])]) {
+    if (npcTypes.has(entity.typeId)) byId.set(entity.id, entity);
+  }
+  return [...byId.values()];
+}
+
+export interface CutsceneReferences {
+  graphFunctions?: CutsceneAction[];
+  storyValues?: readonly import('../types/schema').StoryValueDefinition[];
+  resources?: ScriptingResources;
+  tileSize?: number;
+  maps: GameMap[];
+  entityTypes: EntityType[];
+  dialogueIds: string[];
+}
+
+export function validateCutsceneTriggers(map: GameMap, scenes: readonly Cutscene[]): string[] {
+  const errors: string[] = [];
+  for (const trigger of map.spatialPrimitives?.triggers ?? []) {
+    if (trigger.type !== 'cutscene') {
+      if (trigger.cutsceneId !== undefined)
+        errors.push(`Trigger ${trigger.id}: only cutscene triggers may reference a cutscene`);
+      continue;
+    }
+    const scene = scenes.find((s) => s.id === trigger.cutsceneId);
+    if (!scene)
+      errors.push(`Trigger ${trigger.id}: missing cutscene ${trigger.cutsceneId ?? '(none)'}`);
+    else if (scene.mapId !== map.id)
+      errors.push(`Trigger ${trigger.id}: cutscene ${scene.id} belongs to another map`);
+    if (map.locationLinks?.some((l) => l.triggerId === trigger.id))
+      errors.push(`Trigger ${trigger.id}: cannot also be a location link`);
+  }
+  return errors;
+}
+
+export function validateCutscene(
+  raw: unknown,
+  actions: CutsceneAction[],
+  refs: CutsceneReferences,
+): CutsceneDiagnostic[] {
+  const shape = cutsceneSchema.safeParse(raw);
+  if (!shape.success)
+    return shape.error.issues
+      .flatMap((issue) => {
+        // Union failures otherwise hide useful track errors behind "Invalid input".
+        if (issue.code === 'invalid_union') {
+          const candidate = raw as Partial<Cutscene>;
+          const block =
+            issue.path[0] === 'sequence' && typeof issue.path[1] === 'number'
+              ? candidate?.sequence?.[issue.path[1]]
+              : undefined;
+          if (block && isParallelStep(block))
+            return (
+              parallelSchema.safeParse(block).error?.issues.map((child) => ({
+                ...child,
+                path: [...issue.path, ...child.path],
+              })) ?? [issue]
+            );
+        }
+        return [issue];
+      })
+      .map((issue) => {
+        const completion = issue.path[0] === 'onComplete' && issue.path[1] === 'steps';
+        const index = completion ? issue.path[2] : issue.path[1];
+        const phase = completion
+          ? ('completion' as const)
+          : issue.path[0] === 'onStart'
+            ? ('setup' as const)
+            : ('sequence' as const);
+        const candidate = raw as Partial<Cutscene>;
+        const list = completion
+          ? candidate?.onComplete?.steps
+          : phase === 'setup'
+            ? candidate?.onStart
+            : candidate?.sequence;
+        let step = typeof index === 'number' ? list?.[index] : undefined;
+        const trackIndex = issue.path.indexOf('tracks');
+        if (
+          step &&
+          trackIndex >= 0 &&
+          typeof issue.path[trackIndex + 1] === 'number' &&
+          typeof issue.path[trackIndex + 2] === 'number'
+        )
+          step =
+            step.tracks?.[issue.path[trackIndex + 1] as number]?.[
+              issue.path[trackIndex + 2] as number
+            ] ?? step;
+        const argumentIndex = issue.path.indexOf('arguments');
+        const argumentName = argumentIndex >= 0 ? issue.path[argumentIndex + 1] : undefined;
+        const parameter = actions
+          .find((a) => a.id === step?.action)
+          ?.parameters.find((p) => p.name === argumentName);
+        const value = typeof argumentName === 'string' ? step?.arguments[argumentName] : undefined;
+        const invalidWaypoint = Array.isArray(value)
+          ? value.findIndex((p) => !mapPositionSchema.safeParse(p).success)
+          : -1;
+        return {
+          path: issue.path.join('.'),
+          message:
+            issue.path[0] === 'onComplete' && issue.path[1] === 'characterPlacements'
+              ? 'Final position requires a character and either an anchor or integer pixel coordinates'
+              : parameter?.type === 'path'
+                ? invalidWaypoint >= 0
+                  ? `Waypoint ${invalidWaypoint + 1}: choose integer map pixels or a map anchor`
+                  : 'Add at least one valid waypoint'
+                : issue.message,
+          stepId: step?.id,
+          ...(step ? { phase } : {}),
+        };
+      });
+  const scene: Cutscene = shape.data;
+  if (!scene.sequence.length && !scene.graphs?.sequence)
+    return [{ path: 'sequence', message: 'Add at least one sequence step' }];
+  if (scene.graphs && Object.keys(scene.graphs).length) {
+    const projected = structuredClone(scene);
+    delete projected.graphs;
+    try {
+      for (const phase of graphPhases) {
+        const graph = scene.graphs[phase];
+        if (!graph) continue;
+        if (graphPhaseSteps(scene, phase).length)
+          throw new Error(`${phase}: a graph and list cannot both own a phase`);
+        const plan = validateGraphPlan(
+          graph,
+          scene,
+          [...actions, ...(refs.graphFunctions ?? [])],
+          phase,
+        );
+        projected.variables = [...(projected.variables ?? []), ...plan.variables.slice(scene.variables?.length ?? 0)];
+        if (phase === 'sequence') projected.sequence = plan.steps;
+        else if (phase === 'onStart') projected.onStart = plan.steps;
+        else projected.onComplete.steps = plan.steps;
+        for (const node of graph.nodes)
+          if (node.kind === 'expression' || node.kind === 'lua') {
+            const errors = validateLuaChunk(
+              node.kind === 'expression'
+                ? `return (${node.expression || ''})`
+                : node.expression || '',
+            );
+            if (!errors.ok) throw new Error(`${node.id}: ${errors.error}`);
+          }
+      }
+      return validateCutscene(projected, actions, refs);
+    } catch (error) {
+      return [{ path: 'graphs', message: (error as Error).message }];
+    }
+  }
+  const diagnostics: CutsceneDiagnostic[] = [];
+  const report = (path: string, message: string, stepId?: string) =>
+    diagnostics.push({
+      path,
+      message,
+      stepId,
+      ...(stepId
+        ? {
+            phase: path.startsWith('onComplete.steps')
+              ? ('completion' as const)
+              : path.startsWith('onStart')
+                ? ('setup' as const)
+                : ('sequence' as const),
+          }
+        : {}),
+    });
+  const map = refs.maps.find((m) => m.id === scene.mapId);
+  if (!map) report('mapId', `Map ${scene.mapId} does not exist`);
+  const characters = new Set([
+    'player',
+    ...(map ? mapCharacterInstances(map, refs.entityTypes).map((a) => a.id) : []),
+  ]);
+  const anchors = new Set(map?.spatialPrimitives?.anchors?.map((a) => a.id) ?? []);
+  const dialogues = new Set(refs.dialogueIds);
+  const seen = new Set<string>();
+  const dynamicSpawns = scene.onStart?.some(
+    (step) =>
+      step.action === 'characters.spawn' && Object.keys(step.argumentVariables ?? {}).length > 0,
+  );
+  const variableNames = new Set<string>();
+  for (const [index, variable] of (scene.variables ?? []).entries()) {
+    if (variableNames.has(variable.name))
+      report(`variables.${index}.name`, 'Duplicate cutscene variable name');
+    variableNames.add(variable.name);
+  }
+  const phaseSteps = [
+    ...(scene.onStart ?? []).map((step, index) => ({ step, index, section: 'onStart' as const })),
+    ...scene.sequence.flatMap((step, index) => [
+      { step, index, section: 'sequence' as const, nestedPath: '' },
+      ...(step.then ?? []).map((child, childIndex) => ({
+        step: child,
+        index,
+        section: 'sequence' as const,
+        nestedPath: `.then.${childIndex}`,
+      })),
+      ...(step.else ?? []).map((child, childIndex) => ({
+        step: child,
+        index,
+        section: 'sequence' as const,
+        nestedPath: `.else.${childIndex}`,
+      })),
+      ...(step.tracks ?? []).flatMap((track, trackIndex) =>
+        track.map((child, childIndex) => ({
+          step: child,
+          index,
+          section: 'sequence' as const,
+          nestedPath: `.tracks.${trackIndex}.${childIndex}`,
+        })),
+      ),
+    ]),
+    ...scene.onComplete.steps.map((step, index) => ({
+      step,
+      index,
+      section: 'onComplete.steps' as const,
+    })),
+  ];
+  phaseSteps.forEach((entry) => {
+    const { step, index, section } = entry;
+    const path = `${section}.${index}${'nestedPath' in entry ? entry.nestedPath : ''}`;
+    if (seen.has(step.id)) report(`${path}.id`, 'Duplicate step ID', step.id);
+    seen.add(step.id);
+    if (isParallelStep(step)) {
+      for (const conflict of parallelVariableConflicts(step.tracks!))
+        report(path, conflict, step.id);
+      const claims = new Map<string, number>();
+      step.tracks!.forEach((track, trackIndex) => {
+        for (const child of track) {
+          if (child.action === 'cutscene.runLua')
+            report(
+              `${path}.tracks.${trackIndex}`,
+              'Run Lua must be outside parallel blocks because its writes cannot be checked for conflicts',
+              child.id,
+            );
+          const action = actions.find((candidate) => candidate.id === child.action);
+          const resources = (action?.parameters ?? [])
+            .filter(
+              (parameter) =>
+                parameter.semanticType === 'characterRef' &&
+                parameter.name === 'character' &&
+                !child.argumentVariables?.[parameter.name],
+            )
+            .map((parameter) => `character:${child.arguments[parameter.name]}`);
+          if (child.action === 'dialogue.play') resources.push('dialogue');
+          if (child.action.startsWith('story.') && typeof child.arguments.key === 'string')
+            resources.push(`story:${child.arguments.key}`);
+          for (const resource of resources) {
+            const owner = claims.get(resource);
+            if (owner !== undefined && owner !== trackIndex)
+              report(
+                `${path}.tracks.${trackIndex}`,
+                `Track ${trackIndex + 1} conflicts with track ${owner + 1} on '${resource}'`,
+                child.id,
+              );
+            claims.set(resource, trackIndex);
+          }
+        }
+      });
+      return;
+    }
+    if (isConditionalStep(step)) {
+      const condition = step.arguments.condition;
+      const syntax = validateLuaChunk(`return (${condition})`);
+      if (!syntax.ok)
+        report(
+          `${path}.arguments.condition`,
+          `Lua condition syntax error: ${syntax.error}`,
+          step.id,
+        );
+      return;
+    }
+    const action = actionForCutsceneStep(scene, step, actions);
+    if (!action) {
+      report(path, `Unsupported cutscene action ${step.action}`, step.id);
+      return;
+    }
+    const phase =
+      section === 'onStart' ? 'setup' : section === 'onComplete.steps' ? 'completion' : 'sequence';
+    if (!actionsForCutscenePhase([action], phase).length)
+      report(path, `Action ${step.action} is not allowed in ${phase}`, step.id);
+    for (const name of Object.keys(step.arguments)) {
+      if (!action.parameters.some((p) => p.name === name))
+        report(`${path}.arguments.${name}`, 'Unknown argument', step.id);
+    }
+    for (const name of Object.keys(step.argumentVariables ?? {})) {
+      if (!action.parameters.some((parameter) => parameter.name === name))
+        report(`${path}.argumentVariables.${name}`, 'Unknown argument', step.id);
+      if (Object.prototype.hasOwnProperty.call(step.arguments, name))
+        report(
+          `${path}.argumentVariables.${name}`,
+          'Choose a literal or a variable, not both',
+          step.id,
+        );
+    }
+    if (step.resultVariables !== undefined) {
+      const outputs = action.outputs ?? [];
+      if (!outputs.length || outputs.length !== step.resultVariables.length)
+        report(
+          `${path}.resultVariables`,
+          'Result destinations must match the action outputs',
+          step.id,
+        );
+      const targets = new Set<string>();
+      step.resultVariables.forEach((name, index) => {
+        if (name === null) return;
+        const variable = scene.variables?.find((entry) => entry.name === name);
+        if (
+          !variable ||
+          !outputs[index] ||
+          !variableCompatible(outputs[index], variable) ||
+          targets.has(name)
+        )
+          report(
+            `${path}.resultVariables.${index}`,
+            `Invalid or incompatible result destination '${name}'`,
+            step.id,
+          );
+        targets.add(name);
+      });
+    }
+    const destination =
+      step.action === 'cutscene.setVariable'
+        ? scene.variables?.find((variable) => variable.name === step.arguments.name)
+        : undefined;
+    if (step.action === 'cutscene.setVariable') {
+      if (!destination)
+        report(`${path}.arguments.name`, 'Select a declared cutscene variable', step.id);
+      if (step.argumentVariables?.name)
+        report(
+          `${path}.argumentVariables.name`,
+          'Set Variable requires a literal destination name',
+          step.id,
+        );
+    }
+    const storyKey = step.arguments.key;
+    const declaration = refs.storyValues?.find((entry) => entry.key === storyKey);
+    if (declaration && step.action === 'story.set') {
+      const value = step.arguments.value;
+      if (!matchesStoryType(value, declaration.type))
+        report(
+          `${path}.arguments.value`,
+          `Story value '${declaration.key}' requires ${declaration.type} as declared in Data`,
+          step.id,
+        );
+    }
+    for (const parameter of action.parameters) {
+      const authoredValue = step.arguments[parameter.name];
+      const value =
+        authoredValue === undefined && parameter.optional === true
+          ? parameter.defaultValue
+          : authoredValue;
+      const argumentPath = `${path}.arguments.${parameter.name}`;
+      const linked = step.argumentVariables?.[parameter.name];
+      if (linked) {
+        const variable = scene.variables?.find((entry) => entry.name === linked);
+        if (
+          !variable ||
+          !variableCompatible(
+            variable,
+            destination && parameter.name === 'value' ? destination : parameter,
+          )
+        )
+          report(
+            `${path}.argumentVariables.${parameter.name}`,
+            `Variable '${linked}' does not match ${parameter.name} (${parameter.type})`,
+            step.id,
+          );
+        continue;
+      }
+      if (destination && parameter.name === 'value') {
+        if (!validVariableValue(destination, value))
+          report(argumentPath, `Value must match ${destination.type}`, step.id);
+        continue;
+      }
+      if (parameter.type === STORY_VALUE_TYPE) {
+        if (!storyDataSchema.safeParse(value).success)
+          report(
+            argumentPath,
+            'Expected a boolean, string, finite number or string-keyed story object',
+            step.id,
+          );
+        continue;
+      }
+      if (parameter.type === 'boolean') {
+        if (typeof value !== 'boolean')
+          report(argumentPath, 'Expected a boolean argument', step.id);
+        if (parameter.semanticType || parameter.picker || parameter.resourceType)
+          report(argumentPath, 'Boolean parameters cannot use reference pickers', step.id);
+        continue;
+      }
+      if (
+        value === null &&
+        parameter.type === 'position' &&
+        parameter.nullable === true &&
+        positionPickerMetadata(parameter)
+      )
+        continue;
+      if (parameter.semanticType === 'characterDeclaration') {
+        if (phase !== 'setup')
+          report(argumentPath, 'Character declarations are only allowed in setup', step.id);
+        if (typeof value !== 'string' || !value.trim())
+          report(argumentPath, 'Enter a new character name', step.id);
+        else if (characters.has(value))
+          report(argumentPath, `Duplicate character name: ${value}`, step.id);
+        continue;
+      }
+      if (parameter.type === 'path') {
+        if (!pathPickerMetadata(parameter))
+          report(argumentPath, 'Unsupported map path picker metadata', step.id);
+        const path = mapPathSchema.safeParse(value);
+        if (!path.success) report(argumentPath, 'Add at least one valid waypoint', step.id);
+        else
+          path.data.forEach((point, index) => {
+            const pointPath = `${argumentPath}.${index}`;
+            if (isAnchorPosition(point)) {
+              if (!anchors.has(point.anchor))
+                report(pointPath, `Waypoint ${index + 1}: missing anchor ${point.anchor}`, step.id);
+            } else if (
+              map &&
+              (point.x >= map.width * (refs.tileSize ?? 16) ||
+                point.y >= map.height * (refs.tileSize ?? 16))
+            )
+              report(
+                pointPath,
+                `Waypoint ${index + 1}: position is outside the selected map`,
+                step.id,
+              );
+          });
+        continue;
+      }
+      if (parameter.type === 'position') {
+        if (!positionPickerMetadata(parameter))
+          report(argumentPath, 'Unsupported map position picker metadata', step.id);
+        const position = mapPositionSchema.safeParse(value);
+        if (!position.success)
+          report(argumentPath, 'Choose integer map-pixel coordinates or a map anchor', step.id);
+        else if (isAnchorPosition(position.data)) {
+          if (!anchors.has(position.data.anchor))
+            report(argumentPath, `Missing anchor: ${position.data.anchor}`, step.id);
+        } else if (
+          map &&
+          (position.data.x >= map.width * (refs.tileSize ?? 16) ||
+            position.data.y >= map.height * (refs.tileSize ?? 16))
+        )
+          report(argumentPath, 'Position is outside the selected map', step.id);
+        continue;
+      }
+      if (parameter.type === 'number') {
+        if (typeof value !== 'number' || !Number.isFinite(value))
+          report(argumentPath, 'Enter a finite number', step.id);
+        if (parameter.semanticType || parameter.picker || parameter.resourceType)
+          report(argumentPath, 'Numeric parameters cannot use reference pickers', step.id);
+        continue;
+      }
+      if (parameter.type !== 'string') {
+        report(argumentPath, `Unsupported parameter type ${parameter.type}`, step.id);
+        continue;
+      }
+      if (parameter.resourceType) {
+        const list = refs.resources?.[parameter.resourceType];
+        if (!list)
+          report(
+            argumentPath,
+            `Missing resource list "${parameter.resourceType}" in Lua manifest`,
+            step.id,
+          );
+        if (typeof value !== 'string' || !value.trim())
+          report(argumentPath, 'Required resource ID', step.id);
+        else if (list && !list.some((entry) => entry.id === value))
+          report(argumentPath, `Missing ${parameter.resourceType} resource: ${value}`, step.id);
+        continue;
+      }
+      const pair = `${parameter.semanticType ?? ''}/${parameter.picker ?? ''}`;
+      if (pair === 'lua/lua') {
+        if (typeof value !== 'string' || !value.trim()) {
+          report(argumentPath, 'Enter a Lua script', step.id);
+        } else {
+          const syntax = validateLuaChunk(value);
+          if (!syntax.ok)
+            report(argumentPath, `Lua syntax error: ${syntax.error ?? 'Invalid script'}`, step.id);
+        }
+        continue;
+      }
+      const values =
+        pair === 'characterRef/mapCharacter'
+          ? characters
+          : pair === 'anchorRef/mapAnchor'
+            ? anchors
+            : pair === 'dialogueRef/dialogue'
+              ? dialogues
+              : null;
+      if ((parameter.semanticType || parameter.picker) && !values)
+        report(argumentPath, `Unsupported picker ${pair}`, step.id);
+      if (typeof value !== 'string') {
+        report(argumentPath, 'Expected a string argument', step.id);
+        continue;
+      }
+      if (!value.trim()) {
+        report(argumentPath, 'Must not be blank', step.id);
+        continue;
+      }
+      if (
+        values &&
+        !values.has(value) &&
+        !(dynamicSpawns && parameter.semanticType === 'characterRef')
+      )
+        report(argumentPath, `Missing ${parameter.semanticType}: ${value}`, step.id);
+    }
+    // Declarations become visible only after the entire setup step, independently of parameter order.
+    if (phase === 'setup' && actionsForCutscenePhase([action], phase).length)
+      for (const p of action.parameters.filter(
+        (p) => p.type === 'string' && p.semanticType === 'characterDeclaration',
+      )) {
+        const name = step.arguments[p.name];
+        if (typeof name === 'string' && name.trim() && !characters.has(name)) characters.add(name);
+      }
+  });
+  const endpoints = new Set<string>();
+  scene.onComplete.characterPlacements.forEach((p, index) => {
+    const path = `onComplete.characterPlacements.${index}`;
+    if (endpoints.has(p.character)) report(path, `Duplicate endpoint for ${p.character}`);
+    endpoints.add(p.character);
+    if (!characters.has(p.character)) report(path, `Missing character instance ${p.character}`);
+    const position = completionPosition(p);
+    if (isAnchorPosition(position)) {
+      if (!anchors.has(position.anchor)) report(path, `Missing anchor ${position.anchor}`);
+    } else if (
+      map &&
+      position &&
+      (position.x >= map.width * (refs.tileSize ?? 16) ||
+        position.y >= map.height * (refs.tileSize ?? 16))
+    ) {
+      report(path, 'Final position is outside the selected map');
+    }
+  });
+  for (const candidate of refs.maps)
+    for (const trigger of candidate.spatialPrimitives?.triggers ?? []) {
+      if (trigger.type !== 'cutscene' || trigger.cutsceneId !== scene.id) continue;
+      if (candidate.id !== scene.mapId)
+        report(`trigger.${trigger.id}`, 'Trigger and cutscene must belong to the same map');
+      if (candidate.locationLinks?.some((link) => link.triggerId === trigger.id))
+        report(`trigger.${trigger.id}`, 'Cutscene trigger cannot also be a location link');
+    }
+  return diagnostics;
+}
+
+/** Deterministic typed source; Lua compilation and escaping belong to Unity. */
+export function exportCutscene(
+  scene: Cutscene,
+  actions: CutsceneAction[],
+  refs: CutsceneReferences,
+): Cutscene {
+  const diagnostics = validateCutscene(scene, actions, refs);
+  if (diagnostics.length)
+    throw new Error(
+      `Cutscene ${scene.id}: ${diagnostics.map((d) => `${d.phase ? `${d.phase} ` : ''}${d.stepId ?? d.path}: ${d.message}`).join('; ')}`,
+    );
+  const serializeStep = (step: CutsceneStep): CutsceneStep =>
+    isParallelStep(step)
+      ? {
+          id: step.id,
+          action: CUTSCENE_PARALLEL_ACTION,
+          arguments: {},
+          tracks: step.tracks!.map((track) => track.map(serializeStep)),
+        }
+      : isConditionalStep(step)
+        ? {
+            id: step.id,
+            action: CUTSCENE_CONDITION_ACTION,
+            arguments: { condition: step.arguments.condition },
+            then: step.then!.map(serializeStep),
+            else: step.else!.map(serializeStep),
+          }
+        : {
+            id: step.id,
+            action: step.action,
+            arguments: Object.fromEntries(
+              actionForCutsceneStep(scene, step, actions)!
+                .parameters.filter((p) => !step.argumentVariables?.[p.name])
+                .map((p) => [p.name, step.arguments[p.name]]),
+            ),
+            ...(step.argumentVariables ? { argumentVariables: { ...step.argumentVariables } } : {}),
+            ...(step.resultVariables ? { resultVariables: [...step.resultVariables] } : {}),
+          };
+  return {
+    $schema: '../schemas/cutscene.schema.json',
+    formatVersion: 2,
+    id: scene.id,
+    mapId: scene.mapId,
+    allowSkip: scene.allowSkip,
+    ...(scene.variables !== undefined ? { variables: structuredClone(scene.variables) } : {}),
+    ...(scene.transition ? { transition: { ...scene.transition } } : {}),
+    ...(scene.onStart !== undefined ? { onStart: scene.onStart.map(serializeStep) } : {}),
+    onComplete: {
+      steps: scene.onComplete.steps.map(serializeStep),
+      characterPlacements: scene.onComplete.characterPlacements.map((p) =>
+        completionPlacement(p.character, completionPosition(p), p.facing),
+      ),
+    },
+    sequence: scene.sequence.map(serializeStep),
+    ...(scene.graphs ? { graphs: structuredClone(scene.graphs) } : {}),
+  };
+}
+
+export function createCutsceneStep(action: CutsceneAction): CutsceneStep {
+  return {
+    id: `beat-${crypto.randomUUID()}`,
+    action: action.id,
+    arguments: Object.fromEntries(
+      action.parameters.map((p) => [
+        p.name,
+        p.optional === true && p.defaultValue !== undefined
+          ? p.defaultValue
+          : p.type === 'boolean'
+            ? false
+            : p.type === 'position' && p.nullable === true
+              ? null
+              : p.type === 'path'
+                ? []
+                : '',
+      ]),
+    ),
+  };
+}
+
+/** Scope is authored setup order; no declaration can shadow a live map role. */
+export function declaredCharactersBefore(
+  scene: Cutscene,
+  actions: CutsceneAction[],
+  existing: readonly string[],
+  stepId?: string,
+): string[] {
+  const known = new Set(existing);
+  const names: string[] = [];
+  for (const step of scene.onStart ?? []) {
+    if (step.id === stepId) break;
+    const action = actions.find((a) => a.id === step.action);
+    if (!action || !actionsForCutscenePhase([action], 'setup').length) continue;
+    for (const p of action.parameters) {
+      const value = step.arguments[p.name];
+      if (
+        p.type === 'string' &&
+        p.semanticType === 'characterDeclaration' &&
+        typeof value === 'string' &&
+        value.trim() &&
+        !known.has(value)
+      ) {
+        known.add(value);
+        names.push(value);
+      }
+    }
+  }
+  return names;
+}

@@ -1,0 +1,615 @@
+import {
+  resourceFileKey,
+  resourceRegistry,
+  resourceSchemaPath,
+  normalizeProject,
+  normalizeResourceDocument,
+} from '../lib/resourceRegistry';
+import { create } from 'zustand';
+import { useWorkspaceStore } from './useWorkspaceStore';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { immer } from 'zustand/middleware/immer';
+import { subscribeWithSelector, devtools } from 'zustand/middleware';
+import { castDraft } from 'immer';
+import { temporal, type TemporalState } from 'zundo';
+import { EditorState, ValidationError, EditorMode } from '../types/editor';
+import { Project, Map as GameMap, Tileset } from '../types/schema';
+import { recentProjects } from '../lib/recentProjects';
+import { resolveEntities } from '../lib/mapUtils';
+import { fileSystem } from '../lib/fileSystem';
+import { registerSaveAccessors, saveMapDebounced, saveDialogueImmediate } from '../lib/saveManager';
+import { migrateTilesetOnLoad } from '../lib/tilesetMigration';
+import {
+  getPreferredSelectedLayerId,
+  syncToolStateForSelectedLayer,
+  pendingTilesetSaves,
+  withHistorySuppressed,
+  registerTemporalStore,
+} from './storeHelpers';
+import { loadProjectResources, loadSprite } from './projectLoader';
+import { createCutsceneSlice, CutsceneSlice } from './slices/cutsceneSlice';
+import { createCharacterSlice, CharacterSlice } from './slices/characterSlice';
+import { createItemSlice, ItemSlice } from './slices/itemSlice';
+import { createShopSlice, ShopSlice } from './slices/shopSlice';
+import { createRoutineSlice, RoutineSlice } from './slices/routineSlice';
+import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
+import { createEmotionSlice, EmotionSlice } from './slices/emotionSlice';
+import { createTerrainSlice, TerrainSlice } from './slices/terrainSlice';
+import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice';
+import { createLayerDefinitionSlice, LayerDefinitionSlice } from './slices/layerDefinitionSlice';
+import { createToolSlice, ToolSlice } from './slices/toolSlice';
+import { createTilePaintSlice, TilePaintSlice } from './slices/tilePaintSlice';
+import { createWaterSlice, WaterSlice } from './slices/waterSlice';
+import { createTilesetSlice, TilesetSlice } from './slices/tilesetSlice';
+import { createEntityInstanceSlice, EntityInstanceSlice } from './slices/entityInstanceSlice';
+import {
+  createMapSlice,
+  MapSlice,
+  createLocationLinkSlice,
+  LocationLinkSlice,
+} from './slices/mapSlice';
+import { createLayerSlice, LayerSlice } from './slices/layerSlice';
+import { createTriggerSlice, TriggerSlice } from './slices/triggerSlice';
+import { createCollisionSlice, CollisionSlice } from './slices/collisionSlice';
+
+// ============================================================================
+// Store interface
+// ============================================================================
+
+export interface EditorStore
+  extends
+    CutsceneSlice,
+    CharacterSlice,
+    ItemSlice,
+    ShopSlice,
+    RoutineSlice,
+    ItemClassSlice,
+    EmotionSlice,
+    TerrainSlice,
+    EntityTypeSlice,
+    LayerDefinitionSlice,
+    ToolSlice,
+    TilePaintSlice,
+    WaterSlice,
+    TilesetSlice,
+    EntityInstanceSlice,
+    MapSlice,
+    LocationLinkSlice,
+    LayerSlice,
+    TriggerSlice,
+    CollisionSlice {
+  // Fields from EditorState not owned by any slice
+  project: Project | null;
+  projectPath: string | null;
+  resourcesLoaded: boolean;
+  resourceLoadingLabel: string | null;
+  resourceLoadingProgress: number;
+  mode: EditorMode;
+  loadedSprites: globalThis.Map<string, HTMLImageElement>;
+  selectedEntityTypeId: string | null;
+  panels: EditorState['panels'];
+  validationErrors: ValidationError[];
+  dialogues: globalThis.Map<string, import('../types/schema').DialogueDocument>;
+  selectedDialogueId: string | null;
+  selectedDialogueNodeId: string | null;
+
+  // Project actions
+  loadProject: (path: string, project: Project) => Promise<void>;
+  closeProject: () => void;
+  loadProjectResources: () => Promise<void>;
+  loadSprite: (path: string, blob: Blob) => Promise<string>;
+  updateProject: (project: Project) => Promise<void>;
+
+  // Dialogue actions
+  updateDialogueFolderPath: (dialogueId: string, folderPath: string) => Promise<void>;
+
+  // Misc
+  validate: () => ValidationError[];
+}
+
+// ============================================================================
+// History machinery
+// ============================================================================
+
+type EditorHistorySnapshot = { currentMap: GameMap | null; maps: GameMap[] };
+
+const UNDO_HISTORY_LIMIT = 50;
+let historyBatchDepth = 0;
+
+function finalizeHistoryBatchSave(): void {
+  if (historyBatchDepth > 0) {
+    useEditorStore.temporal.getState().pause();
+  }
+}
+
+function syncEditorSelectionsWithMap(): void {
+  useEditorStore.setState((state) => {
+    const currentMap = state.currentMap;
+
+    if (!currentMap) {
+      state.selectedLayerId = null;
+      state.selectedEntityId = null;
+      state.selectedObjectInstanceId = null;
+      state.selectedLinkId = null;
+      state.selectedAnchorId = null;
+      state.selectedTriggerId = null;
+      state.selectedCollisionId = null;
+      state.activeVariationId = null;
+      return;
+    }
+
+    if (state.activeVariationId) {
+      const hasVariation = currentMap.variations?.some((v) => v.id === state.activeVariationId);
+      if (!hasVariation) state.activeVariationId = null;
+    }
+
+    if (state.selectedLayerId && !currentMap.layers.some((l) => l.id === state.selectedLayerId)) {
+      state.selectedLayerId = getPreferredSelectedLayerId(currentMap);
+    }
+    if (!state.selectedLayerId) {
+      state.selectedLayerId = getPreferredSelectedLayerId(currentMap);
+    }
+
+    syncToolStateForSelectedLayer(state);
+
+    if (state.selectedLinkId) {
+      const hasLink = currentMap.locationLinks?.some((l) => l.id === state.selectedLinkId) ?? false;
+      if (!hasLink) state.selectedLinkId = null;
+    }
+
+    if (state.selectedAnchorId) {
+      const hasAnchor = currentMap.spatialPrimitives?.anchors?.some(
+        (anchor) => anchor.id === state.selectedAnchorId,
+      );
+      if (!hasAnchor) state.selectedAnchorId = null;
+    }
+
+    if (state.selectedTriggerId) {
+      const hasTrigger = currentMap.spatialPrimitives?.triggers?.some(
+        (t) => t.id === state.selectedTriggerId,
+      );
+      if (!hasTrigger) state.selectedTriggerId = null;
+    }
+
+    if (state.selectedCollisionId) {
+      const hasCollision = currentMap.spatialPrimitives?.collisions?.some(
+        (c) => c.id === state.selectedCollisionId,
+      );
+      if (!hasCollision) state.selectedCollisionId = null;
+    }
+
+    if (state.selectedEntityId) {
+      const hasEntity = resolveEntities(currentMap, state.activeVariationId).some(
+        (e) => e.id === state.selectedEntityId,
+      );
+      if (!hasEntity) state.selectedEntityId = null;
+    }
+
+    if (state.selectedObjectInstanceId) {
+      const hasObjectInstance = currentMap.layers.some((layer) =>
+        (layer.objectInstances ?? []).some(
+          (instance) => instance.id === state.selectedObjectInstanceId,
+        ),
+      );
+      if (!hasObjectInstance) state.selectedObjectInstanceId = null;
+    }
+  });
+}
+
+export function beginEditorHistoryBatch(): void {
+  historyBatchDepth += 1;
+  if (historyBatchDepth === 1) {
+    useEditorStore.temporal.getState().resume();
+  }
+}
+
+export function endEditorHistoryBatch(): void {
+  if (historyBatchDepth === 0) return;
+  historyBatchDepth -= 1;
+  if (historyBatchDepth === 0) {
+    useEditorStore.temporal.getState().resume();
+  }
+}
+
+export function undoEditorChange(): void {
+  endEditorHistoryBatch();
+  const previousMaps = useEditorStore.getState().maps;
+  useEditorStore.temporal.getState().undo();
+  saveRestoredMaps(previousMaps);
+  syncEditorSelectionsWithMap();
+}
+
+export function redoEditorChange(): void {
+  endEditorHistoryBatch();
+  const previousMaps = useEditorStore.getState().maps;
+  useEditorStore.temporal.getState().redo();
+  saveRestoredMaps(previousMaps);
+  syncEditorSelectionsWithMap();
+}
+
+// A connection can create anchors and a return link on a second map in the same edit.
+function saveRestoredMaps(previousMaps: GameMap[]): void {
+  const { maps, currentMap } = useEditorStore.getState();
+  for (const map of maps) {
+    if (
+      map.id !== currentMap?.id &&
+      map !== previousMaps.find((previous) => previous.id === map.id)
+    ) {
+      saveMapDebounced(map);
+    }
+  }
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select' ||
+    target.closest('[contenteditable="true"]') !== null
+  );
+}
+
+export function runEditorHistoryCommand(
+  command: 'undo' | 'redo',
+  target?: EventTarget | null,
+): boolean {
+  const state = useEditorStore.getState();
+  if (
+    isEditableTarget(target ?? (typeof document !== 'undefined' ? document.activeElement : null))
+  ) {
+    return false;
+  }
+  const workspace = useWorkspaceStore.getState();
+  const activeDocument = workspace.tabs.find((tab) => tab.id === workspace.activeTabId)?.document;
+  const cutsceneId =
+    activeDocument?.kind === 'cutscene'
+      ? activeDocument.cutsceneId
+      : state.mode === 'cutscenes'
+        ? state.selectedCutsceneId
+        : null;
+  if (cutsceneId) {
+    if (command === 'undo') state.undoCutscene(cutsceneId);
+    else state.redoCutscene(cutsceneId);
+    return true;
+  }
+  if (activeDocument?.kind === 'shop') {
+    if (command === 'undo') state.undoShop(activeDocument.shopId);
+    else state.redoShop(activeDocument.shopId);
+    return true;
+  }
+  if (activeDocument?.kind === 'routine') {
+    if (command === 'undo') state.undoRoutine(activeDocument.routineId);
+    else state.redoRoutine(activeDocument.routineId);
+    return true;
+  }
+  if (state.mode !== 'maps' || !state.currentMap) return false;
+  if (command === 'undo') undoEditorChange();
+  else redoEditorChange();
+  return true;
+}
+
+export function useEditorHistory<T>(
+  selector: (state: TemporalState<EditorHistorySnapshot>) => T,
+  equality?: (left: T, right: T) => boolean,
+): T {
+  return useStoreWithEqualityFn(useEditorStore.temporal, selector, equality);
+}
+
+function isTrackedHistoryEqual(
+  pastState: EditorHistorySnapshot,
+  currentState: EditorHistorySnapshot,
+): boolean {
+  return pastState.currentMap === currentState.currentMap;
+}
+
+// ============================================================================
+// Store creation
+// ============================================================================
+
+export const useEditorStore = create<EditorStore>()(
+  temporal(
+    devtools(
+      subscribeWithSelector(
+        immer((set, get) => ({
+          // ── Slices ────────────────────────────────────────────────────────
+          ...createCutsceneSlice(set, get, {} as never),
+          ...createCharacterSlice(set, get, {} as never),
+          ...createItemSlice(set, get, {} as never),
+          ...createShopSlice(set, get, {} as never),
+          ...createRoutineSlice(set, get, {} as never),
+          ...createItemClassSlice(set, get, {} as never),
+          ...createEmotionSlice(set, get, {} as never),
+          ...createTerrainSlice(set, get, {} as never),
+          ...createEntityTypeSlice(set, get, {} as never),
+          ...createLayerDefinitionSlice(set, get, {} as never),
+          ...createToolSlice(set, get, {} as never),
+          ...createTilePaintSlice(set, get, {} as never),
+          ...createWaterSlice(set, get, {} as never),
+          ...createTilesetSlice(set, get, {} as never),
+          ...createEntityInstanceSlice(set, get, {} as never),
+          ...createMapSlice(set, get, {} as never),
+          ...createLocationLinkSlice(set, get, {} as never),
+          ...createLayerSlice(set, get, {} as never),
+          ...createTriggerSlice(set, get, {} as never),
+          ...createCollisionSlice(set, get, {} as never),
+
+          // ── Initial state not owned by slices ─────────────────────────────
+          project: null,
+          projectPath: null,
+          resourcesLoaded: false,
+          resourceLoadingLabel: null,
+          resourceLoadingProgress: 0,
+          mode: 'project' as EditorMode,
+          loadedSprites: new globalThis.Map(),
+          selectedEntityTypeId: null,
+          panels: {
+            layersOpen: true,
+            tilesetPaletteOpen: true,
+            entitiesOpen: true,
+            inspectorOpen: true,
+            variationsOpen: true,
+          },
+          dialogues: new globalThis.Map(),
+          selectedDialogueId: null,
+          selectedDialogueNodeId: null,
+          validationErrors: [],
+
+          // ── Project actions ────────────────────────────────────────────────
+          loadProject: async (path, project) => {
+            get().resetCutscenes();
+            get().resetShops();
+            get().resetRoutines();
+            project = normalizeProject(project);
+            withHistorySuppressed(
+              () =>
+                set((state) => {
+                  state.project = project;
+                  state.projectPath = path;
+                  state.resourcesLoaded = false;
+                  state.resourceLoadingLabel = 'Preparing workspace';
+                  state.resourceLoadingProgress = 0.05;
+                  state.currentMap = null;
+                  state.currentMapPath = null;
+                  state.connectionWizard = null;
+                  state.maps = [];
+                  state.tilesets = new globalThis.Map();
+                  state.loadedSprites = new globalThis.Map();
+                  state.selectedLayerId = null;
+                  state.selectedObjectInstanceId = null;
+                  state.selectedAnchorId = null;
+                  state.activeTilesetId = null;
+                  state.selectedTileIndex = null;
+                  state.activeVariationId = null;
+                  state.terrainTypes = [];
+                  state.entityTypes = [];
+                  state.tileMetadataDefinitions = [];
+                  state.locationMetadataDefinitions = [];
+                }),
+              { clearHistory: true },
+            );
+            recentProjects.add(project.name, path);
+          },
+
+          closeProject: () => {
+            get().resetCutscenes();
+            get().resetShops();
+            get().resetRoutines();
+            for (const timeoutId of pendingTilesetSaves.values()) clearTimeout(timeoutId);
+            pendingTilesetSaves.clear();
+
+            const currentProjectPath = useEditorStore.getState().projectPath;
+            if ('ipcRenderer' in window && currentProjectPath) {
+              window.ipcRenderer
+                .invoke('app:stop-watching', currentProjectPath)
+                .catch(() => undefined);
+            }
+
+            withHistorySuppressed(
+              () =>
+                set((state) => {
+                  state.project = null;
+                  state.projectPath = null;
+                  state.resourcesLoaded = false;
+                  state.resourceLoadingLabel = null;
+                  state.resourceLoadingProgress = 0;
+                  state.currentMap = null;
+                  state.connectionWizard = null;
+                  state.maps = [];
+                  state.tilesets = new globalThis.Map();
+                  state.loadedSprites = new globalThis.Map();
+                  state.selectedObjectInstanceId = null;
+                  state.activeTilesetId = null;
+                  state.selectedTileIndex = null;
+                  state.selectedAnchorId = null;
+                  state.entityTypes = [];
+                  state.tileMetadataDefinitions = [];
+                  state.locationMetadataDefinitions = [];
+                  state.characters = [];
+                  state.selectedCharacterId = null;
+                  state.dialogues = new globalThis.Map();
+                  state.selectedDialogueId = null;
+                  state.selectedDialogueNodeId = null;
+                  state.mapFullscreen = false;
+                }),
+              { clearHistory: true },
+            );
+          },
+
+          loadProjectResources: () => loadProjectResources(set, get),
+
+          loadSprite: (path, blob) => loadSprite(path, blob, set),
+
+          updateProject: async (project) => {
+            project = normalizeProject(project);
+            if (get().project && project.idPrefix !== (get().project!.idPrefix ?? 'base')) {
+              throw new Error('The ID prefix cannot be changed after project creation.');
+            }
+            await fileSystem.saveJson(
+              resourceRegistry.project.folder,
+              resourceFileKey('project', project.id),
+              {
+                $schema: resourceSchemaPath('project'),
+                ...project,
+              },
+            );
+            set((state) => {
+              state.project = project;
+            });
+          },
+
+          validate: () => [],
+
+          updateDialogueFolderPath: async (dialogueId, folderPath) => {
+            let nextDialogue: import('../types/schema').DialogueDocument | null = null;
+            set((state) => {
+              const dialogue = state.dialogues.get(dialogueId);
+              if (!dialogue) return;
+              dialogue.folderPath = folderPath || undefined;
+              dialogue.updatedAt = new Date().toISOString();
+              nextDialogue = castDraft(dialogue);
+            });
+            if (nextDialogue) await saveDialogueImmediate(nextDialogue);
+          },
+        })),
+      ),
+    ),
+    {
+      limit: UNDO_HISTORY_LIMIT,
+      partialize: (state) => ({ currentMap: state.currentMap, maps: state.maps }),
+      equality: isTrackedHistoryEqual,
+      onSave: () => {
+        finalizeHistoryBatchSave();
+      },
+    },
+  ),
+);
+
+// Register temporal store reference (used by withHistorySuppressed in slices)
+registerTemporalStore(() => useEditorStore.temporal.getState());
+registerSaveAccessors({
+  getCutscenes: () => useEditorStore.getState().cutscenes,
+  getMapById: (mapId) => {
+    const state = useEditorStore.getState();
+    if (state.currentMap?.id === mapId) {
+      return state.currentMap;
+    }
+    return state.maps.find((map) => map.id === mapId) ?? null;
+  },
+  getProject: () => useEditorStore.getState().project,
+  getTilesetById: (tilesetId) => useEditorStore.getState().tilesets.get(tilesetId) ?? null,
+});
+
+// ============================================================================
+// IPC listeners (Electron hot-reload for assets and tilesets)
+// ============================================================================
+
+if ('ipcRenderer' in window) {
+  window.ipcRenderer.on(
+    'app:asset-changed',
+    async (_event, payload: { eventType: string; relativePath: string }) => {
+      const { relativePath } = payload;
+      try {
+        const state = useEditorStore.getState();
+        if (state.loadedSprites.has(relativePath)) {
+          try {
+            const blob = await fileSystem.loadAsset(relativePath);
+            await state.loadSprite(relativePath, blob);
+            for (const [id, tileset] of state.tilesets) {
+              if (tileset.spriteSheet === relativePath) {
+                console.info('Tileset sprite changed for tileset:', id, relativePath);
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to reload sprite asset', relativePath, e);
+          }
+        }
+      } catch (_e) {
+        /* swallow */
+      }
+    },
+  );
+
+  window.ipcRenderer.on(
+    'app:tileset-changed',
+    async (
+      _event,
+      payload: { eventType: string; relativePath: string; tileset: Tileset | null },
+    ) => {
+      const { relativePath, tileset } = payload;
+      try {
+        if (!tileset) {
+          console.warn('Tileset changed but could not parse JSON:', relativePath);
+          return;
+        }
+        const migratedTileset = migrateTilesetOnLoad(
+          normalizeResourceDocument(
+            tileset,
+            'tileset',
+            useEditorStore.getState().project?.idPrefix,
+          ),
+        );
+        useEditorStore.setState((state) => {
+          const newMap = new Map(state.tilesets);
+          try {
+            newMap.set(migratedTileset.id, migratedTileset);
+          } catch (_e) {
+            newMap.set(relativePath, migratedTileset);
+          }
+          return { tilesets: newMap };
+        });
+        if (
+          migratedTileset.spriteSheet &&
+          !useEditorStore.getState().loadedSprites.has(migratedTileset.spriteSheet)
+        ) {
+          try {
+            const blob = await fileSystem.loadAsset(migratedTileset.spriteSheet);
+            await useEditorStore.getState().loadSprite(migratedTileset.spriteSheet, blob);
+          } catch (e) {
+            console.warn('Failed to reload tileset sprite:', migratedTileset.spriteSheet, e);
+          }
+        }
+      } catch (_e) {
+        /* swallow */
+      }
+    },
+  );
+
+  window.ipcRenderer.on('app:history-command', (_event, command: 'undo' | 'redo') => {
+    runEditorHistoryCommand(command);
+  });
+}
+
+// ============================================================================
+// Auto-save subscription
+// ============================================================================
+
+let lastSavedMapJson: string | null = null;
+
+useEditorStore.subscribe(
+  (state) => state.currentMap,
+  (currentMap, prevMap) => {
+    if (!currentMap) {
+      lastSavedMapJson = null;
+      return;
+    }
+
+    const currentJson = JSON.stringify(currentMap);
+    if (currentMap.id !== prevMap?.id) {
+      lastSavedMapJson = currentJson;
+      return;
+    }
+
+    if (currentJson !== lastSavedMapJson) {
+      lastSavedMapJson = currentJson;
+      saveMapDebounced(currentMap);
+      useEditorStore.setState((state) => {
+        const idx = state.maps.findIndex((m) => m.id === currentMap.id);
+        if (idx !== -1) state.maps[idx] = castDraft(currentMap);
+      });
+    }
+  },
+  { fireImmediately: false },
+);

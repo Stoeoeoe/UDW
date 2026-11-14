@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-electron
+release
+build
+*.map
+*.log
+.vscode
+.idea
+public/locales/
+.DS_Store

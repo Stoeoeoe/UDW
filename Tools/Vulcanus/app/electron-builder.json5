@@ -1,0 +1,42 @@
+// @see - https://www.electron.build/electron-builder/
+{
+  $schema: 'https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json',
+  appId: 'map-editor',
+  asar: true,
+  productName: 'Vulcanus Editor',
+  icon: 'build/icon',
+  directories: {
+    output: 'release/${version}',
+  },
+  files: ['dist', 'dist-electron'],
+  extraResources: [
+    {
+      from: 'resources/lua-language-server',
+      to: 'lua-language-server',
+      filter: ['**/*'],
+    },
+  ],
+  mac: {
+    target: ['dmg'],
+    artifactName: '${productName}-Mac-${version}-Installer.${ext}',
+  },
+  win: {
+    target: [
+      {
+        target: 'nsis',
+        arch: ['x64'],
+      },
+    ],
+    artifactName: '${productName}-Windows-${version}-Setup.${ext}',
+  },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    deleteAppDataOnUninstall: false,
+  },
+  linux: {
+    target: ['AppImage'],
+    artifactName: '${productName}-Linux-${version}.${ext}',
+  },
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Cutscene"
+  short_description: "Author validated Vulcanus cutscene graphs"
+  default_prompt: "Use $create-cutscene to author a cutscene graph from my scene description using the live project bindings and schema."

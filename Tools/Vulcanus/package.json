@@ -1,0 +1,14 @@
+{
+  "name": "map-editor-root",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "app"
+  ],
+  "scripts": {
+    "test": "npm --prefix ./app run test",
+    "dev": "npm --prefix ./app run dev",
+    "build": "npm --prefix ./app run build"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "name": "New Project 222",
+  "tileSize": 16,
+  "defaultMapWidth": 32,
+  "defaultMapHeight": 32,
+  "metadata": {
+    "author": "sda",
+    "description": "asd213"
+  },
+  "terrainTypes": [
+    {
+      "id": "water",
+      "displayName": "Water",
+      "color": "#3182ce"
+    },
+    {
+      "id": "grass",
+      "displayName": "Grass",
+      "color": "#30cf60"
+    }
+  ],
+  "layerDefinitions": [
+    {
+      "id": "layer-1769464326893",
+      "name": "Test",
+      "type": "tile",
+      "color": "#3182ce",
+      "zIndex": 0
+    },
+    {
+      "id": "layer-1769464347677",
+      "name": "Test 2",
+      "type": "tile",
+      "color": "#43283a",
+      "zIndex": 10
+    },
+    {
+      "id": "layer-1775079949627",
+      "name": "Entity Layer",
+      "type": "entity",
+      "color": "#9bcb15",
+      "zIndex": 11
+    }
+  ],
+  "entityTypes": [
+    {
+      "id": "gageli",
+      "displayName": "Gageli",
+      "category": "object",
+      "icon": "⚡",
+      "group": "Gugu",
+      "description": "Gaga",
+      "placeholderColor": "#3182ce",
+      "properties": [
+        {
+          "key": "prop_1772056362678",
+          "label": "hello",
+          "type": "string",
+          "defaultValue": "",
+          "required": false
+        }
+      ],
+      "defaultSize": [
+        1,
+        1
+      ]
+    }
+  ]
+}

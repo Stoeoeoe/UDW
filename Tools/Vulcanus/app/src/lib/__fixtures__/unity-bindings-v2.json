@@ -1,0 +1,900 @@
+{
+  "schemaVersion": 2,
+  "modules": [
+    {
+      "path": "Audio",
+      "methods": [
+        {
+          "name": "PlaySound",
+          "parameters": [
+            {
+              "name": "sound",
+              "type": "string",
+              "resourceType": "sound"
+            },
+            {
+              "name": "position",
+              "type": "position",
+              "picker": "mapPosition",
+              "nullable": true,
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "audio.playSound",
+            "displayName": "Play sound",
+            "category": "Audio",
+            "description": "Play a sound globally or at a map position and continue immediately.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "Camera",
+      "methods": [
+        {
+          "name": "Flash",
+          "parameters": [
+            {
+              "name": "color",
+              "type": "string",
+              "optional": true,
+              "defaultValue": "#FFFFFF"
+            },
+            {
+              "name": "durationSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 1.1
+            },
+            {
+              "name": "easeInSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.05
+            },
+            {
+              "name": "holdSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 1
+            },
+            {
+              "name": "easeOutSeconds",
+              "type": "number",
+              "optional": true,
+              "defaultValue": 0.05
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "camera.flash",
+            "displayName": "Screen flash",
+            "category": "Camera",
+            "description": "Flash the screen with an HTML color. Uses real seconds, including while paused. Phase times scale to durationSeconds. Defaults: white, 1.1 seconds total, 0.05 in / 1 hold / 0.05 out. Continues immediately; a new flash replaces the previous one.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "Shake",
+          "parameters": [
+            {
+              "name": "durationSeconds",
+              "type": "number"
+            },
+            {
+              "name": "strength",
+              "type": "number"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "camera.shake",
+            "displayName": "Screen shake",
+            "category": "Camera",
+            "description": "Shake the screen for gameplay seconds, fading out. Strength is in world units (try 0.1). Continues immediately; a new shake replaces the previous one.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "Characters",
+      "methods": [
+        {
+          "name": "Face",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "target",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.face",
+            "displayName": "Face character",
+            "category": "Movement",
+            "description": "Turn an existing character toward another character.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "faceCharacterTowardCharacter",
+                  "characterParameter": "character",
+                  "targetCharacterParameter": "target"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "FaceDirection",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "resourceType": "direction"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.faceDirection",
+            "displayName": "Face direction",
+            "category": "Movement",
+            "description": "Turn a character toward North, East, South or West.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "faceCharacterDirection",
+                  "characterParameter": "character",
+                  "directionParameter": "direction"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "MoveTo",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "destination",
+              "type": "string",
+              "semanticType": "anchorRef",
+              "picker": "mapAnchor"
+            },
+            {
+              "name": "immediateAcceleration",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": true
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.moveTo",
+            "displayName": "Move to anchor",
+            "category": "Movement",
+            "description": "Walk an existing character to a map anchor.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "moveCharacterToAnchor",
+                  "characterParameter": "character",
+                  "anchorParameter": "destination",
+                  "facing": "unknown"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Place",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "position",
+              "type": "position",
+              "picker": "mapPosition",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.place",
+            "displayName": "Place character",
+            "category": "Placement",
+            "description": "Immediately place a character at a map position.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "completion",
+              "sequence",
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "setCharacterPosition",
+                  "characterParameter": "character",
+                  "positionParameter": "position",
+                  "facing": "preserve"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PlayAnimation",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "animation",
+              "type": "string",
+              "resourceType": "animation"
+            },
+            {
+              "name": "holdLastFrame",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": false
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.playAnimation",
+            "displayName": "Play animation",
+            "category": "Animation",
+            "description": "Play a finite animation and wait for completion. Hold last frame keeps the final pose until another animation starts or movement resumes.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "Spawn",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterDeclaration"
+            },
+            {
+              "name": "definition",
+              "type": "string",
+              "resourceType": "character"
+            },
+            {
+              "name": "position",
+              "type": "position",
+              "picker": "mapPosition",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.spawn",
+            "displayName": "Spawn character",
+            "category": "Placement",
+            "description": "Spawn a persistent NPC and declare its cutscene-local character name.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "setup"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "spawnCharacter",
+                  "characterParameter": "character",
+                  "positionParameter": "position",
+                  "definitionParameter": "definition",
+                  "facing": "unknown"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "WalkPath",
+          "parameters": [
+            {
+              "name": "character",
+              "type": "string",
+              "semanticType": "characterRef",
+              "picker": "mapCharacter"
+            },
+            {
+              "name": "path",
+              "type": "path",
+              "picker": "mapPath",
+              "coordinateSpace": "mapPixels",
+              "origin": "topLeft",
+              "placementModes": [
+                "tile",
+                "pixel",
+                "anchor"
+              ],
+              "tileAnchor": "center",
+              "characterPivot": "feet"
+            },
+            {
+              "name": "immediateAcceleration",
+              "type": "boolean",
+              "optional": true,
+              "defaultValue": true
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "characters.walkPath",
+            "displayName": "Walk path",
+            "category": "Movement",
+            "description": "Walk through an ordered list of map positions and anchors.",
+            "contexts": [
+              "cutscene",
+              "npcRoutine"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 2,
+              "spatialState": "described",
+              "effects": [
+                {
+                  "kind": "moveCharacterAlongPath",
+                  "characterParameter": "character",
+                  "pathParameter": "path",
+                  "facing": "unknown"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "Cutscene",
+      "methods": [
+        {
+          "name": "RunLua",
+          "parameters": [
+            {
+              "name": "code",
+              "type": "string",
+              "semanticType": "lua",
+              "picker": "lua"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "cutscene.runLua",
+            "displayName": "Run Lua",
+            "category": "Scripting",
+            "description": "Run a Lua script immediately using the scripting API. Timed actions remain separate steps.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "immediate",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": []
+            }
+          }
+        },
+        {
+          "name": "Wait",
+          "parameters": [
+            {
+              "name": "seconds",
+              "type": "number"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "cutscene.wait",
+            "displayName": "Wait",
+            "category": "Timing",
+            "description": "Wait for gameplay seconds.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "described",
+              "effects": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "Dialogue",
+      "methods": [
+        {
+          "name": "Play",
+          "parameters": [
+            {
+              "name": "dialogue",
+              "type": "string",
+              "semanticType": "dialogueRef",
+              "picker": "dialogue"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "action": {
+            "id": "dialogue.play",
+            "displayName": "Play dialogue",
+            "category": "Dialogue",
+            "description": "Wait for a conversation to finish through its flow.",
+            "contexts": [
+              "cutscene"
+            ],
+            "phases": [
+              "sequence"
+            ],
+            "execution": "awaitable",
+            "preview": {
+              "version": 1,
+              "spatialState": "unknown",
+              "effects": [
+                {
+                  "kind": "showDialogue",
+                  "dialogueParameter": "dialogue"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "GameState.Player.Skills",
+      "methods": [
+        {
+          "name": "GetLevel",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "HasUnlocked",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "TryLevelUp",
+          "parameters": [
+            {
+              "name": "skillId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "GameState.Story",
+      "methods": [
+        {
+          "name": "Has",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Get",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean|string|number|table",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Set",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "boolean|string|number|table"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "Remove",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "GameState.World",
+      "methods": [
+        {
+          "name": "GetFarmland",
+          "parameters": [
+            {
+              "name": "locationId",
+              "type": "string"
+            },
+            {
+              "name": "objectId",
+              "type": "string"
+            }
+          ],
+          "returnType": "FarmlandLuaView",
+          "returnNullable": true,
+          "writesState": false
+        },
+        {
+          "name": "SetFarmland",
+          "parameters": [
+            {
+              "name": "locationId",
+              "type": "string"
+            },
+            {
+              "name": "objectId",
+              "type": "string"
+            },
+            {
+              "name": "plowed",
+              "type": "boolean"
+            },
+            {
+              "name": "irrigated",
+              "type": "boolean"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    },
+    {
+      "path": "Player.Tags",
+      "methods": [
+        {
+          "name": "Has",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "HasExact",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        },
+        {
+          "name": "Matches",
+          "parameters": [
+            {
+              "name": "expression",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false
+        }
+      ]
+    },
+    {
+      "path": "Wallet",
+      "methods": [
+        {
+          "name": "AddMoney",
+          "parameters": [
+            {
+              "name": "money",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        },
+        {
+          "name": "RemoveMoney",
+          "parameters": [
+            {
+              "name": "money",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "name": "FarmlandLuaView",
+      "fields": [
+        {
+          "name": "irrigated",
+          "type": "boolean"
+        },
+        {
+          "name": "plowed",
+          "type": "boolean"
+        }
+      ]
+    }
+  ],
+  "resources": {
+    "sound": [
+      {
+        "id": "base:prototype-complete",
+        "description": "PrototypeComplete"
+      },
+      {
+        "id": "base:prototype-impact",
+        "description": "PrototypeImpact"
+      }
+    ],
+    "animation": [
+      {
+        "id": "base:pass-out",
+        "description": "PassOut"
+      },
+      {
+        "id": "base:prototype-sitting",
+        "description": "PrototypeSittingAnimation"
+      }
+    ],
+    "direction": [
+      {
+        "id": "East",
+        "description": "East"
+      },
+      {
+        "id": "North",
+        "description": "North"
+      },
+      {
+        "id": "South",
+        "description": "South"
+      },
+      {
+        "id": "West",
+        "description": "West"
+      }
+    ]
+  }
+}

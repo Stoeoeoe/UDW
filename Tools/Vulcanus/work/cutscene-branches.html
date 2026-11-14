@@ -1,0 +1,145 @@
+<div id="vulcanus-branches" class="viz-carousel" aria-label="Conditional cutscene branch designs">
+  <section data-variant="Nested sequence" aria-label="Nested sequence design"></section>
+  <section data-variant="Branch tabs" aria-label="Branch tabs design" hidden></section>
+</div>
+<style>
+#vulcanus-branches .vb-app{--vb-bg:light-dark(#eef1f5,#141619);--vb-panel:light-dark(#ffffff,#1b1f26);--vb-chrome:light-dark(#e4e9ef,#171a1f);--vb-card:light-dark(#f6f8fb,#242a34);--vb-field:light-dark(#ffffff,#0f1217);--vb-line:light-dark(#c8d1dd,#3b4658);--vb-text:light-dark(#202b3a,#e5eaf2);--vb-muted:light-dark(#536378,#a2afc1);--vb-accent:light-dark(#2864a2,#90cdf4);--vb-active:light-dark(#e6f0fc,#24394b);--vb-ok:light-dark(#28714a,#91d8af);--vb-warn:light-dark(#854e17,#edc68c);font:13px/1.5 'Segoe UI',sans-serif;color:var(--vb-text);background:var(--vb-bg);border:1px solid var(--vb-line);border-radius:7px;min-height:920px}
+#vulcanus-branches .vb-app *{box-sizing:border-box}
+#vulcanus-branches .vb-app button,#vulcanus-branches .vb-app input,#vulcanus-branches .vb-app select{font:inherit;color:inherit}
+#vulcanus-branches .vb-app button{background:var(--vb-card);border:1px solid var(--vb-line);border-radius:4px;padding:5px 9px;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+#vulcanus-branches .vb-app button:focus-visible{outline:2px solid var(--vb-accent);outline-offset:3px}
+#vulcanus-branches .vb-app svg{width:15px;height:15px;flex-shrink:0}
+#vulcanus-branches .vb-top{background:var(--vb-chrome);border-bottom:1px solid var(--vb-line);padding:11px 15px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#vulcanus-branches .vb-brand{font-weight:600;letter-spacing:1.5px}
+#vulcanus-branches .vb-small{font-size:11px;color:var(--vb-muted)}
+#vulcanus-branches .vb-spacer{flex:1}
+#vulcanus-branches .vb-body{display:grid;grid-template-columns:105px minmax(0,1fr)}
+#vulcanus-branches .vb-nav{background:var(--vb-chrome);padding:19px 10px;border-right:1px solid var(--vb-line);color:var(--vb-muted)}
+#vulcanus-branches .vb-nav div{padding:9px 4px}
+#vulcanus-branches .vb-nav .vb-current{background:var(--vb-active);color:var(--vb-text);border-radius:4px}
+#vulcanus-branches .vb-area{min-width:0}
+#vulcanus-branches .vb-titlebar{display:flex;gap:8px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--vb-line);flex-wrap:wrap}
+#vulcanus-branches .vb-title{font-size:15px;font-weight:600}
+#vulcanus-branches .vb-phases{display:flex;gap:17px;padding:10px 16px 0;border-bottom:1px solid var(--vb-line);color:var(--vb-muted);flex-wrap:wrap}
+#vulcanus-branches .vb-phases span{padding:0 0 9px}
+#vulcanus-branches .vb-phases .vb-current{color:var(--vb-text);border-bottom:2px solid var(--vb-accent)}
+#vulcanus-branches .vb-workspace{display:grid;grid-template-columns:minmax(0,1fr) 278px;min-height:770px}
+#vulcanus-branches .vb-sequence{padding:17px 16px;min-width:0}
+#vulcanus-branches .vb-heading{font-size:11px;text-transform:uppercase;letter-spacing:1.1px;color:var(--vb-muted);margin-bottom:10px}
+#vulcanus-branches .vb-step{background:var(--vb-card);border:1px solid var(--vb-line);border-left:3px solid var(--vb-line);border-radius:5px;padding:10px 12px;margin:7px 0}
+#vulcanus-branches .vb-stephead{display:flex;align-items:center;gap:7px;color:var(--vb-muted);font-size:11px;margin-bottom:4px}
+#vulcanus-branches .vb-stepname{font-size:13px}
+#vulcanus-branches .vb-join{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--vb-muted);font-size:11px;padding:9px 0}
+#vulcanus-branches .vb-branch{border:1px solid var(--vb-accent);border-radius:6px;margin-top:12px;background:var(--vb-panel)}
+#vulcanus-branches .vb-branchhead{padding:12px;border-bottom:1px solid var(--vb-line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#vulcanus-branches .vb-branchhead strong{font-weight:600}
+#vulcanus-branches .vb-rule{padding:0 12px;color:var(--vb-muted);font-size:11px;margin-top:9px}
+#vulcanus-branches .vb-arms{padding:9px 12px 0}
+#vulcanus-branches .vb-arm{border-left:2px solid var(--vb-line);padding:0 0 6px 12px;margin:8px 0 12px}
+#vulcanus-branches .vb-arm.vb-taken{border-left-color:var(--vb-ok)}
+#vulcanus-branches .vb-app .vb-armhead{justify-content:flex-start;text-align:left;width:100%;border:1px solid transparent;background:transparent;padding:5px 6px;flex-wrap:wrap}
+#vulcanus-branches .vb-armhead[aria-pressed="true"]{border-color:var(--vb-accent);background:var(--vb-active)}
+#vulcanus-branches .vb-keyword{font-size:11px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+#vulcanus-branches .vb-expression{font-family:Consolas,monospace;font-size:11px;overflow-wrap:anywhere}
+#vulcanus-branches .vb-pathbadge{color:var(--vb-ok);font-size:11px;display:inline-flex;gap:4px;align-items:center}
+#vulcanus-branches .vb-branchfoot{display:flex;gap:7px;padding:0 12px 12px;flex-wrap:wrap}
+#vulcanus-branches .vb-app .vb-add{background:transparent;border:1px dashed var(--vb-line);color:var(--vb-muted);padding:5px 8px;font-size:11px}
+#vulcanus-branches .vb-nestedsteps{padding:0 2px}
+#vulcanus-branches .vb-tabs{display:flex;gap:5px;padding:12px 12px 0;flex-wrap:wrap}
+#vulcanus-branches .vb-tabs button[aria-selected="true"]{border-color:var(--vb-accent);background:var(--vb-active)}
+#vulcanus-branches .vb-tabbody{padding:12px}
+#vulcanus-branches .vb-tabcondition{color:var(--vb-muted);font-size:11px;margin-bottom:9px;overflow-wrap:anywhere}
+#vulcanus-branches .vb-inspector{background:var(--vb-panel);border-left:1px solid var(--vb-line);padding:16px;min-width:0}
+#vulcanus-branches .vb-inspector h3{font-size:15px;margin:0 0 4px;font-weight:600}
+#vulcanus-branches .vb-inspector hr{border:0;border-top:1px solid var(--vb-line);margin:17px 0}
+#vulcanus-branches .vb-field{margin:15px 0}
+#vulcanus-branches .vb-field label{display:block;font-size:12px;margin-bottom:6px}
+#vulcanus-branches .vb-field input,#vulcanus-branches .vb-field select{width:100%;border:1px solid var(--vb-line);border-radius:4px;padding:8px;background:var(--vb-field);min-width:0}
+#vulcanus-branches .vb-field .vb-codeinput{font-family:Consolas,monospace;font-size:12px}
+#vulcanus-branches .vb-helper{font-size:11px;color:var(--vb-muted);margin-top:6px;overflow-wrap:anywhere}
+#vulcanus-branches .vb-inspector .vb-mode{color:var(--vb-accent);font-size:11px}
+#vulcanus-branches .vb-check{display:flex;align-items:center;gap:6px;font-size:12px;margin:9px 0}
+#vulcanus-branches .vb-inspector .vb-error{color:var(--vb-warn)}
+#vulcanus-branches .vb-preview{margin-top:18px;padding:12px;background:var(--vb-panel);border:1px solid var(--vb-line);border-radius:5px}
+#vulcanus-branches .vb-preview h4{font-weight:600;font-size:12px;margin:0 0 8px}
+#vulcanus-branches .vb-preview label{display:flex;gap:6px;align-items:center;font-size:12px;margin:7px 0}
+#vulcanus-branches .vb-route{border-top:1px solid var(--vb-line);margin-top:10px;padding-top:9px;color:var(--vb-muted);font-size:11px}
+#vulcanus-branches .vb-merge{color:var(--vb-muted);font-size:11px;padding:2px 12px 12px;display:flex;gap:6px;align-items:center}
+#vulcanus-branches .vb-app [hidden]{display:none!important}
+#vulcanus-branches .vb-app{min-height:1080px}
+@media(max-width:850px){#vulcanus-branches .vb-body{grid-template-columns:minmax(0,1fr)}#vulcanus-branches .vb-nav{display:none}#vulcanus-branches .vb-workspace{grid-template-columns:minmax(0,1fr) 260px}}
+@media(max-width:620px){#vulcanus-branches .vb-workspace{grid-template-columns:minmax(0,1fr)}#vulcanus-branches .vb-inspector{border-left:0;border-top:1px solid var(--vb-line)}#vulcanus-branches .vb-sequence{padding:14px 10px}#vulcanus-branches .vb-app{min-height:1550px}#vulcanus-branches .vb-brand{font-size:12px}}
+</style>
+<script>
+(() => {
+  const root = document.getElementById('vulcanus-branches');
+  const esc = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
+  const initial = { selected:'if', met:true, newcomer:false, elseif:false, condition:'GameState.Story.HasFlag("met_host")', label:'Has met the host', steps:{if:['Play dialogue · Welcome back'], elseif:['Play dialogue · First visit'], else:['Play dialogue · A quiet greeting']} };
+  const states = [structuredClone(initial), structuredClone(initial)];
+  function restore(saved) {
+    if (!saved || !Array.isArray(saved.designs)) return;
+    saved.designs.slice(0,2).forEach((value, index) => {
+      if (value && typeof value.condition === 'string' && ['if','elseif','else'].includes(value.selected)) states[index] = {...structuredClone(initial), ...value};
+    });
+  }
+  restore(window.openai?.widgetState?.privateContent);
+  function persist() {
+    window.openai?.setWidgetState?.({ modelContent:{ feature:'Conditional cutscene branches', designs:states.map(s=>({condition:s.condition,elseIf:s.elseif,selected:s.selected})) }, privateContent:{designs:states} })?.catch(()=>{});
+  }
+  const armName = id => ({if:'If',elseif:'Else if',else:'Else'}[id]);
+  const activeArm = s => s.met ? 'if' : s.elseif && s.newcomer ? 'elseif' : 'else';
+  const conditionFor = (s,id) => id === 'if' ? s.condition : id === 'elseif' ? 'Player.Tags.Has("Visitor.New")' : 'No condition — fallback';
+  function stepMarkup(text,index) {
+    return `<div class="vb-step"><div class="vb-stephead">${icon(text.startsWith('Wait')?'timer':'message-square')}<span>${text.startsWith('Wait')?'TIMING':'DIALOGUE'} · ${index+1}</span></div><div class="vb-stepname">${esc(text)}</div></div>`;
+  }
+  function render(index) {
+    const state = states[index];
+    if (!state.elseif && state.selected === 'elseif') state.selected = 'if';
+    const stage = root.children[index];
+    const arms = ['if',...(state.elseif?['elseif']:[]),'else'];
+    const taken = activeArm(state);
+    const nested = index === 0;
+    const stepsFor = id => `${state.steps[id].map(stepMarkup).join('')}<button type="button" class="vb-add cursor-interaction" data-add="${id}">${icon('plus')} Add step to ${armName(id)}</button>`;
+    const label = state.selected === 'if' ? state.label : state.selected === 'elseif' ? 'Is a new visitor' : 'Fallback';
+    const contents = nested ? `<div class="vb-arms">${arms.map(id=>`<div class="vb-arm ${id===taken?'vb-taken':''}"><button type="button" class="vb-armhead cursor-interaction" data-select="${id}" aria-pressed="${state.selected===id}"><span class="vb-keyword">${armName(id)}</span><span class="vb-expression">${esc(id==='if'?state.label:id==='elseif'?'Is a new visitor':'Otherwise')}</span><span class="vb-spacer"></span>${id===taken?`<span class="vb-pathbadge">${icon('check')}Preview path</span>`:''}</button><div class="vb-nestedsteps">${stepsFor(id)}</div></div>`).join('')}</div>`
+      : `<div class="vb-tabs" role="tablist" aria-label="Conditional paths">${arms.map(id=>`<button type="button" class="cursor-interaction" id="vb-tab-${index}-${id}" role="tab" aria-selected="${state.selected===id}" aria-controls="vb-path-${index}" data-select="${id}">${armName(id)}${id===taken?icon('check'):''}<span class="vb-small">${state.steps[id].length}</span></button>`).join('')}</div><div class="vb-tabbody" role="tabpanel" id="vb-path-${index}" aria-labelledby="vb-tab-${index}-${state.selected}"><div class="vb-tabcondition vb-expression">${esc(conditionFor(state,state.selected))}</div>${stepsFor(state.selected)}</div>`;
+    stage.innerHTML = `<div class="vb-app" aria-label="Vulcanus cutscene conditional branch mockup">
+      <header class="vb-top"><span class="vb-brand">VULCANUS</span><span class="vb-small">Village project</span><span class="vb-spacer"></span><span class="vb-small">Cutscenes / Village arrival</span></header>
+      <div class="vb-body"><nav class="vb-nav" aria-label="Editor modules"><div>Project</div><div>Maps</div><div>Entities</div><div>Characters</div><div>Dialogue</div><div class="vb-current">Cutscenes</div><div>Scripting</div></nav>
+      <div class="vb-area"><div class="vb-titlebar">${icon('clapperboard')}<span class="vb-title">Village arrival</span><span class="vb-spacer"></span><span class="vb-small">village_square</span></div>
+      <div class="vb-phases" aria-label="Cutscene phase"><span>Setup</span><span class="vb-current">Sequence</span><span>On completion</span></div>
+      <div class="vb-workspace"><main class="vb-sequence"><div class="vb-heading">Sequence</div>
+        <div class="vb-step"><div class="vb-stephead">${icon('move-right')}<span>STEP 1 · MOVEMENT</span></div><div class="vb-stepname">Host faces Player</div></div>
+        <div class="vb-join">${icon('arrow-down')} Next</div>
+        <div class="vb-branch"><div class="vb-branchhead">${icon('git-branch')}<strong>Step 2 · Conditional branch</strong><span class="vb-spacer"></span><span class="vb-small">${arms.length} paths</span></div><div class="vb-rule">Check from top to bottom. Run the first matching path.</div>${contents}
+          <div class="vb-branchfoot"><button type="button" class="vb-add cursor-interaction" data-elseif>${icon(state.elseif?'minus':'plus')}${state.elseif?'Remove Else if':'Add Else if'}</button></div>
+          <div class="vb-merge">${icon('git-merge')} Paths rejoin here</div>
+        </div>
+        <div class="vb-join">${icon('arrow-down')} Continue after the selected path</div>
+        <div class="vb-step"><div class="vb-stephead">${icon('footprints')}<span>STEP 3 · MOVEMENT</span></div><div class="vb-stepname">Host walks to the gate</div><div class="vb-small">Runs after every path</div></div>
+        <section class="vb-preview" aria-label="Branch preview"><h4>Preview state</h4><label><input type="checkbox" data-met ${state.met?'checked':''}> Player has met the host</label>${state.elseif?`<label><input type="checkbox" data-newcomer ${state.newcomer?'checked':''}> Player has the Visitor.New tag</label>`:''}<div class="vb-route" aria-live="polite">${armName(taken)} → ${esc(state.steps[taken][0])} → Host walks to the gate</div></section>
+      </main>
+      <aside class="vb-inspector" aria-label="Branch inspector"><div class="vb-heading">Inspector</div><h3>Conditional branch</h3><div class="vb-small">Step 2 · ${armName(state.selected)} path</div><hr>
+        <div class="vb-field"><label for="vb-arm-${index}">Selected path</label><select id="vb-arm-${index}" data-arm>${arms.map(id=>`<option value="${id}" ${id===state.selected?'selected':''}>${armName(id)}</option>`).join('')}</select></div>
+        ${state.selected==='else'?`<div class="vb-field"><label>Fallback</label><div class="vb-helper">Runs when no condition above matches. Leave this path empty to continue without extra steps.</div></div>`:`<div class="vb-field"><label for="vb-label-${index}">Label</label><input id="vb-label-${index}" data-label value="${esc(label)}" ${state.selected==='elseif'?'readonly':''}></div><div class="vb-field"><label for="vb-condition-${index}">Lua condition</label><input id="vb-condition-${index}" class="vb-codeinput" data-condition value="${esc(conditionFor(state,state.selected))}" ${state.selected==='elseif'?'readonly':''}><div class="vb-helper">Evaluated once when this step is reached.</div><div class="vb-mode">Lua · Read-only API · Ctrl+Space</div></div>`}
+        <hr><div class="vb-heading">Steps in this path</div><div>${state.steps[state.selected].length} ${state.steps[state.selected].length===1?'step':'steps'}</div><div class="vb-helper">Use the same actions as the surrounding sequence. A path can contain another conditional branch.</div>
+        <hr><div class="vb-heading">After this branch</div><div>${icon('git-merge')} Continue at step 3</div><div class="vb-helper">Host walks to the gate</div>
+      </aside></div></div></div></div>`;
+    stage.querySelectorAll('[data-select]').forEach(button=>button.addEventListener('click',()=>{state.selected=button.dataset.select;render(index);persist();}));
+    stage.querySelector('[data-arm]').addEventListener('change',event=>{state.selected=event.target.value;render(index);persist();});
+    stage.querySelector('[data-met]').addEventListener('change',event=>{state.met=event.target.checked;render(index);persist();});
+    stage.querySelector('[data-newcomer]')?.addEventListener('change',event=>{state.newcomer=event.target.checked;render(index);persist();});
+    stage.querySelector('[data-elseif]').addEventListener('click',()=>{state.elseif=!state.elseif;state.selected=state.elseif?'elseif':'if';render(index);persist();});
+    stage.querySelectorAll('[data-add]').forEach(button=>button.addEventListener('click',()=>{state.steps[button.dataset.add].push('Wait · 0.5 seconds');state.selected=button.dataset.add;render(index);persist();}));
+    stage.querySelector('[data-label]')?.addEventListener('change',event=>{if(state.selected==='if'){state.label=event.target.value;render(index);persist();}});
+    stage.querySelector('[data-condition]')?.addEventListener('change',event=>{if(state.selected==='if'){state.condition=event.target.value;render(index);persist();}});
+    if(globalThis.lucide) lucide.createIcons({attrs:{width:15,height:15}});
+  }
+  states.forEach((_,index)=>render(index));
+  window.addEventListener('openai:set_globals',event=>{const saved=event.detail?.globals?.widgetState?.privateContent;if(saved){restore(saved);states.forEach((_,index)=>render(index));}});
+  if(globalThis.Tweak){
+    states.forEach((state,index)=>{const tweak=new Tweak({container:root.children[index],onChange:()=>{render(index);persist();}});tweak.addToggle(state,'elseif',{label:'Show Else if path'});});
+  }
+})();
+</script>
