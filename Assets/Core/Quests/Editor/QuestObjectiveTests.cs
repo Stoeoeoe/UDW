@@ -130,6 +130,17 @@ namespace Core.Quests.Editor
         }
 
         [Test]
+        public void ACharacterIsMarkedWhileTheyHaveSomethingForTheQuest()
+        {
+            Quest("{ id: 'bring', kind: 'deliver', character: 'test:fabia', item: 'test:wine', count: 1 }");
+            Assert.That(_quests.HasObjectiveFor("test:fabia"), Is.True, "Even before the player has the wine.");
+            Assert.That(_quests.HasObjectiveFor("test:other"), Is.False);
+            _bag.AddItem(_wine, 1);
+            _quests.CompleteConversation(_quests.FindConversation("test:fabia"));
+            Assert.That(_quests.HasObjectiveFor("test:fabia"), Is.False);
+        }
+
+        [Test]
         public void AConversationThatOutlivedItsStepChangesNothing()
         {
             Quest("{ id: 'bring', kind: 'deliver', character: 'test:fabia', item: 'test:wine', count: 1 }");

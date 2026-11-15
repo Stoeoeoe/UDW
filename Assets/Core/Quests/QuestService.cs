@@ -119,6 +119,15 @@ namespace Core.Quests
             Finish(quest, progress, step);
         }
 
+        /// <summary>Whether an active quest's current step has an open talk or deliver objective for this character.</summary>
+        public bool HasObjectiveFor(string characterId) => ActiveQuestIds().Any(questId =>
+        {
+            var (_, progress, step) = CurrentStep(questId);
+            return step.Objectives.Any(objective => objective.CharacterId == characterId &&
+                objective.Kind is QuestObjectiveKind.Talk or QuestObjectiveKind.Deliver &&
+                !progress.CompletedObjectives.Contains(objective.Id));
+        });
+
         /// <summary>
         /// The talk or deliver objective that talking to this character would meet now, if any: deliver only while the
         /// player carries the items. Its dialogue, when set, plays instead of the character's usual one.

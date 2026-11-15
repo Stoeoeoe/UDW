@@ -2256,6 +2256,9 @@ MonoBehaviour:
   routines:
     pauseAfterTalkingSeconds: 3
     maxDelayMinutes: 20
+  quests:
+    markIcon: {fileID: 21300000, guid: 99d9c017be802d444bf60d2e85367033, type: 3}
+    markOffset: {x: 0, y: 1.75}
 --- !u!114 &7446204801965182001
 MonoBehaviour:
   m_ObjectHideFlags: 0

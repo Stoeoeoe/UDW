@@ -27,12 +27,17 @@ namespace Core
     public static class GameServices
     {
         public static void Register(IContainerBuilder builder, PlayerSettings player, ItemSettings items, ClockSettings clock,
-            RoutineSettings routines)
+            RoutineSettings routines, QuestSettings quests)
         {
             if (!builder.Exists(typeof(PlayerSettings))) builder.RegisterInstance(player);
             if (!builder.Exists(typeof(ItemSettings))) builder.RegisterInstance(items);
             if (!builder.Exists(typeof(ClockSettings))) builder.RegisterInstance(clock);
             if (!builder.Exists(typeof(RoutineSettings))) builder.RegisterInstance(routines);
+            if (!builder.Exists(typeof(QuestSettings)))
+            {
+                quests.Validate();
+                builder.RegisterInstance(quests);
+            }
             builder.Register<GameState>(Lifetime.Singleton);
             builder.Register<LocationContext>(Lifetime.Singleton);
             builder.Register<CharacterManager>(Lifetime.Singleton);

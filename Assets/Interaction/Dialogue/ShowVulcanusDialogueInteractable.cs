@@ -14,6 +14,8 @@ namespace Interaction.Dialogue
         [SerializeField] private DialogueOptions options = new();
         [Inject] private VulcanusDialogueRunner _dialogue;
         [Inject] private QuestService _quests;
+        [Inject] private QuestSettings _questSettings;
+        private SpriteRenderer _questMark;
         private VulcanusDialogueExecutionContext _conversation;
         private GameCharacter _character;
         private GameCharacter Character => _character ??= GetComponentInParent<GameCharacter>();
@@ -45,6 +47,27 @@ namespace Interaction.Dialogue
 
         /// <summary>Whether a conversation started by talking to this character is still running.</summary>
         public bool IsTalking => _conversation != null && _dialogue.ActiveContext == _conversation;
+
+        /// <summary>A character with something for an active quest shows the quest mark above their head.</summary>
+        private void LateUpdate()
+        {
+            var marked = Character && _quests.HasObjectiveFor(Character.CharacterId);
+            if (marked && !_questMark) _questMark = CreateQuestMark();
+            if (_questMark) _questMark.enabled = marked;
+        }
+
+        private SpriteRenderer CreateQuestMark()
+        {
+            var mark = new GameObject("Quest mark");
+            mark.transform.SetParent(Character.Graphics, false);
+            mark.transform.localPosition = _questSettings.markOffset;
+            var renderer = mark.AddComponent<SpriteRenderer>();
+            renderer.sprite = _questSettings.markIcon;
+            var body = Character.Graphics.GetComponentInChildren<SpriteRenderer>();
+            renderer.sortingLayerID = body.sortingLayerID;
+            renderer.sortingOrder = body.sortingOrder + 100;
+            return renderer;
+        }
 
         protected override bool Interact(GameCharacter instigator)
         {
