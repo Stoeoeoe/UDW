@@ -111,6 +111,36 @@ namespace Core.Inventory
             return true;
         }
 
+        /// <summary>How many of the item the slots hold together.</summary>
+        public int Count(ItemDefinition item)
+        {
+            if (!item) throw new ArgumentNullException(nameof(item));
+            var count = 0;
+            for (var i = 0; i < Capacity; i++)
+            {
+                var stack = GetSlot(i);
+                if (!stack.IsEmpty && stack.Item == item) count += stack.Quantity;
+            }
+            return count;
+        }
+
+        /// <summary>Takes the items from any slots holding them; takes nothing unless there are enough.</summary>
+        public bool TryRemove(ItemDefinition item, int quantity)
+        {
+            CheckQuantity(quantity);
+            if (Count(item) < quantity) return false;
+            var remaining = quantity;
+            for (var i = 0; i < Capacity && remaining > 0; i++)
+            {
+                var stack = GetSlot(i);
+                if (stack.IsEmpty || stack.Item != item) continue;
+                var taken = Math.Min(stack.Quantity, remaining);
+                RemoveItemAt(i, taken);
+                remaining -= taken;
+            }
+            return true;
+        }
+
         public bool RemoveItemAt(int index, int quantity = 1)
         {
             CheckQuantity(quantity);

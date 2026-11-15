@@ -1014,6 +1014,79 @@
       ]
     },
     {
+      "path": "Inventory",
+      "methods": [
+        {
+          "name": "Count",
+          "parameters": [
+            {
+              "name": "itemId",
+              "type": "string",
+              "resourceType": "item"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "Give",
+          "parameters": [
+            {
+              "name": "itemId",
+              "type": "string",
+              "resourceType": "item"
+            },
+            {
+              "name": "count",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "Take",
+          "parameters": [
+            {
+              "name": "itemId",
+              "type": "string",
+              "resourceType": "item"
+            },
+            {
+              "name": "count",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "Music",
       "methods": [
         {
@@ -1607,6 +1680,56 @@
       {
         "id": "base:wave",
         "description": "Wave"
+      }
+    ],
+    "item": [
+      {
+        "id": "HoeToolData",
+        "description": "Hoe"
+      },
+      {
+        "id": "RavenFlower",
+        "description": "Raven Flower"
+      },
+      {
+        "id": "WateringJarToolData",
+        "description": "Watering Jar"
+      },
+      {
+        "id": "base:broad_bean_seeds",
+        "description": "Broad Bean Seeds"
+      },
+      {
+        "id": "base:broad_beans",
+        "description": "Broad Beans"
+      },
+      {
+        "id": "base:energy-tonic",
+        "description": "Energy Tonic"
+      },
+      {
+        "id": "base:fig",
+        "description": "Fig"
+      },
+      {
+        "id": "base:growth_wand",
+        "description": "Growth Wand"
+      },
+      {
+        "id": "base:lentils",
+        "description": "Lentils"
+      },
+      {
+        "id": "base:scythe",
+        "description": "Scythe"
+      },
+      {
+        "id": "lentils_seed",
+        "description": "Lentil Seeds"
+      },
+      {
+        "id": "raven_flower_produce",
+        "description": "Raven Flower"
       }
     ],
     "musicCue": [

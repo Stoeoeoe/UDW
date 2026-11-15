@@ -78,6 +78,13 @@ namespace Core.Inventory
             InventoryChangedEvent.Trigger(this);
             return true;
         }
+        public int Count(ItemDefinition item) => Storage.Count(item);
+        public bool TryRemove(ItemDefinition item, int quantity)
+        {
+            if (!Storage.TryRemove(item, quantity)) return false;
+            InventoryChangedEvent.Trigger(this);
+            return true;
+        }
         public void RemoveItemAt(int index, int quantity = 1)
         {
             if (Storage.RemoveItemAt(index, quantity)) InventoryChangedEvent.Trigger(this);

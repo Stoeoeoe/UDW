@@ -1,4 +1,5 @@
 using Core.Catalogs;
+using Core.Scripting;
 using UnityEngine;
 
 namespace Core.Inventory
@@ -6,6 +7,7 @@ namespace Core.Inventory
     /// <summary>Explicit asset references for resolving saved IDs, populated by the editor.</summary>
     [CreateAssetMenu(menuName = "Game/Catalogs/Items")]
     [DefaultCatalog(ResourceName)]
+    [LuaResource("item", DescriptionMember = nameof(ItemDefinition.ItemName))]
     public sealed class ItemCatalog : DefinitionCatalog<ItemDefinition>
     {
         public const string ResourceName = "ItemCatalog";
