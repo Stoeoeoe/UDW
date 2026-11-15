@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Character;
 using Core.Divinity;
 using Core.Inventory;
+using Core.Quests;
 using Core.TimeAndWeather;
 using Sirenix.Serialization;
 using UnityEngine;
@@ -26,6 +27,7 @@ namespace Core.Game
         public WorldState World => Data.world;
         public PlayerState Player => Data.player;
         public StoryState Story => Data.story;
+        public QuestState Quests => Data.quests;
         public GameTimeState Time => Data.time;
         public SessionState Session => Data.session;
         /// <summary>This playthrough's random seed (<see cref="GameSaveData.seed"/>).</summary>

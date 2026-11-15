@@ -1159,6 +1159,153 @@
       ]
     },
     {
+      "path": "Quests",
+      "methods": [
+        {
+          "name": "CompleteObjective",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            },
+            {
+              "name": "objectiveId",
+              "type": "string"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": []
+        },
+        {
+          "name": "CompleteStep",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": []
+        },
+        {
+          "name": "CurrentStep",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            }
+          ],
+          "returnType": "string",
+          "returnNullable": true,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "string",
+              "nullable": true
+            }
+          ]
+        },
+        {
+          "name": "IsActive",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "IsCompleted",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "IsFailed",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "IsOnStep",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            },
+            {
+              "name": "stepId",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "Start",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": []
+        }
+      ]
+    },
+    {
       "path": "Shop",
       "methods": [
         {

@@ -1,12 +1,12 @@
 # Quests
 
 A quest is a story questline: steps that run in order, each with objectives the game checks. Quests are authored in
-the Vulcanus project as `quests/*.quest.json` (schema: `schemas/quest.schema.json`); the Vulcanus importer turns each
-into a `QuestDefinition`, and `QuestCatalog` lists them. The spec and build order are Linear STO-89.
+the Vulcanus project as `quests/*.quest.json` (schema: `Schemas/quest.schema.json` at the repository root); the
+Vulcanus importer turns each into a `QuestDefinition`, and `QuestCatalog` lists them. The spec and build order are
+Linear STO-89.
 
 ```json
 {
-  "$schema": "../schemas/quest.schema.json",
   "formatVersion": 1,
   "id": "base:festival_wine",
   "title": "Wine for the festival",
@@ -58,4 +58,14 @@ to the quest's own. Renaming a step or objective drops its translations.
 - When catalogs refresh (`QuestCatalogValidation`): the giver and talk/deliver characters, dialogues, items, maps and
   triggers exist.
 
-Not yet built: running quests, saving their progress and the journal (STO-93 onwards).
+## Running quests
+
+`QuestService` starts quests, completes objectives and steps, and runs their actions. Progress is saved in the
+`quests` section of the save (`QuestState`): status, current step, start time, finished steps with their times, and
+the current step's completed objectives. A step finishes once all its objectives are done, or when completed outright;
+after the last step the quest completes. Progress is recorded before any action runs, so an action may advance the
+quest further. Mistakes fail clearly: starting a quest twice, an unknown quest or objective, or advancing an ended quest.
+
+The `Quests` Lua module reads (`IsActive`, `IsCompleted`, `IsFailed`, `CurrentStep`, `IsOnStep`) and advances
+(`Start`, `CompleteObjective`, `CompleteStep`) quests. For now progress is scripted only; the game checks objectives
+from STO-95 on.

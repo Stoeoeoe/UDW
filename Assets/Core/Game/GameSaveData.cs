@@ -3,6 +3,7 @@ using System.Linq;
 using Character;
 using Core.Inventory;
 using Core.Items;
+using Core.Quests;
 using Core.TimeAndWeather;
 
 namespace Core.Game
@@ -24,18 +25,21 @@ namespace Core.Game
         public int seed;
         public PlayerState player = new();
         public StoryState story = new();
+        /// <summary>Started quests.</summary>
+        public QuestState quests = new();
         public GameTimeState time = new();
         public WorldState world = new();
         public SessionState session = new();
 
         public void Validate(CharacterCatalog characters, ItemCatalog items)
         {
+            quests ??= new QuestState(); // Saves made before quests existed have none.
             if (schemaVersion != CurrentVersion)
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
             if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory?.ToolCharges == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
-                story == null || time == null || world?.GetLocations() == null || session == null)
+                story == null || quests == null || time == null || world?.GetLocations() == null || session == null)
                 throw new FormatException("The save is missing a required state section.");
             session.Validate();
             if (saveName != null && string.IsNullOrWhiteSpace(saveName))
@@ -90,6 +94,7 @@ namespace Core.Game
                     throw new FormatException("The save contains an invalid skill level.");
 
             story.Validate();
+            quests.Validate();
 
             foreach (var location in world.GetLocations())
             {
