@@ -8,9 +8,20 @@ import {
   FiMaximize,
   FiHelpCircle,
 } from 'react-icons/fi';
-import { ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
+import { ToolbarShell, ToolbarToggleButton } from '../Toolbar';
 
-export function CutsceneGraphToolbar({
+export type GraphCommand =
+  | 'add'
+  | 'delete'
+  | 'copy'
+  | 'duplicate'
+  | 'paste'
+  | 'layout'
+  | 'fit'
+  | 'undo'
+  | 'redo';
+
+export function GraphEditorToolbar({
   disabled,
   selection,
   canPaste,
@@ -19,14 +30,12 @@ export function CutsceneGraphToolbar({
   disabled: boolean;
   selection: boolean;
   canPaste: boolean;
-  run: (
-    command: 'add' | 'delete' | 'duplicate' | 'paste' | 'layout' | 'fit' | 'undo' | 'redo',
-  ) => void;
+  run: (command: GraphCommand) => void;
 }) {
   return (
     <ToolbarShell
       role="toolbar"
-      aria-label="Cutscene graph tools"
+      aria-label="Graph tools"
       rounded="none"
       boxShadow="none"
       borderWidth="0 0 1px"

@@ -33,7 +33,7 @@ export const documentPresentation: Record<
   item: { layout: 'form', icon: FiPackage },
   items: { layout: 'form', icon: FiPackage },
   shop: { layout: 'form', icon: FiShoppingBag },
-  quest: { layout: 'sequence', icon: FiStar },
+  quest: { layout: 'canvas', icon: FiStar },
   routine: { layout: 'sequence', icon: FiClock },
   dialogue: { layout: 'sequence', icon: FiMessageSquare },
   dialogues: { layout: 'sequence', icon: FiMessageSquare },

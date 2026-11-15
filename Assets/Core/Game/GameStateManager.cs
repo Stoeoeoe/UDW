@@ -67,6 +67,7 @@ namespace Core.Game
             _state.Player.Wallet.SetBalance(_player.startingMoney);
             CurrentSlot = _saves.NextSlotId();
             _saveWhenLocationReady = true;
+            GameStartedEvent.Trigger();
         }
 
         // Without a current slot (a development start) there is nowhere to save. A disk problem must never break the

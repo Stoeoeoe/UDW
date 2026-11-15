@@ -9,6 +9,8 @@ export const GraphEditingContext = createContext<{
   actions: CutsceneAction[];
   resources: ScriptingResources;
   phase: 'setup' | 'sequence' | 'completion';
+  /** Immediate quest calls use literal parameters, without transient cutscene data wiring. */
+  executionOnly?: boolean;
   characterReferences: { id: string; name: string }[];
   argumentReferences: LuaArgumentReferences;
   change: (id: string, change: (node: CutsceneGraphNode) => void) => void;

@@ -20,6 +20,47 @@ namespace Core.Quests
         Condition
     }
 
+    /// <summary>A moment at which a quest is considered for starting by itself.</summary>
+    public enum QuestStartKind
+    {
+        /// <summary>A new game begins. Loading a save does not count.</summary>
+        GameStart,
+        /// <summary>A new day begins.</summary>
+        NewDay,
+        /// <summary>A season begins, optionally a particular one.</summary>
+        NewSeason,
+        /// <summary>Every ten-minute clock step. The most frequent moment.</summary>
+        EveryTenMinutes,
+        /// <summary>The favour with a deity changes, optionally a particular deity and a threshold.</summary>
+        DivineFavour,
+        /// <summary>The player enters a map, optionally a particular one.</summary>
+        LocationChanged
+    }
+
+    /// <summary>One moment of a quest's start; which fields apply depends on <see cref="On"/>.</summary>
+    [Serializable, ImportedData]
+    public sealed class QuestStartMoment
+    {
+        [field: SerializeField] public QuestStartKind On { get; private set; }
+        /// <summary>New season: only this season ("spring" ...); empty for any.</summary>
+        [field: SerializeField] public string Season { get; private set; }
+        /// <summary>Divine favour: only this deity; empty for any.</summary>
+        [field: SerializeField, Validation.Reference(typeof(Core.Divinity.DeityDefinition))] public string Deity { get; private set; }
+        /// <summary>Divine favour: only once the favour is at least this much; 0 for any.</summary>
+        [field: SerializeField] public int AtLeast { get; private set; }
+        /// <summary>Location changed: only this map; empty for any.</summary>
+        [field: SerializeField] public string Map { get; private set; }
+    }
+
+    /// <summary>When a quest starts by itself: at any of the moments, if the condition holds.</summary>
+    [Serializable, ImportedData]
+    public sealed class QuestStart
+    {
+        [field: SerializeField, Validation.Nested] public QuestStartMoment[] When { get; private set; } = Array.Empty<QuestStartMoment>();
+        /// <summary>Read-only Lua expression; empty to start at the moment alone.</summary>
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
+    }
+
     /// <summary>Something a step needs; which fields apply depends on <see cref="Kind"/>.</summary>
     [Serializable, ImportedData]
     public sealed class QuestObjective
@@ -114,6 +155,8 @@ namespace Core.Quests
         [field: SerializeField, Validation.LuaChunk] public string OnComplete { get; private set; }
         /// <summary>Lua actions run when the quest fails; empty for none.</summary>
         [field: SerializeField, Validation.LuaChunk] public string OnFail { get; private set; }
+        /// <summary>When the quest starts by itself; without moments it starts only through an action.</summary>
+        [field: SerializeField, Validation.Nested] public QuestStart Start { get; private set; } = new();
         // The schema checks everything else at import; only unique IDs and Lua syntax are beyond it.
         [field: SerializeField, Validation.Nested, Validation.Unique(nameof(QuestStep.Id))]
         public QuestStep[] Steps { get; private set; } = Array.Empty<QuestStep>();

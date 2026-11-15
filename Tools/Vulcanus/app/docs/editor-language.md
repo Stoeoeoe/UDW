@@ -17,11 +17,19 @@ document identity. Save, Save All, Undo and Redo live in the application toolbar
 - `EditorWorkspaceShell` owns resizable body panels and has no header API.
 - `SequenceCard` owns geometry, focus, selection and hover treatment. It accepts
   content, selection, semantic accents, comments and preview muting, not arbitrary
-  Chakra styling props. Dialogues, quests and routine goals share it.
+  Chakra styling props. Dialogues and routine goals share it.
 - `SequenceToolbar` owns ordered-content toolbar geometry. Map/tileset tools sit
   immediately below the document header, separate from application commands.
-- `InspectorShell` owns property panel spacing, empty states and deletion. Quest
-  cards summarize steps/objectives; selecting one edits its properties here.
+- `InspectorShell` owns property panel spacing, empty states and deletion.
+- Quest and cutscene graphs use `GraphEditorShell`, `useGraphEditor`, `GraphCanvas`
+  and `GraphNodeFrame` from `common/graph`. The shared controller owns right-click
+  creation, pin-drop suggestions, selection, keyboard shortcuts and dragging onto
+  execution wires. The shell owns toolbar, focus, picker and canvas styles.
+  `graphEditing` supplies clipboard, deletion, insertion and layout operations.
+  Editors provide their node palette and authored mutations; they cannot replace
+  these interactions locally. Quest step nodes show their objectives; selecting one edits
+  its properties in the inspector. The quest palette exposes immediate callable
+  mutations from the binding manifest; script nodes use the ordinary quest API.
 - Conditions use `ConditionEditor`; action blocks use `LuaScriptEditor`.
 - `EditorFormSave` connects character/item drafts to Save, Save All, dirty state
   and the existing autosave scheduler. Other editors retain their save commands.

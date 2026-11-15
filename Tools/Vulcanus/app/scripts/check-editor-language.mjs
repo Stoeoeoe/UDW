@@ -20,6 +20,7 @@ export function checkEditorSource(filename, source) {
   );
   const imports = new Map();
   const errors = [];
+  const graphEditor = /\/(CutsceneGraphEditor|QuestGraphCanvas)\.tsx$/.test(filename);
   const report = (node, message) =>
     errors.push(
       `${filename}:${file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1}: ${message}`,
@@ -54,6 +55,22 @@ export function checkEditorSource(filename, source) {
         }
         if (!ts.isJsxAttribute(attribute)) continue;
         const key = attribute.name.text;
+        if (
+          graphEditor &&
+          [
+            'onPaneContextMenu',
+            'onConnectStart',
+            'onConnectEnd',
+            'onNodesChange',
+            'onEdgesChange',
+            'onNodeDragStart',
+            'onNodeDrag',
+            'onNodeDragStop',
+            'onPointerDownCapture',
+            'onKeyDown',
+          ].includes(key)
+        )
+          report(attribute, 'Graph interactions belong to useGraphEditor and GraphEditorShell.');
         if (filename.endsWith('Editor.tsx') && ['bgGradient', 'backgroundImage'].includes(key))
           report(attribute, 'Editor surfaces use the shared neutral surface components.');
         if (
@@ -74,6 +91,10 @@ export function checkEditorSource(filename, source) {
     ts.forEachChild(node, visit);
   };
   visit(file);
+  if (graphEditor)
+    for (const name of ['GraphEditorShell', 'useGraphEditor'])
+      if (![...imports.values()].includes(name))
+        errors.push(`${filename}: Graph editors must use ${name}.`);
   return errors;
 }
 

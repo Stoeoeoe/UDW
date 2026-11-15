@@ -1,0 +1,102 @@
+{
+  "$schema": "../../../../Schemas/quest.schema.json",
+  "formatVersion": 1,
+  "id": "base:fabia_delivery",
+  "title": "Fabia Delivery",
+  "description": "Fabia Delivery",
+  "folderPath": "",
+  "steps": [
+    {
+      "id": "step-1",
+      "journal": "Complete the first objective.",
+      "objectives": [
+        {
+          "id": "objective-1",
+          "text": "New objective",
+          "kind": "talk",
+          "character": "base:fabia",
+          "dialogue": "base:dlg_salve"
+        }
+      ]
+    }
+  ],
+  "giver": "base:fabia",
+  "editorGraph": {
+    "nodes": [
+      {
+        "id": "begin",
+        "kind": "entry",
+        "position": {
+          "x": -33.670761633892454,
+          "y": 114.6835639525433
+        }
+      },
+      {
+        "id": "step-node-0",
+        "kind": "step",
+        "stepId": "step-1",
+        "group": false,
+        "position": {
+          "x": 338.22785465084775,
+          "y": 118.22785465084775
+        }
+      },
+      {
+        "id": "complete",
+        "kind": "exit",
+        "position": {
+          "x": 680,
+          "y": 120
+        }
+      },
+      {
+        "id": "node-e8962fde-ba51-468d-b308-049fdae8cd7c",
+        "kind": "action",
+        "position": {
+          "x": 1053.9190467523067,
+          "y": 175.42043107869674
+        },
+        "action": {
+          "method": "Wallet.AddMoney",
+          "arguments": {
+            "money": 100
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "wire-2c66002c-a83b-4d23-80aa-fac515fff4ad",
+        "source": "begin",
+        "target": "step-node-0",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-891e5b63-9a1d-4a8d-9e02-b30f867f7b6e",
+        "source": "step-node-0",
+        "target": "complete",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-b576132e-cf17-4b28-b836-cfb2d5ae96e7",
+        "source": "complete",
+        "target": "node-e8962fde-ba51-468d-b308-049fdae8cd7c",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      }
+    ]
+  },
+  "onComplete": "Wallet.AddMoney(100)",
+  "start": {
+    "when": [
+      {
+        "on": "newDay"
+      }
+    ]
+  }
+}

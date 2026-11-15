@@ -1,18 +1,7 @@
 import { EditorHeaderActions } from '../../common/EditorDocumentFrame';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { produce } from 'immer';
-import {
-  Box,
-  Flex,
-  Button,
-  HStack,
-  Input,
-  Select,
-  ModalBody,
-  ModalCloseButton,
-  ModalHeader,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Button, ModalBody, ModalCloseButton, ModalHeader, Text } from '@chakra-ui/react';
 import {
   ReactFlowProvider,
   Background,
@@ -20,8 +9,6 @@ import {
   MarkerType,
   useReactFlow,
   type Connection,
-  type OnConnectEnd,
-  type OnConnectStartParams,
   type Edge,
 } from '@xyflow/react';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -29,9 +16,9 @@ import {
   copyGraphSelection,
   pasteGraphSelection,
   deleteGraphSelection,
-  layoutCutsceneGraph,
+  layoutGraph,
   insertExecutionNode,
-} from '../../../lib/cutsceneGraphEditing';
+} from '../../../lib/graphEditing';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import {
   EMPTY_SCRIPTING_ACTIONS,
@@ -48,7 +35,6 @@ import {
 } from '../../../lib/cutsceneGraph';
 import {
   graphTemplates,
-  filterGraphTemplates,
   matchingGraphTemplates,
   type GraphTemplate,
 } from '../../../lib/cutsceneGraphPalette';
@@ -62,8 +48,10 @@ import type {
   CutscenePhase,
 } from '../../../types/cutsceneGraph';
 import { CutsceneGraphNode, type GraphViewNode } from './CutsceneGraphNode';
-import { CutsceneGraphCanvas } from './CutsceneGraphCanvas';
-import { CutsceneGraphToolbar } from './CutsceneGraphToolbar';
+import { GraphCanvas } from '../../common/graph/GraphCanvas';
+import { GraphEditorShell } from '../../common/graph/GraphEditorShell';
+import { useGraphEditor } from '../../common/graph/useGraphEditor';
+import type { GraphCommand } from '../../common/graph/GraphEditorToolbar';
 import { GraphEditingContext } from './CutsceneGraphContext';
 import { CutsceneSpatialEditor } from './CutsceneSpatialEditor';
 import { CutsceneSettings } from './CutsceneSettings';
@@ -77,23 +65,9 @@ const nodeTypes = { cutscene: CutsceneGraphNode };
 function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.ReactNode }) {
   const [phase, setPhase] = useState<CutscenePhase>('sequence');
   const [settings, setSettings] = useState<'scene' | 'completion'>();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [selectedEdges, setSelectedEdges] = useState<Set<string>>(new Set());
-  const [insertionEdge, setInsertionEdge] = useState<string>();
-  const insertionTarget = useRef<string>();
-  const insertionWires = useRef<{ id: string; points: { x: number; y: number }[] }[]>([]);
-  const draggingNodes = useRef(false);
   const [clipboard, setClipboard] = useState<CutsceneGraph>();
   const pasteOffset = useRef(48);
   const [message, setMessage] = useState('');
-  const [query, setQuery] = useState('');
-  const [pickerCategory, setPickerCategory] = useState('');
-  const [picker, setPicker] = useState<{
-    x: number;
-    y: number;
-    position: { x: number; y: number };
-    from?: OnConnectStartParams;
-  }>();
   const [spatial, setSpatial] = useState<{
     id: string;
     title: string;
@@ -103,9 +77,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     value: CutsceneData | undefined;
     start?: [number, number];
   }>();
-  const root = useRef<HTMLDivElement>(null);
-  const connecting = useRef<OnConnectStartParams>();
-  const droppingPin = useRef(false);
   const flow = useReactFlow<GraphViewNode>();
   const baseActions = useScriptingManifestStore(
     (s) => s.actionsByContext.cutscene ?? EMPTY_SCRIPTING_ACTIONS,
@@ -136,6 +107,29 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     () => scene.graphs?.[phase] ?? graphFromSteps(list),
     [scene.graphs, phase, list],
   );
+  const operations = useRef<{
+    run: (command: GraphCommand) => void;
+    move: (nodes: { id: string; position: { x: number; y: number } }[]) => void;
+    finishDrag: (nodes: GraphViewNode[], edge?: string) => void;
+  }>(null!);
+  const editor = useGraphEditor<GraphViewNode>({
+    nodes: graph.nodes,
+    edges: graph.edges,
+    disabled: Boolean(spatial || settings),
+    run: (command) => operations.current.run(command),
+    move: (nodes) => operations.current.move(nodes),
+    finishDrag: (nodes, edge) => operations.current.finishDrag(nodes, edge),
+    insertable: (node) => ['action', 'lua'].includes(node.data.authored.kind),
+  });
+  const {
+    selected,
+    setSelected,
+    selectedEdges,
+    setSelectedEdges,
+    picker,
+    setPicker,
+    insertionEdge,
+  } = editor;
   const refs = useMemo(
     () => ({
       maps: currentMap ? [...maps.filter((m) => m.id !== currentMap.id), currentMap] : maps,
@@ -217,40 +211,10 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
         },
       ]),
     );
-    update((draft) => layoutCutsceneGraph(draft, sizes));
+    update((draft) => layoutGraph(draft, sizes));
     requestAnimationFrame(() => {
       void flow.fitView({ padding: 0.15, duration: 200 });
     });
-  };
-  const nearbyExecutionEdge = (
-    event: { clientX: number; clientY: number },
-    node: GraphViewNode,
-  ) => {
-    if (!['action', 'lua'].includes(node.data.authored.kind)) return;
-    const point = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-    let nearest: string | undefined;
-    let distance = 28 / flow.getZoom();
-    for (const edge of insertionWires.current) {
-      for (const sample of edge.points) {
-        const next = Math.hypot(sample.x - point.x, sample.y - point.y);
-        if (next < distance) {
-          distance = next;
-          nearest = edge.id;
-        }
-      }
-    }
-    return nearest;
-  };
-  const finishDrag = (nodes: GraphViewNode[], edge?: string) => {
-    draggingNodes.current = false;
-    update((draft) => {
-      for (const moved of nodes)
-        draft.nodes.find((n) => n.id === moved.id)!.position = moved.position;
-      if (edge && nodes.length === 1) insertExecutionNode(draft, nodes[0].id, edge);
-    });
-    insertionWires.current = [];
-    insertionTarget.current = undefined;
-    setInsertionEdge(undefined);
   };
   const templates = useMemo(
     () => (picker ? graphTemplates(scene, actions, phase) : []),
@@ -448,28 +412,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
       setMessage((error as Error).message);
     }
   };
-  const showPicker = (clientX: number, clientY: number, from?: OnConnectStartParams) => {
-    const rect = root.current!.getBoundingClientRect();
-    setQuery('');
-    setPickerCategory('');
-    setPicker({
-      x: Math.max(0, Math.min(rect.width - 320, clientX - rect.left)),
-      y: Math.max(0, Math.min(rect.height - 410, clientY - rect.top)),
-      position: flow.screenToFlowPosition({ x: clientX, y: clientY }),
-      from,
-    });
-  };
-  const onConnectEnd: OnConnectEnd = (event, state) => {
-    if (state.isValid || state.toNode || !connecting.current) return;
-    const point = 'changedTouches' in event ? event.changedTouches[0] : event;
-    droppingPin.current = true;
-    showPicker(point.clientX, point.clientY, connecting.current);
-    connecting.current = undefined;
-    // The same mouse release can also produce a pane click; it must not dismiss the new menu.
-    setTimeout(() => {
-      droppingPin.current = false;
-    }, 0);
-  };
   const choices = useMemo<(GraphTemplate & { pin?: string })[]>(() => {
     if (!picker) return [];
     if (!picker.from) return templates;
@@ -493,11 +435,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
       return [];
     }
   }, [picker, templates, graph, scene, actions]);
-  const categories = useMemo(() => [...new Set(choices.map((c) => c.category))].sort(), [choices]);
-  const visibleChoices = useMemo(
-    () => filterGraphTemplates(choices, query, pickerCategory),
-    [choices, query, pickerCategory],
-  );
   const insert = (template: GraphTemplate & { pin?: string }) => {
     const id = `node-${crypto.randomUUID()}`,
       position = picker!.position;
@@ -610,7 +547,19 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
       });
       setPicker(undefined);
     },
-    [map, graph, scene, actions, types, baseActions, dialogues, project, resources, roles],
+    [
+      map,
+      graph,
+      scene,
+      actions,
+      types,
+      baseActions,
+      dialogues,
+      project,
+      resources,
+      roles,
+      setPicker,
+    ],
   );
   const characterReferences = useMemo(
     () => roles.map((actor) => ({ id: actor.id, name: actor.label })),
@@ -651,6 +600,30 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     }),
     [nodeScene, actions, resources, phase, characterReferences, argumentReferences],
   );
+  operations.current = {
+    run: (command) => {
+      if (command === 'delete') removeSelection();
+      else if (command === 'copy') {
+        setClipboard(copyGraphSelection(graph, selected));
+        pasteOffset.current = 48;
+      } else if (command === 'duplicate') pasteSelection(copyGraphSelection(graph, selected), 48);
+      else if (command === 'paste') pasteSelection();
+      else if (command === 'layout') autoLayout();
+      else if (command === 'undo') useEditorStore.getState().undoCutscene(scene.id);
+      else if (command === 'redo') useEditorStore.getState().redoCutscene(scene.id);
+    },
+    move: (nodes) =>
+      update((draft) => {
+        for (const node of nodes)
+          draft.nodes.find((n) => n.id === node.id)!.position = node.position;
+      }),
+    finishDrag: (nodes, edge) =>
+      update((draft) => {
+        for (const node of nodes)
+          draft.nodes.find((n) => n.id === node.id)!.position = node.position;
+        if (edge && nodes.length === 1) insertExecutionNode(draft, nodes[0].id, edge);
+      }),
+  };
   return (
     <ResizableEditorLayout
       viewportBackground={false}
@@ -703,318 +676,96 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
           }
           mainContent={
             <GraphEditingContext.Provider value={editingContext}>
-              <Flex direction="column" h="full">
-                <CutsceneGraphToolbar
-                  disabled={Boolean(spatial)}
-                  selection={
-                    graph.nodes.some(
-                      (n) => selected.has(n.id) && !['entry', 'exit'].includes(n.kind),
-                    ) || selectedEdges.size > 0
-                  }
-                  canPaste={Boolean(clipboard?.nodes.length)}
-                  run={(command) => {
-                    if (command === 'delete') removeSelection();
-                    else if (command === 'duplicate')
-                      pasteSelection(copyGraphSelection(graph, selected), 48);
-                    else if (command === 'paste') pasteSelection();
-                    else if (command === 'layout') autoLayout();
-                    else if (command === 'fit') void flow.fitView({ padding: 0.15, duration: 200 });
-                    else if (command === 'undo') useEditorStore.getState().undoCutscene(scene.id);
-                    else if (command === 'redo') useEditorStore.getState().redoCutscene(scene.id);
-                    else {
-                      const rect = root.current!.getBoundingClientRect();
-                      showPicker(rect.left + rect.width / 2, rect.top + 70);
-                    }
-                  }}
-                />
-                <Box
-                  ref={root}
-                  tabIndex={0}
-                  className="cutscene-graph-canvas"
-                  flex={1}
-                  onKeyDown={(e) => {
-                    if (spatial || settings) return;
-                    if (e.key === 'Escape') {
-                      setPicker(undefined);
-                      setSelected(new Set());
-                      setSelectedEdges(new Set());
-                      root.current?.focus();
-                      return;
-                    }
-                    const target = e.target as HTMLElement;
-                    if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
-                    const key = e.key.toLowerCase();
-                    const mod = e.ctrlKey || e.metaKey;
-                    if (e.altKey) return;
-                    if (mod && key === 'a') {
-                      setSelected(new Set(graph.nodes.map((n) => n.id)));
-                      setSelectedEdges(new Set(graph.edges.map((edge) => edge.id)));
-                    } else if (mod && key === 'c') {
-                      setClipboard(copyGraphSelection(graph, selected));
-                      pasteOffset.current = 48;
-                    } else if (mod && key === 'v') pasteSelection();
-                    else if (mod && key === 'd')
-                      pasteSelection(copyGraphSelection(graph, selected), 48);
-                    else if (mod && (key === 'z' || key === 'y')) {
-                      const state = useEditorStore.getState();
-                      if (e.shiftKey || key === 'y') state.redoCutscene(scene.id);
-                      else state.undoCutscene(scene.id);
-                    } else if (!mod && (key === 'delete' || key === 'backspace')) removeSelection();
-                    else if (!mod && key === 'f')
-                      void flow.fitView({ padding: 0.15, duration: 200 });
-                    else if (!mod && e.shiftKey && key === 'l') autoLayout();
-                    else return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onPointerDownCapture={(e) => {
-                    if (
-                      !(e.target as HTMLElement).closest(
-                        'input, textarea, select, button, [contenteditable="true"]',
-                      )
-                    )
-                      root.current?.focus({ preventScroll: true });
-                  }}
-                >
-                  {notice}
-                  {(message || issues.length > 0) && (
-                    <Box
-                      position="absolute"
-                      top={2}
-                      left={2}
-                      right={2}
-                      zIndex={10}
-                      bg="editorPanelBg"
-                      borderWidth="1px"
-                      borderColor="editorSequenceBorder"
-                      p={2}
+              <GraphEditorShell
+                editor={editor}
+                choices={choices}
+                onInsert={insert}
+                canPaste={Boolean(clipboard?.nodes.length)}
+              >
+                {notice}
+                {(message || issues.length > 0) && (
+                  <Box
+                    position="absolute"
+                    top={2}
+                    left={2}
+                    right={2}
+                    zIndex={10}
+                    bg="editorPanelBg"
+                    borderWidth="1px"
+                    borderColor="editorSequenceBorder"
+                    p={2}
+                  >
+                    <Text
+                      fontSize="xs"
+                      color={issues.length ? 'editorDangerText' : 'editorMutedText'}
                     >
-                      <Text
-                        fontSize="xs"
-                        color={issues.length ? 'editorDangerText' : 'editorMutedText'}
-                      >
-                        {message || issues[0].message}
-                        {issues.length > 1 ? ` (${issues.length} issues)` : ''}
-                      </Text>
-                    </Box>
-                  )}
-                  <CutsceneGraphCanvas
-                    nodes={viewNodes}
-                    edges={viewEdges}
-                    nodeTypes={nodeTypes}
-                    onConnect={connect}
-                    onConnectStart={(_, params) => {
-                      connecting.current = params;
-                    }}
-                    onConnectEnd={onConnectEnd}
-                    onNodeDragStart={(_, node, nodes) => {
-                      draggingNodes.current = true;
-                      // Other wires stay fixed during a single-node drag. Snapshot their graph
-                      // geometry before highlighting can replace their SVG elements.
-                      insertionWires.current =
-                        nodes.length === 1 && ['action', 'lua'].includes(node.data.authored.kind)
-                          ? graph.edges.flatMap((edge) => {
-                              if (
-                                edge.kind !== 'execution' ||
-                                edge.source === node.id ||
-                                edge.target === node.id
-                              )
-                                return [];
-                              const element = Array.from(
-                                root.current!.querySelectorAll<SVGGElement>('.react-flow__edge'),
-                              ).find((el) => el.dataset.id === edge.id);
-                              const path =
-                                element?.querySelector<SVGPathElement>('.react-flow__edge-path');
-                              if (!path) return [];
-                              const points = [];
-                              const total = path.getTotalLength();
-                              for (let length = 0; length <= total; length += 10) {
-                                const point = path.getPointAtLength(length);
-                                points.push({ x: point.x, y: point.y });
-                              }
-                              return [{ id: edge.id, points }];
-                            })
-                          : [];
-                    }}
-                    onNodeDrag={(event, node, nodes) => {
-                      insertionTarget.current =
-                        nodes.length === 1 ? nearbyExecutionEdge(event, node) : undefined;
-                      setInsertionEdge(insertionTarget.current);
-                    }}
-                    onNodeDragStop={(_, __, nodes) => finishDrag(nodes, insertionTarget.current)}
-                    onPaneClick={() => {
-                      if (droppingPin.current) return;
-                      setPicker(undefined);
-                    }}
-                    onPaneContextMenu={(e) => {
-                      e.preventDefault();
-                      showPicker(e.clientX, e.clientY);
-                    }}
-                    onNodesChange={(changes) => {
-                      const finished = changes.filter(
-                        (c) => c.type === 'position' && c.position && c.dragging === false,
-                      );
-                      if (finished.length) {
-                        if (draggingNodes.current) return;
-                        update((draft) => {
-                          for (const c of finished)
-                            if (c.type === 'position' && c.position)
-                              draft.nodes.find((n) => n.id === c.id)!.position = c.position;
-                        });
+                      {message || issues[0].message}
+                      {issues.length > 1 ? ` (${issues.length} issues)` : ''}
+                    </Text>
+                  </Box>
+                )}
+                <GraphCanvas
+                  nodes={viewNodes}
+                  edges={viewEdges}
+                  nodeTypes={nodeTypes}
+                  onConnect={connect}
+                  {...editor.canvasProps}
+                  onEdgeDoubleClick={(_, edge) =>
+                    update((draft) => {
+                      draft.edges = draft.edges.filter((e) => e.id !== edge.id);
+                    })
+                  }
+                  defaultViewport={{ x: 50, y: 110, zoom: 0.8 }}
+                >
+                  <Background gap={24} size={1} />
+                  <Controls showInteractive={false} />
+                </GraphCanvas>
+                {spatial && map && (
+                  <CutsceneSpatialEditor
+                    map={map}
+                    tileSize={project!.tileSize}
+                    title={spatial.title}
+                    value={spatial.value}
+                    path={spatial.type === 'path'}
+                    nullable={spatial.nullable}
+                    start={spatial.start}
+                    onCancel={() => setSpatial(undefined)}
+                    onDone={(value) => {
+                      const next = structuredClone(graph);
+                      const n = next.nodes.find((n) => n.id === spatial.id);
+                      if (!n) {
+                        setSpatial(undefined);
+                        setMessage(
+                          'The edited node was removed by undo. The map draft was not applied.',
+                        );
                         return;
                       }
-                      if (changes.some((c) => c.type === 'select'))
-                        setSelected((previous) => {
-                          const next = new Set(previous);
-                          for (const c of changes)
-                            if (c.type === 'select') {
-                              if (c.selected) next.add(c.id);
-                              else next.delete(c.id);
-                            }
-                          return next;
-                        });
+                      (n.step?.arguments ?? (n.arguments ??= {}))[spatial.parameter] = value;
+                      edit((scenes) => {
+                        setPhaseGraph(scenes.find((s) => s.id === scene.id)!, phase, next);
+                      });
+                      setSpatial(undefined);
                     }}
-                    onEdgesChange={(changes) => {
-                      if (changes.some((c) => c.type === 'select'))
-                        setSelectedEdges((previous) => {
-                          const next = new Set(previous);
-                          for (const c of changes)
-                            if (c.type === 'select') {
-                              if (c.selected) next.add(c.id);
-                              else next.delete(c.id);
-                            }
-                          return next;
-                        });
-                    }}
-                    onEdgeDoubleClick={(_, edge) =>
-                      update((draft) => {
-                        draft.edges = draft.edges.filter((e) => e.id !== edge.id);
-                      })
-                    }
-                    defaultViewport={{ x: 50, y: 110, zoom: 0.8 }}
-                    minZoom={0.2}
-                    maxZoom={1.8}
-                    deleteKeyCode={null}
-                    nodesDraggable={!spatial}
-                    nodesConnectable={!spatial}
-                    edgesReconnectable={false}
-                  >
-                    <Background gap={24} size={1} />
-                    <Controls showInteractive={false} />
-                  </CutsceneGraphCanvas>
-                  {picker && (
-                    <Box
-                      className="cutscene-graph-picker"
-                      style={{ left: picker.x, top: picker.y }}
-                    >
-                      <HStack mb={2}>
-                        <Input
-                          autoFocus
-                          size="sm"
-                          placeholder={
-                            picker.from ? 'Search compatible functions…' : 'Search nodes…'
-                          }
-                          aria-label="Search graph nodes"
-                          value={query}
-                          onChange={(e) => setQuery(e.target.value)}
-                        />
-                        <Button size="xs" onClick={() => setPicker(undefined)}>
-                          ×
-                        </Button>
-                      </HStack>
-                      <Select
-                        size="xs"
-                        mb={2}
-                        aria-label="Node category"
-                        value={pickerCategory}
-                        onChange={(e) => setPickerCategory(e.target.value)}
-                      >
-                        <option value="">All categories</option>
-                        {categories.map((category) => (
-                          <option key={category} value={category}>
-                            {category}
-                          </option>
-                        ))}
-                      </Select>
-                      {picker.from && (
-                        <Text fontSize="10px" color="editorMutedText" mb={2}>
-                          Compatible nodes · connects the first matching pin
-                        </Text>
+                  />
+                )}
+                <EditorModal
+                  isOpen={Boolean(settings)}
+                  onClose={() => setSettings(undefined)}
+                  size="2xl"
+                >
+                  <Box bg="editorPanelBg" borderRadius="lg" maxH="85vh" overflow="auto">
+                    <ModalHeader>
+                      {settings === 'completion' ? 'Final positions' : 'Scene settings'}
+                    </ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={5}>
+                      {settings && (
+                        <CutsceneSettings scene={scene} mode={settings} characterOptions={roles} />
                       )}
-                      <Box className="cutscene-graph-picker-results">
-                        {visibleChoices.map((choice) => (
-                          <Button
-                            key={choice.id}
-                            size="xs"
-                            variant="ghost"
-                            w="full"
-                            justifyContent="start"
-                            fontWeight="normal"
-                            onClick={() => insert(choice)}
-                          >
-                            {choice.label}
-                            {choice.pin ? ` → ${choice.pin}` : ''}
-                          </Button>
-                        ))}
-                        {!visibleChoices.length && (
-                          <Text fontSize="xs" p={2}>
-                            No compatible functions or values.
-                          </Text>
-                        )}
-                      </Box>
-                    </Box>
-                  )}
-                  {spatial && map && (
-                    <CutsceneSpatialEditor
-                      map={map}
-                      tileSize={project!.tileSize}
-                      title={spatial.title}
-                      value={spatial.value}
-                      path={spatial.type === 'path'}
-                      nullable={spatial.nullable}
-                      start={spatial.start}
-                      onCancel={() => setSpatial(undefined)}
-                      onDone={(value) => {
-                        const next = structuredClone(graph);
-                        const n = next.nodes.find((n) => n.id === spatial.id);
-                        if (!n) {
-                          setSpatial(undefined);
-                          setMessage(
-                            'The edited node was removed by undo. The map draft was not applied.',
-                          );
-                          return;
-                        }
-                        (n.step?.arguments ?? (n.arguments ??= {}))[spatial.parameter] = value;
-                        edit((scenes) => {
-                          setPhaseGraph(scenes.find((s) => s.id === scene.id)!, phase, next);
-                        });
-                        setSpatial(undefined);
-                      }}
-                    />
-                  )}
-                  <EditorModal
-                    isOpen={Boolean(settings)}
-                    onClose={() => setSettings(undefined)}
-                    size="2xl"
-                  >
-                    <Box bg="editorPanelBg" borderRadius="lg" maxH="85vh" overflow="auto">
-                      <ModalHeader>
-                        {settings === 'completion' ? 'Final positions' : 'Scene settings'}
-                      </ModalHeader>
-                      <ModalCloseButton />
-                      <ModalBody pb={5}>
-                        {settings && (
-                          <CutsceneSettings
-                            scene={scene}
-                            mode={settings}
-                            characterOptions={roles}
-                          />
-                        )}
-                      </ModalBody>
-                    </Box>
-                  </EditorModal>
-                </Box>
-              </Flex>
+                    </ModalBody>
+                  </Box>
+                </EditorModal>
+              </GraphEditorShell>
             </GraphEditingContext.Provider>
           }
         />

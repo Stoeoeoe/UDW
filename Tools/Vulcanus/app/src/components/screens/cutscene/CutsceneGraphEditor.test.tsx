@@ -15,11 +15,12 @@ import manifest from '../../../lib/__fixtures__/cutscene-bindings.json';
 import prototype from '../../../lib/__fixtures__/prototype.v2.runtime.cutscene.json';
 import { theme } from '../../../theme';
 
-const mocks = vi.hoisted(() => ({ preview: vi.fn(), nodes: [] as any[] }));
+const mocks = vi.hoisted(() => ({ preview: vi.fn(), nodes: [] as any[], props: {} as any }));
 // Real-browser checks cover canvas gestures/Monaco; render the actual node and settings forms here.
 vi.mock('@xyflow/react', () => ({
   ReactFlowProvider: ({ children }: any) => children,
-  ReactFlow: ({ nodes, nodeTypes }: any) => {
+  ReactFlow: ({ nodes, nodeTypes, ...props }: any) => {
+    mocks.props = props;
     mocks.nodes = nodes;
     const Node = nodeTypes.cutscene;
     return (
@@ -299,5 +300,31 @@ describe('graph-only cutscene authoring', () => {
     });
     fireEvent.click(dialog.getByRole('button', { name: 'Restore original' }));
     expect(scene().onComplete.characterPlacements).toEqual([]);
+  });
+  it('opens shared node suggestions from both a right click and an execution pin', () => {
+    mount();
+    const preventDefault = vi.fn();
+    act(() => mocks.props.onPaneContextMenu({ clientX: 400, clientY: 250, preventDefault }));
+    expect(preventDefault).toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Choose graph node' })).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Close node suggestions'));
+    const start = mocks.nodes.find((n) => n.data.authored.kind === 'entry');
+    act(() => {
+      mocks.props.onConnectStart(
+        {},
+        { nodeId: start.id, handleId: 'exec:next', handleType: 'source' },
+      );
+      mocks.props.onConnectEnd({ clientX: 480, clientY: 320 }, { isValid: false, toNode: null });
+    });
+    fireEvent.change(screen.getByLabelText('Search graph nodes'), { target: { value: 'Wait' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Wait → in', exact: true }));
+    expect(
+      scene().graphs?.sequence?.nodes.some(
+        (n) => n.kind === 'action' && n.step?.action === 'cutscene.wait',
+      ),
+    ).toBe(true);
+    expect(
+      scene().graphs?.sequence?.edges.some((e) => e.source === start.id && e.target !== 'approach'),
+    ).toBe(true);
   });
 });

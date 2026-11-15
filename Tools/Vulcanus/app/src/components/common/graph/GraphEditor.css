@@ -1,0 +1,161 @@
+.cutscene-graph-canvas {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  background: var(--chakra-colors-editorCanvasBg);
+}
+.cutscene-graph-canvas .react-flow__edge.insertion-target .react-flow__edge-path {
+  stroke: var(--chakra-colors-blue-300);
+  stroke-width: 5;
+  stroke-dasharray: 7 4;
+}
+.cutscene-graph-node {
+  background: var(--chakra-colors-editorPanelBg);
+  border: 1px solid var(--chakra-colors-editorSequenceBorder);
+  border-radius: 6px;
+  color: var(--chakra-colors-editorText);
+  box-shadow: 0 3px 12px #0004;
+}
+.cutscene-graph-node.selected {
+  border-color: var(--chakra-colors-blue-300);
+  box-shadow: 0 0 0 1px var(--chakra-colors-blue-300);
+}
+.cutscene-graph-node.cutscene-graph-note {
+  border-color: var(--chakra-colors-yellow-600);
+  background: var(--chakra-colors-editorInlineBg);
+}
+.cutscene-graph-note .cutscene-graph-node-title {
+  background: var(--chakra-colors-editorInlineBg);
+}
+.cutscene-graph-comment-text {
+  min-height: 80px;
+  resize: vertical;
+  border: 0;
+  border-radius: 0;
+  color: var(--chakra-colors-editorMutedText);
+}
+.cutscene-graph-note .cutscene-graph-comment-text {
+  min-height: 140px;
+}
+.cutscene-graph-node-title {
+  padding: 10px 14px;
+  background: var(--chakra-colors-editorSequenceBg);
+  border-bottom: 1px solid var(--chakra-colors-editorSequenceBorder);
+  border-radius: 5px 5px 0 0;
+}
+.cutscene-graph-node[data-node-category='quest-step'] {
+  --graph-node-accent: var(--chakra-colors-orange-300);
+}
+.cutscene-graph-node[data-node-category='action'] {
+  --graph-node-accent: var(--chakra-colors-green-300);
+}
+.cutscene-graph-node[data-node-category='script'] {
+  --graph-node-accent: var(--chakra-colors-purple-300);
+}
+.cutscene-graph-node[data-node-category='flow'] {
+  --graph-node-accent: var(--chakra-colors-gray-500);
+}
+.cutscene-graph-node[data-node-category='value'] {
+  --graph-node-accent: var(--chakra-colors-cyan-300);
+}
+.cutscene-graph-node[data-node-category] .cutscene-graph-node-title {
+  border-top: 3px solid var(--graph-node-accent);
+}
+.cutscene-graph-port {
+  position: relative;
+  padding: 9px 15px;
+  min-height: 33px;
+  border-top: 1px solid var(--chakra-colors-editorFieldBorder);
+}
+.cutscene-graph-execution {
+  padding: 0 3px;
+  min-height: 37px;
+}
+.cutscene-graph-port.exec {
+  border: 0;
+}
+.cutscene-graph-port.source {
+  text-align: right;
+  margin-left: auto;
+}
+.cutscene-graph-port.output {
+  background: var(--chakra-colors-editorInlineBg);
+}
+.cutscene-graph-canvas .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--chakra-colors-green-300);
+  background: var(--chakra-colors-editorPanelBg);
+  border-radius: 50%;
+}
+.cutscene-graph-canvas .react-flow__handle.connected {
+  background: var(--chakra-colors-green-300);
+}
+.cutscene-graph-canvas .pin-string .react-flow__handle {
+  border-color: var(--chakra-colors-purple-300);
+}
+.cutscene-graph-canvas .pin-boolean .react-flow__handle {
+  border-color: var(--chakra-colors-red-300);
+}
+.cutscene-graph-canvas .pin-position .react-flow__handle {
+  border-color: var(--chakra-colors-yellow-300);
+}
+.cutscene-graph-canvas .pin-path .react-flow__handle {
+  border-color: var(--chakra-colors-blue-300);
+}
+.cutscene-graph-canvas .react-flow__handle.cutscene-exec-pin {
+  border-color: var(--chakra-colors-gray-400);
+  background: var(--chakra-colors-gray-100);
+  border-radius: 1px;
+  clip-path: polygon(0 0, 65% 0, 100% 50%, 65% 100%, 0 100%);
+  width: 13px;
+  height: 13px;
+}
+.cutscene-graph-canvas .react-flow__edge.execution .react-flow__edge-path {
+  stroke: var(--chakra-colors-gray-200);
+  stroke-width: 1.8;
+}
+.cutscene-graph-canvas .react-flow__edge.data .react-flow__edge-path {
+  stroke: var(--chakra-colors-green-300);
+  stroke-width: 1.8;
+}
+.cutscene-graph-canvas .react-flow__edge.pin-string .react-flow__edge-path {
+  stroke: var(--chakra-colors-purple-300);
+}
+.cutscene-graph-canvas .react-flow__edge.pin-boolean .react-flow__edge-path {
+  stroke: var(--chakra-colors-red-300);
+}
+.cutscene-graph-canvas .react-flow__edge.pin-position .react-flow__edge-path {
+  stroke: var(--chakra-colors-yellow-300);
+}
+.cutscene-graph-canvas .react-flow__controls-button {
+  background: var(--chakra-colors-editorPanelBg);
+  color: var(--chakra-colors-editorText);
+  border-color: var(--chakra-colors-editorSequenceBorder);
+}
+.cutscene-graph-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}
+.cutscene-graph-canvas .react-flow__attribution {
+  background: var(--chakra-colors-editorPanelBg);
+  color: var(--chakra-colors-editorMutedText);
+}
+.cutscene-graph-picker {
+  position: absolute;
+  z-index: 30;
+  width: 310px;
+  max-height: 390px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--chakra-colors-editorSequenceBorder);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--chakra-colors-editorPanelBg);
+  box-shadow: 0 8px 30px #0008;
+}
+.cutscene-graph-picker-results {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}

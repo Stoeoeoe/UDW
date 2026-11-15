@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../Schemas/quest-i18n.schema.json",
+  "questId": "base:fabia_delivery",
+  "messages": [
+    {
+      "msgKey": "quest.base:fabia_delivery.title",
+      "text": "Fabia Delivery"
+    },
+    {
+      "msgKey": "quest.base:fabia_delivery.description",
+      "text": "Fabia Delivery"
+    },
+    {
+      "msgKey": "quest.base:fabia_delivery.step-1.journal",
+      "text": "Complete the first objective."
+    },
+    {
+      "msgKey": "quest.base:fabia_delivery.step-1.objective-1.text",
+      "text": "New objective"
+    }
+  ]
+}

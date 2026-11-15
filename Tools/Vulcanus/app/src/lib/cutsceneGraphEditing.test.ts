@@ -4,9 +4,9 @@ import {
   copyGraphSelection,
   pasteGraphSelection,
   deleteGraphSelection,
-  layoutCutsceneGraph,
+  layoutGraph,
   insertExecutionNode,
-} from './cutsceneGraphEditing';
+} from './graphEditing';
 import type { CutsceneGraph } from '../types/cutsceneGraph';
 
 const graph = (): CutsceneGraph => ({
@@ -67,7 +67,7 @@ it('keeps canvas notes where authored during layout and preserves annotations on
     position: { x: 70, y: -300 },
   });
   source.nodes.find((n) => n.id === 'wait')!.comment = 'Reaction hold';
-  layoutCutsceneGraph(source, new Map());
+  layoutGraph(source, new Map());
   expect(source.nodes.find((n) => n.id === 'note')!.position).toEqual({ x: 70, y: -300 });
   const copied = copyGraphSelection(source, new Set(['note', 'wait']));
   const ids = pasteGraphSelection(source, copied);
@@ -152,7 +152,7 @@ describe('cutscene graph editing', () => {
   it('lays out measured nodes left to right without changing graph semantics', () => {
     const source = graph();
     const edges = structuredClone(source.edges);
-    layoutCutsceneGraph(
+    layoutGraph(
       source,
       new Map(source.nodes.map((n) => [n.id, { width: 300, height: n.id === 'wait' ? 600 : 100 }])),
     );
@@ -161,7 +161,7 @@ describe('cutscene graph editing', () => {
     );
     expect(source.edges).toEqual(edges);
     const first = structuredClone(source);
-    layoutCutsceneGraph(
+    layoutGraph(
       source,
       new Map(source.nodes.map((n) => [n.id, { width: 300, height: n.id === 'wait' ? 600 : 100 }])),
     );
@@ -172,7 +172,7 @@ describe('cutscene graph editing', () => {
     const sizes = new Map(
       source.nodes.map((n) => [n.id, { width: n.id === 'wait' ? 460 : 300, height: 260 }]),
     );
-    layoutCutsceneGraph(source, sizes);
+    layoutGraph(source, sizes);
     for (const edge of source.edges) {
       const left = source.nodes.find((n) => n.id === edge.source)!;
       const right = source.nodes.find((n) => n.id === edge.target)!;

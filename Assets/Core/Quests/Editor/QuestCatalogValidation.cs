@@ -29,6 +29,9 @@ namespace Core.Quests.Editor
         internal static IEnumerable<string> Problems(QuestDefinition quest, KnownContent known)
         {
             string Prefix(string where) => $"Quest '{quest.Id}': {where}";
+            foreach (var when in quest.Start.When)
+                if (!string.IsNullOrEmpty(when.Map) && !known.TriggersByMap.ContainsKey(when.Map))
+                    yield return Prefix($"it starts on entering the unknown map '{when.Map}'.");
             foreach (var step in quest.Steps)
                 foreach (var objective in step.Objectives)
                 {

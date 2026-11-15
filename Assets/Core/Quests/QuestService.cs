@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Divinity;
 using Core.Events;
 using Core.Game;
 using Core.Inventory;
@@ -8,6 +9,7 @@ using Core.Location;
 using Core.Scripting;
 using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
+using Core.TimeAndWeather.Seasons;
 using VContainer.Unity;
 
 namespace Core.Quests
@@ -39,8 +41,26 @@ namespace Core.Quests
     /// </para>
     /// </summary>
     public sealed class QuestService : ITickable, ILocationLifecycle, IDisposable,
-        IEventListener<InventoryChangedEvent>, IEventListener<GameTimeChangedEvent>, IEventListener<MapTriggerEnteredEvent>
+        IEventListener<InventoryChangedEvent>, IEventListener<GameTimeChangedEvent>, IEventListener<MapTriggerEnteredEvent>,
+        IEventListener<NewDayEvent>, IEventListener<DivineFavourChangedEvent>, IEventListener<GameStartedEvent>
     {
+        /// <summary>Something that happened, which quests that start by themselves may be waiting for.</summary>
+        private readonly struct Moment
+        {
+            public readonly QuestStartKind Kind;
+            public readonly string Season, Deity, Map;
+            public readonly int Favour;
+
+            public Moment(QuestStartKind kind, string season = null, string deity = null, int favour = 0, string map = null)
+            {
+                Kind = kind;
+                Season = season;
+                Deity = deity;
+                Favour = favour;
+                Map = map;
+            }
+        }
+
         private readonly QuestCatalog _quests;
         private readonly ItemCatalog _items;
         private readonly GameState _gameState;
@@ -49,6 +69,7 @@ namespace Core.Quests
         private VulcanusLuaEngine _conditions;
         private string _mapId;
         private bool _checkPending;
+        private readonly List<Moment> _moments = new();
 
         public QuestService(QuestCatalog quests, ItemCatalog items, GameState gameState, LuaRuntime lua, CharacterManager characters)
         {
@@ -61,6 +82,10 @@ namespace Core.Quests
             EventBus<InventoryChangedEvent>.Subscribe(this);
             EventBus<GameTimeChangedEvent>.Subscribe(this);
             EventBus<MapTriggerEnteredEvent>.Subscribe(this);
+            EventBus<NewDayEvent>.Subscribe(this);
+            EventBus<DivineFavourChangedEvent>.Subscribe(this);
+            EventBus<GameStartedEvent>.Subscribe(this);
+            SeasonStartEvent.Register(OnSeasonStarted);
         }
 
         public void Dispose()
@@ -69,6 +94,10 @@ namespace Core.Quests
             EventBus<InventoryChangedEvent>.Unsubscribe(this);
             EventBus<GameTimeChangedEvent>.Unsubscribe(this);
             EventBus<MapTriggerEnteredEvent>.Unsubscribe(this);
+            EventBus<NewDayEvent>.Unsubscribe(this);
+            EventBus<DivineFavourChangedEvent>.Unsubscribe(this);
+            EventBus<GameStartedEvent>.Unsubscribe(this);
+            SeasonStartEvent.Unregister(OnSeasonStarted);
         }
 
         public QuestDefinition Require(string questId) =>
@@ -164,10 +193,11 @@ namespace Core.Quests
 
         public void Tick()
         {
-            if (!_checkPending) return;
-            _checkPending = false;
+            if (!_checkPending && _moments.Count == 0) return;
             var player = _characters.MainCharacter;
-            if (!player) return; // Nothing can be met before the player exists; entering a location checks again.
+            if (!player) return; // Nothing can be met or started before the player exists; entering a location checks again.
+            _checkPending = false;
+            StartByMoments();
             // Failure first: a step whose deadline has passed is too late, even if it would be met now.
             foreach (var questId in ActiveQuestIds())
             {
@@ -190,7 +220,22 @@ namespace Core.Quests
             if (e.InventoryRef == _characters.MainCharacter?.MainInventory) RequestCheck();
         }
 
-        public void OnEvent(GameTimeChangedEvent e) => RequestCheck();
+        public void OnEvent(GameTimeChangedEvent e)
+        {
+            RequestCheck();
+            _moments.Add(new Moment(QuestStartKind.EveryTenMinutes));
+        }
+
+        public void OnEvent(NewDayEvent e) => _moments.Add(new Moment(QuestStartKind.NewDay));
+
+        public void OnEvent(GameStartedEvent e) => _moments.Add(new Moment(QuestStartKind.GameStart));
+
+        public void OnEvent(DivineFavourChangedEvent e) =>
+            _moments.Add(new Moment(QuestStartKind.DivineFavour, deity: e.DeityId, favour: e.NewFavour));
+
+        // The clock has already set the new season when it announces it.
+        private void OnSeasonStarted(SeasonData _) =>
+            _moments.Add(new Moment(QuestStartKind.NewSeason, season: _gameState.Time.season.ToString()));
 
         public void OnEvent(MapTriggerEnteredEvent e) => ForEachOpenObjective((_, objective) =>
             objective.Kind == QuestObjectiveKind.Reach && objective.Map == _mapId && objective.Trigger == e.TriggerId);
@@ -199,11 +244,31 @@ namespace Core.Quests
         {
             _mapId = location.id;
             RequestCheck();
+            _moments.Add(new Moment(QuestStartKind.LocationChanged, map: location.id));
         }
 
         public void OnLocationLeave(LocationData location) => _mapId = null;
 
         private void RequestCheck() => _checkPending = true;
+
+        /// <summary>Starts each quest that never has been and is waiting for one of the moments that came, if its condition holds.</summary>
+        private void StartByMoments()
+        {
+            var moments = _moments.ToArray();
+            _moments.Clear();
+            foreach (var quest in _quests.EnabledDefinitions)
+                if (_gameState.Quests.Find(quest.Id) == null && quest.Start.When.Any(when => moments.Any(moment => Matches(when, moment))) &&
+                    (string.IsNullOrWhiteSpace(quest.Start.Condition) || Conditions.EvaluateCondition(quest.Start.Condition)))
+                    Start(quest.Id);
+        }
+
+        private static bool Matches(QuestStartMoment when, Moment moment) => when.On == moment.Kind && when.On switch
+        {
+            QuestStartKind.NewSeason => string.IsNullOrEmpty(when.Season) || string.Equals(when.Season, moment.Season, StringComparison.OrdinalIgnoreCase),
+            QuestStartKind.DivineFavour => (string.IsNullOrEmpty(when.Deity) || when.Deity == moment.Deity) && moment.Favour >= when.AtLeast,
+            QuestStartKind.LocationChanged => string.IsNullOrEmpty(when.Map) || string.Equals(when.Map, moment.Map, StringComparison.OrdinalIgnoreCase),
+            _ => true
+        };
 
         private VulcanusLuaEngine Conditions => _conditions ??= _lua.CreateEngine();
 

@@ -1,16 +1,6 @@
 import React, { lazy, Suspense, useContext, useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  HStack,
-  IconButton,
-  Input,
-  Select,
-  Switch,
-  Text,
-  Textarea,
-} from '@chakra-ui/react';
-import { FiMessageSquare, FiX } from 'react-icons/fi';
+import { Box, Button, HStack, Input, Select, Switch, Text } from '@chakra-ui/react';
+import { GraphNodeFrame, GraphExecutionPort } from '../../common/graph/GraphNodeFrame';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { CutsceneData } from '../../../types/cutscene';
 import type { CutsceneGraphNode as AuthoredNode } from '../../../types/cutsceneGraph';
@@ -47,6 +37,7 @@ export const CutsceneGraphNode = React.memo(
       spatial,
       characterReferences,
       argumentReferences,
+      executionOnly,
     } = useContext(GraphEditingContext);
     const scriptScope = useMemo(
       () => ({
@@ -115,74 +106,41 @@ export const CutsceneGraphNode = React.memo(
       </Box>
     );
     const exec = (direction: 'source' | 'target', id: string, label: string) => (
-      <Box key={id} className={`cutscene-graph-port exec ${direction}`}>
-        <Handle
-          type={direction}
-          position={direction === 'source' ? Position.Right : Position.Left}
-          id={`exec:${id}`}
-          className="cutscene-exec-pin"
-        />
-        <Text fontSize="10px">{label}</Text>
-      </Box>
+      <GraphExecutionPort key={id} direction={direction} id={id} label={label} />
     );
-    const commentField = (
-      <Textarea
-        className="nodrag nowheel nopan cutscene-graph-comment-text"
-        aria-label={n.kind === 'comment' ? 'Canvas comment' : `${title} comment`}
-        placeholder="Write a comment…"
-        size="xs"
-        value={n.comment ?? ''}
-        onKeyDown={(e) => e.stopPropagation()}
-        onChange={(e) =>
-          change(n.id, (node) => {
-            node.comment = e.target.value;
-          })
-        }
-      />
-    );
+    const changeComment = (value: string | undefined) =>
+      change(n.id, (node) => {
+        if (value === undefined) delete node.comment;
+        else node.comment = value;
+      });
     if (n.kind === 'comment')
       return (
-        <Box className={`cutscene-graph-node cutscene-graph-note ${selected ? 'selected' : ''}`}>
-          <Box className="cutscene-graph-node-title">
-            <Text fontSize="xs" fontWeight="semibold">
-              Comment
-            </Text>
-          </Box>
-          {commentField}
-        </Box>
+        <GraphNodeFrame
+          title="Comment"
+          annotation
+          selected={selected}
+          comment={n.comment}
+          onCommentChange={changeComment}
+        />
       );
     return (
-      <Box className={`cutscene-graph-node ${pure ? 'pure' : ''} ${selected ? 'selected' : ''}`}>
-        <Box className="cutscene-graph-node-title">
-          <HStack justify="space-between">
-            <Text fontWeight="semibold" fontSize="sm">
-              {pure ? 'ƒ ' : ''}
-              {title}
-            </Text>
-            <IconButton
-              className="nodrag"
-              size="xs"
-              variant="ghost"
-              aria-label={n.comment === undefined ? 'Add node comment' : 'Remove node comment'}
-              title={n.comment === undefined ? 'Add comment' : 'Remove comment'}
-              icon={n.comment === undefined ? <FiMessageSquare /> : <FiX />}
-              onClick={() =>
-                change(n.id, (node) => {
-                  if (node.comment === undefined) node.comment = '';
-                  else delete node.comment;
-                })
-              }
-            />
-          </HStack>
-          <Text fontSize="9px" color="editorMutedText">
-            {pure
-              ? 'Read-only · calculated when needed'
-              : signature.action?.execution === 'awaitable'
-                ? 'Completes before continuing'
-                : 'Execution'}
-          </Text>
-        </Box>
-        {n.comment !== undefined && commentField}
+      <GraphNodeFrame
+        title={title}
+        category={
+          pure ? 'value' : n.kind === 'action' ? 'action' : n.kind === 'lua' ? 'script' : 'flow'
+        }
+        selected={selected}
+        pure={pure}
+        subtitle={
+          pure
+            ? 'Read-only · calculated when needed'
+            : signature.action?.execution === 'awaitable'
+              ? 'Completes before continuing'
+              : 'Execution'
+        }
+        comment={n.comment}
+        onCommentChange={changeComment}
+      >
         {!pure && (
           <HStack className="cutscene-graph-execution" justify="space-between">
             {n.kind !== 'entry' && n.kind !== 'join' && exec('target', 'in', 'In')}
@@ -238,12 +196,14 @@ export const CutsceneGraphNode = React.memo(
           const colorType = canonicalVariableType(p.type);
           return (
             <Box className={`cutscene-graph-port data pin-${colorType}`} key={p.name}>
-              <Handle
-                type="target"
-                position={Position.Left}
-                id={`data:${p.name}`}
-                className={connected ? 'connected' : ''}
-              />
+              {!executionOnly && (
+                <Handle
+                  type="target"
+                  position={Position.Left}
+                  id={`data:${p.name}`}
+                  className={connected ? 'connected' : ''}
+                />
+              )}
               <HStack justify="space-between" mb={1}>
                 <Text fontSize="11px">{p.name.replace(/([A-Z])/g, ' $1')}</Text>
                 <Text fontSize="8px" color="editorMutedText">
@@ -530,7 +490,7 @@ export const CutsceneGraphNode = React.memo(
             </Button>
           </>
         )}
-      </Box>
+      </GraphNodeFrame>
     );
   },
   (previous, next) => previous.data === next.data && previous.selected === next.selected,

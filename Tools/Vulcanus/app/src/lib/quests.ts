@@ -4,7 +4,8 @@ import type { Map as GameMap } from '../types/schema';
 import { LOCAL_ID_PATTERN, RESOURCE_ID_PATTERN } from './resourceIds';
 import { validateLuaChunk } from './luaRunner';
 import { bindingDiagnostics, CONDITION_SCOPE, SCRIPT_SCOPE } from './luaBindings';
-import type { ScriptingManifest } from './scriptingManifest';
+import type { ScriptingManifest, ScriptingResources } from './scriptingManifest';
+import { compileQuestGraph, questGraphSchema } from './questGraph';
 
 const text = z.string().regex(/\S/);
 const local = z.string().regex(LOCAL_ID_PATTERN);
@@ -34,6 +35,21 @@ const objective = z.discriminatedUnion('kind', [
   z.strictObject({ ...base, kind: z.literal('reach'), map: resource, trigger: text.optional() }),
   z.strictObject({ ...base, kind: z.literal('condition'), condition: text }),
 ]);
+const startMoment = z.discriminatedUnion('on', [
+  z.strictObject({ on: z.literal('gameStart') }),
+  z.strictObject({ on: z.literal('newDay') }),
+  z.strictObject({
+    on: z.literal('newSeason'),
+    season: z.enum(['spring', 'summer', 'autumn', 'winter']).optional(),
+  }),
+  z.strictObject({ on: z.literal('everyTenMinutes') }),
+  z.strictObject({
+    on: z.literal('divineFavour'),
+    deity: resource.optional(),
+    atLeast: z.number().int().optional(),
+  }),
+  z.strictObject({ on: z.literal('locationChanged'), map: resource.optional() }),
+]);
 export const questSchema = z.strictObject({
   $schema: z.string().optional(),
   formatVersion: z.literal(1),
@@ -42,9 +58,13 @@ export const questSchema = z.strictObject({
   description: text,
   giver: resource.optional(),
   folderPath: z.string().optional(),
+  editorGraph: questGraphSchema.optional(),
   onStart: text.optional(),
   onComplete: text.optional(),
   onFail: text.optional(),
+  start: z
+    .strictObject({ when: z.array(startMoment).min(1), condition: text.optional() })
+    .optional(),
   steps: z
     .array(
       z.strictObject({
@@ -78,7 +98,15 @@ export function validateQuest(
   quest: Quest,
   references?: QuestReferences,
   manifest: ScriptingManifest | null = null,
+  resources?: ScriptingResources,
 ): string[] {
+  if (quest.editorGraph) {
+    try {
+      quest = compileQuestGraph(quest, manifest, resources);
+    } catch (error) {
+      return [error instanceof Error ? error.message : String(error)];
+    }
+  }
   const parsed = questSchema.safeParse(quest);
   const errors = parsed.success
     ? []
@@ -110,6 +138,16 @@ export function validateQuest(
   };
   known(quest.giver, references?.characterIds, 'character', 'Giver');
   for (const field of ['onStart', 'onComplete', 'onFail'] as const) lua(quest[field], field);
+  lua(quest.start?.condition, 'Start condition', true);
+  quest.start?.when.forEach((when, i) => {
+    const where = `Start moment ${i + 1}`;
+    if (when.on === 'divineFavour' && when.deity && resources?.deity)
+      known(when.deity, new Set(resources.deity.map((d) => d.id)), 'deity', where);
+    if (when.on === 'locationChanged' && when.map && references) {
+      if (!references.maps.some((map) => map.id.toLowerCase() === when.map!.toLowerCase()))
+        errors.push(`${where}: unknown map ${when.map}.`);
+    }
+  });
   unique(
     quest.steps.map((step) => step.id),
     'Steps',
@@ -136,6 +174,15 @@ export function validateQuest(
     });
   });
   return errors;
+}
+
+/** Things that are allowed but worth a second look; they never block saving. */
+export function questStartWarnings(quest: Quest): string[] {
+  return quest.start?.when.some((when) => when.on === 'everyTenMinutes')
+    ? [
+        'Every 10 minutes looks at this quest at every clock step, the most often of all moments. Use another moment where one fits.',
+      ]
+    : [];
 }
 
 export function questI18n(quest: Quest): QuestI18n {

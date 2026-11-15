@@ -36,6 +36,37 @@ Linear STO-89.
 - **Actions** (`onStart`, `onComplete`, `onFail`, and each step's `onComplete`) are Lua statements, like dialogue
   action nodes.
 
+## Graph authoring in Vulcanus
+
+The quest editor uses the shared cutscene canvas and action parameter controls.
+Typed quest step nodes author talk, deliver, have, reach and condition objectives;
+Complete objectives groups multiple requirements into one journal step. Objectives
+are added and removed inside that node. Step and objective IDs remain the IDs used
+by saved quest progress and translation keys.
+
+Begin starts the execution chain. Actions before the first step compile to
+`onStart`; actions after a step compile to that step's `onComplete`. Complete quest
+marks the boundary for quest-level completion actions: actions connected after it
+compile to the quest's `onComplete`. An optional On failure root compiles its actions
+to `onFail`. This preserves the runtime's existing lifecycle ordering, including its
+recording of progress before running actions. These are synchronous hooks, not
+cutscene sessions that remain alive while a quest waits for the player.
+
+Action nodes use state-changing, ordinary callable methods from the generated
+binding manifest, with the same resource pickers and numeric fields as cutscenes.
+Session-only and spatial actions are excluded. Execute Lua Script uses the existing
+quest scripting API. Return values from action nodes are discarded; for example
+`Inventory.Give` still gives nothing and returns false when the bag is full. Graph
+authoring does not change that inventory behavior.
+
+`editorGraph` stores node positions, wires, step references and authored actions in
+the quest source. At save, Vulcanus validates and compiles it into the existing
+`steps` and Lua fields that Unity imports. Unity checks the extended source schema
+and imports those compiled fields; no quest save format changes are needed. Existing
+quests open as graphs without rewriting their content until edited. Disconnected
+nodes, cycles, branches, multiple predecessors and missing steps block saving.
+Quest branching and parallel execution are not supported in this version.
+
 ## Texts
 
 Texts are plain strings in the source language. Their message keys are derived from the IDs, which must stay stable
@@ -55,8 +86,27 @@ to the quest's own. Renaming a step or objective drops its translations.
 
 - At import: the schema (shape, required fields per objective kind, ranges) and Lua that parses. The definition adds
   only what the schema can't express: unique step IDs and objective IDs within a step (`Validation.Unique`).
-- When catalogs refresh (`QuestCatalogValidation`): the giver and talk/deliver characters, dialogues, items, maps and
-  triggers exist.
+- When catalogs refresh: the giver, characters, dialogues, items and deities a quest names exist
+  (`Validation.Reference`, checked by `ReferenceValidation`), and `QuestCatalogValidation` checks the maps and triggers.
+
+## Starting by themselves
+
+A quest with a `start` is considered for starting at the moments it lists, and starts if it never has and its optional
+`condition` (a read-only Lua expression) holds then. Without a condition the moment alone starts it. Without `start`,
+a quest starts only through a `Quests.Start` action, from a dialogue, cutscene or another quest.
+
+| `on` | Moment | Optional filters |
+| --- | --- | --- |
+| `gameStart` | A new game begins; loading a save does not count | |
+| `newDay` | A new day begins. The first day of a new game is not a new day; use `gameStart` | |
+| `newSeason` | A season begins | `season` |
+| `everyTenMinutes` | Every ten-minute clock step. The most frequent moment; prefer another where one fits | |
+| `divineFavour` | The favour with a deity changes | `deity`, `atLeast` (the new favour) |
+| `locationChanged` | The player enters a map | `map` |
+
+`QuestService` collects the moments as they happen and looks at the waiting quests on its next tick, together with the
+objective checks. Other moments, such as wallet, equipment, item or social-standing changes, can be added the same way
+later: a new `QuestStartKind`, the event that raises it, and its filters.
 
 ## Running quests
 

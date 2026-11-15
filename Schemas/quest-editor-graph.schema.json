@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "quest-editor-graph.schema.json",
+  "title": "Quest editor graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nodes", "edges"],
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "position"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": ["entry", "exit", "failure", "step", "action", "lua"]
+          },
+          "position": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x", "y"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "stepId": { "type": "string" },
+          "group": { "type": "boolean" },
+          "code": { "type": "string" },
+          "comment": { "type": "string" },
+          "action": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["method", "arguments"],
+            "properties": {
+              "method": { "type": "string", "minLength": 1 },
+              "arguments": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "target",
+          "sourcePin",
+          "targetPin",
+          "kind"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "sourcePin": { "const": "next" },
+          "targetPin": { "const": "in" },
+          "kind": { "const": "execution" }
+        }
+      }
+    }
+  }
+}

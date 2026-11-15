@@ -10,18 +10,33 @@ import {
   Select,
   Text,
   Textarea,
-  VStack,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
-import { validateQuest, unusedQuestLocalId } from '../../../lib/quests';
+import { questStartWarnings, validateQuest } from '../../../lib/quests';
+import { describeStartMoment, questStartedBy } from '../../../lib/questStarters';
 import { ConditionEditor } from '../scripting/ConditionEditor';
 import { EditorHeaderActions, EditorValidationStatus } from '../../common/EditorDocumentFrame';
-import { SequenceCard, SequenceToolbar } from '../../common/SequenceEditor';
+import { QuestGraphCanvas } from './QuestGraphCanvas';
+import {
+  graphFromQuest,
+  editQuestGraph,
+  removeQuestNode,
+  questActionResources,
+  questStepLabels,
+} from '../../../lib/questGraph';
+import type { QuestGraphNode } from '../../../types/questGraph';
 import { InspectorShell } from '../../common/InspectorShell';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { FiPlus, FiSettings } from 'react-icons/fi';
-import type { Quest, QuestObjective, QuestStep } from '../../../types/quest';
+import { FiSettings } from 'react-icons/fi';
+import type {
+  Quest,
+  QuestObjective,
+  QuestSeason,
+  QuestStart,
+  QuestStartMoment,
+  QuestStep,
+} from '../../../types/quest';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { DialogueSelect } from '../routine/DialogueSelect';
 
@@ -118,6 +133,196 @@ function LuaField({
   );
 }
 
+const START_MOMENTS: { on: QuestStartMoment['on']; label: string }[] = [
+  { on: 'gameStart', label: 'Game start' },
+  { on: 'newDay', label: 'New day' },
+  { on: 'newSeason', label: 'New season' },
+  { on: 'everyTenMinutes', label: 'Every 10 minutes' },
+  { on: 'divineFavour', label: 'Divine favour changes' },
+  { on: 'locationChanged', label: 'Location changed' },
+];
+const SEASONS: QuestSeason[] = ['spring', 'summer', 'autumn', 'winter'];
+
+/** When the quest starts by itself, and what else starts it. */
+function StartSection({
+  quest,
+  onChange,
+  maps,
+  deities,
+  documentId,
+}: {
+  quest: Quest;
+  onChange: (start: QuestStart | undefined) => void;
+  maps: readonly { id: string; name: string }[];
+  deities: readonly { id: string; name: string }[];
+  documentId: string;
+}) {
+  const quests = useEditorStore((s) => s.quests);
+  const dialogues = useEditorStore((s) => s.dialogues);
+  const cutscenes = useEditorStore((s) => s.cutscenes);
+  const startedBy = useMemo(
+    () => questStartedBy(quest.id, { quests, dialogues, cutscenes }),
+    [quest.id, quests, dialogues, cutscenes],
+  );
+  const names = useMemo(
+    () => Object.fromEntries([...maps, ...deities].map((r) => [r.id, r.name])),
+    [maps, deities],
+  );
+  const start = quest.start;
+  const setMoment = (i: number, moment: QuestStartMoment) =>
+    onChange({ ...start!, when: start!.when.map((m, j) => (j === i ? moment : m)) });
+  return (
+    <>
+      <Checkbox
+        isChecked={!!start}
+        onChange={(e) => onChange(e.target.checked ? { when: [{ on: 'newDay' }] } : undefined)}
+      >
+        Starts by itself
+      </Checkbox>
+      {start && (
+        <>
+          {start.when.map((moment, i) => (
+            <Box key={i} borderWidth="1px" borderRadius="md" p={2}>
+              <HStack align="end">
+                <FormControl>
+                  <FieldLabel>Moment {i + 1}</FieldLabel>
+                  <Select
+                    size="sm"
+                    aria-label={`Moment ${i + 1}`}
+                    value={moment.on}
+                    onChange={(e) => setMoment(i, { on: e.target.value } as QuestStartMoment)}
+                  >
+                    {START_MOMENTS.map((m) => (
+                      <option key={m.on} value={m.on}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Remove moment ${i + 1}`}
+                  onClick={() =>
+                    onChange(
+                      start.when.length > 1
+                        ? { ...start, when: start.when.filter((_, j) => j !== i) }
+                        : undefined,
+                    )
+                  }
+                >
+                  Remove
+                </Button>
+              </HStack>
+              {moment.on === 'newSeason' && (
+                <FormControl mt={2}>
+                  <FieldLabel>Season</FieldLabel>
+                  <Select
+                    size="sm"
+                    aria-label="Season"
+                    value={moment.season ?? ''}
+                    onChange={(e) =>
+                      setMoment(i, {
+                        on: 'newSeason',
+                        season: (e.target.value || undefined) as QuestSeason | undefined,
+                      })
+                    }
+                  >
+                    <option value="">Any season</option>
+                    {SEASONS.map((season) => (
+                      <option key={season} value={season}>
+                        {season}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+              {moment.on === 'divineFavour' && (
+                <>
+                  <Reference
+                    label="Deity"
+                    value={moment.deity ?? ''}
+                    entries={deities}
+                    empty="Any deity"
+                    onChange={(deity) => setMoment(i, { ...moment, deity: deity || undefined })}
+                  />
+                  <FormControl mt={2}>
+                    <FieldLabel>Favour at least (empty = any)</FieldLabel>
+                    <Input
+                      aria-label="Favour at least"
+                      size="sm"
+                      type="number"
+                      value={moment.atLeast ?? ''}
+                      onChange={(e) =>
+                        setMoment(i, {
+                          ...moment,
+                          atLeast: e.target.value === '' ? undefined : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </FormControl>
+                </>
+              )}
+              {moment.on === 'locationChanged' && (
+                <Reference
+                  label="Map"
+                  value={moment.map ?? ''}
+                  entries={maps}
+                  empty="Any map"
+                  onChange={(map) => setMoment(i, { on: 'locationChanged', map: map || undefined })}
+                />
+              )}
+            </Box>
+          ))}
+          {questStartWarnings(quest).map((warning) => (
+            <Text key={warning} role="status" fontSize="sm" color="orange.400">
+              {warning}
+            </Text>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onChange({ ...start, when: [...start.when, { on: 'newDay' }] })}
+          >
+            Add moment
+          </Button>
+          <LuaField
+            label="Start condition (optional)"
+            value={start.condition}
+            condition
+            documentId={`${documentId}/start`}
+            onChange={(condition) => onChange({ ...start, condition })}
+          />
+        </>
+      )}
+      <Box>
+        <FieldLabel>Started by</FieldLabel>
+        {!start && !startedBy.length && (
+          <Text fontSize="sm" color="editorMutedText">
+            Nothing starts this quest yet. Add a Quests.Start call to a dialogue or cutscene, or let
+            it start by itself.
+          </Text>
+        )}
+        {start?.when.map((moment, i) => (
+          <Text key={`moment-${i}`} fontSize="sm">
+            {describeStartMoment(moment, names)}
+            {start.condition ? ' and the start condition holds' : ''}
+          </Text>
+        ))}
+        {startedBy.map((starter) => (
+          <Text key={`${starter.kind}-${starter.id}-${starter.nodeId ?? ''}`} fontSize="sm">
+            {starter.kind === 'dialogue'
+              ? `Dialogue ${starter.name}, node ${starter.nodeId}`
+              : starter.kind === 'cutscene'
+                ? `Cutscene ${starter.name}`
+                : `Quest ${starter.name}`}
+          </Text>
+        ))}
+      </Box>
+    </>
+  );
+}
+
 export function QuestEditor({ questId }: { questId: string }) {
   const quest = useEditorStore((s) => s.quests.find((q) => q.id === questId));
   return quest ? (
@@ -127,7 +332,7 @@ export function QuestEditor({ questId }: { questId: string }) {
   );
 }
 
-type Selection = 'settings' | 'issues' | { step: number; objective?: number };
+type Selection = 'settings' | 'issues' | { step: number; objective?: number } | { nodeId: string };
 
 function QuestWorkspace({ quest }: { quest: Quest }) {
   const characters = useEditorStore((s) => s.characters);
@@ -136,11 +341,39 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
   const dialogues = useEditorStore((s) => s.dialogues);
   const update = useEditorStore((s) => s.updateQuest);
   const manifest = useScriptingManifestStore((s) => s.manifest);
+  const resources = useMemo(
+    () => questActionResources(manifest, { characters, items }),
+    [manifest, characters, items],
+  );
+  const deities = useMemo(
+    () => (resources.deity ?? []).map((d) => ({ id: d.id, name: d.description ?? d.id })),
+    [resources],
+  );
   const [selection, setSelection] = useState<Selection>({ step: 0 });
-  const selected = typeof selection === 'object' ? selection.step : -1;
-  const index = typeof selection === 'object' ? (selection.objective ?? -1) : -1;
+  const graph = useMemo(() => graphFromQuest(quest), [quest]);
+  const selectionNode =
+    typeof selection === 'object' && 'nodeId' in selection
+      ? graph.nodes.find((n) => n.id === selection.nodeId)
+      : undefined;
+  const selected =
+    selectionNode?.kind === 'step'
+      ? quest.steps.findIndex((s) => s.id === selectionNode.stepId)
+      : typeof selection === 'object' && 'step' in selection
+        ? selection.step
+        : -1;
   const step = quest.steps[selected];
+  const index =
+    selectionNode?.kind === 'step' && step?.objectives.length === 1
+      ? 0
+      : typeof selection === 'object' && 'step' in selection
+        ? (selection.objective ?? -1)
+        : -1;
   const o = step?.objectives[index];
+  const grouped =
+    graph.nodes.find((n) => n.kind === 'step' && n.stepId === step?.id)?.group === true ||
+    (step?.objectives.length ?? 0) > 1;
+  const node = selectionNode?.kind !== 'step' ? selectionNode : undefined;
+  const selectNode = (node: QuestGraphNode) => setSelection({ nodeId: node.id });
   const errors = useMemo(
     () =>
       validateQuest(
@@ -152,46 +385,48 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
           maps,
         },
         manifest,
+        resources,
       ),
-    [quest, characters, items, dialogues, maps, manifest],
+    [quest, characters, items, dialogues, maps, manifest, resources],
   );
-  const patch = (updates: Partial<Quest>) => update(quest.id, updates);
-  const patchStep = (updates: Partial<QuestStep>) =>
-    patch({ steps: quest.steps.map((s, i) => (i === selected ? { ...s, ...updates } : s)) });
+  const patch = (updates: Partial<Quest>) => {
+    const merged = { ...quest, ...updates };
+    update(quest.id, editQuestGraph(merged, updates.editorGraph ?? graph, manifest, resources));
+  };
+  const patchStep = (updates: Partial<QuestStep>) => {
+    const next =
+      updates.id === undefined
+        ? graph
+        : {
+            ...graph,
+            nodes: graph.nodes.map((n) =>
+              n.kind === 'step' && n.stepId === step.id ? { ...n, stepId: updates.id } : n,
+            ),
+          };
+    patch({
+      steps: quest.steps.map((s, i) => (i === selected ? { ...s, ...updates } : s)),
+      editorGraph: next,
+    });
+  };
   const patchObjective = (objectiveIndex: number, objective: QuestObjective) =>
     patchStep({
       objectives: step.objectives.map((entry, i) => (i === objectiveIndex ? objective : entry)),
     });
-  const addStep = () => {
-    patch({
-      steps: [
-        ...quest.steps,
-        {
-          id: unusedQuestLocalId(quest.steps, 'step'),
-          journal: 'Complete the next objective.',
-          objectives: [
-            { id: 'objective-1', kind: 'condition', text: 'New objective', condition: 'false' },
-          ],
-        },
-      ],
-    });
-    setSelection({ step: quest.steps.length });
-  };
-  const move = (delta: number) => {
-    const steps = [...quest.steps];
-    [steps[selected], steps[selected + delta]] = [steps[selected + delta], steps[selected]];
-    patch({ steps });
-    setSelection({ step: selected + delta });
-  };
   const removeSelected = () => {
-    if (o) {
+    if (o && grouped) {
       patchStep({ objectives: step.objectives.filter((_, i) => i !== index) });
       setSelection({ step: selected });
     } else {
-      patch({ steps: quest.steps.filter((_, i) => i !== selected) });
-      setSelection(
-        quest.steps.length > 1 ? { step: Math.min(selected, quest.steps.length - 2) } : 'settings',
-      );
+      const removing = node ?? graph.nodes.find((n) => n.stepId === step?.id);
+      if (!removing) return;
+      patch({
+        editorGraph: removeQuestNode(graph, removing.id),
+        steps:
+          removing.kind === 'step'
+            ? quest.steps.filter((s) => s.id !== removing.stepId)
+            : quest.steps,
+      });
+      setSelection('settings');
     }
   };
   const inspector = (
@@ -202,13 +437,36 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
           : selection === 'issues'
             ? 'Validation'
             : o
-              ? 'Objective'
-              : 'Step'
+              ? questStepLabels[o.kind]
+              : node
+                ? node.kind === 'lua'
+                  ? 'Execute Lua Script'
+                  : node.kind === 'action'
+                    ? 'Action'
+                    : node.kind === 'exit'
+                      ? 'Complete quest'
+                      : node.kind === 'failure'
+                        ? 'On failure'
+                        : 'Begin'
+                : 'Step'
       }
-      subtitle={o?.id ?? step?.id}
-      onDelete={step ? removeSelected : undefined}
-      deleteLabel={o ? 'Delete objective' : 'Delete step'}
+      subtitle={o?.id ?? step?.id ?? node?.action?.method}
+      onDelete={
+        step || (node && !['entry', 'exit'].includes(node.kind)) ? removeSelected : undefined
+      }
+      deleteLabel={o && grouped ? 'Delete objective' : step ? 'Delete step' : 'Delete node'}
     >
+      {step && (
+        <>
+          <Field label="Step ID" value={step.id} onChange={(id) => patchStep({ id })} />
+          <Field
+            label="Journal"
+            value={step.journal}
+            onChange={(journal) => patchStep({ journal })}
+            multiline
+          />
+        </>
+      )}
       {selection === 'settings' ? (
         <>
           <Field label="Title" value={quest.title} onChange={(title) => patch({ title })} />
@@ -225,21 +483,13 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             empty="No giver"
             onChange={(giver) => patch({ giver: giver || undefined })}
           />
-          {(['onStart', 'onComplete', 'onFail'] as const).map((field) => (
-            <LuaField
-              key={field}
-              label={
-                field === 'onStart'
-                  ? 'On start'
-                  : field === 'onComplete'
-                    ? 'On completion'
-                    : 'On failure'
-              }
-              value={quest[field]}
-              documentId={quest.id + '/' + field}
-              onChange={(value) => patch({ [field]: value })}
-            />
-          ))}
+          <StartSection
+            quest={quest}
+            onChange={(start) => patch({ start })}
+            maps={maps}
+            deities={deities}
+            documentId={quest.id}
+          />
         </>
       ) : selection === 'issues' ? (
         <>
@@ -255,6 +505,45 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             </Text>
           )}
         </>
+      ) : node ? (
+        node.kind === 'lua' ? (
+          <LuaField
+            label="Script"
+            value={node.code}
+            documentId={quest.id + '/' + node.id}
+            onChange={(code) =>
+              patch({
+                editorGraph: {
+                  ...graph,
+                  nodes: graph.nodes.map((n) =>
+                    n.id === node.id ? { ...n, code: code ?? '' } : n,
+                  ),
+                },
+              })
+            }
+          />
+        ) : (
+          <>
+            <Text fontSize="sm" color="editorMutedText">
+              {node.kind === 'action'
+                ? 'Edit the action parameters directly on the node. Its result is currently discarded, as in a Lua statement.'
+                : node.kind === 'exit'
+                  ? 'The quest becomes completed when the previous step finishes. Connect quest completion actions to this output.'
+                  : node.kind === 'failure'
+                    ? 'Actions connected here run when a step deadline or fail condition fails the quest.'
+                    : 'Actions before the first quest step run when the quest starts.'}
+            </Text>
+            {node.kind === 'entry' && (
+              <StartSection
+                quest={quest}
+                onChange={(start) => patch({ start })}
+                maps={maps}
+                deities={deities}
+                documentId={quest.id}
+              />
+            )}
+          </>
+        )
       ) : o ? (
         <>
           <Field
@@ -362,7 +651,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
           )}
           {o.kind === 'condition' && (
             <LuaField
-              label="Objective condition"
+              label="Complete when"
               value={o.condition}
               condition
               documentId={`${quest.id}/${selected}/${index}/condition`}
@@ -371,26 +660,17 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
           )}
         </>
       ) : step ? (
+        <Text fontSize="sm" color="editorMutedText">
+          Select an objective in the node to edit its fields. Add or remove objectives directly in
+          the node.
+        </Text>
+      ) : (
+        <Text fontSize="sm" color="editorMutedText">
+          Select a step or objective to edit its properties.
+        </Text>
+      )}
+      {step && (
         <>
-          <HStack>
-            <Button size="xs" isDisabled={selected === 0} onClick={() => move(-1)}>
-              Move up
-            </Button>
-            <Button
-              size="xs"
-              isDisabled={selected === quest.steps.length - 1}
-              onClick={() => move(1)}
-            >
-              Move down
-            </Button>
-          </HStack>
-          <Field label="Step ID" value={step.id} onChange={(id) => patchStep({ id })} />
-          <Field
-            label="Journal"
-            value={step.journal}
-            onChange={(journal) => patchStep({ journal })}
-            multiline
-          />
           <Checkbox
             isChecked={!!step.deadline}
             onChange={(e) => patchStep({ deadline: e.target.checked ? { days: 0 } : undefined })}
@@ -422,45 +702,13 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             </HStack>
           )}
           <LuaField
-            label="Fail condition"
+            label="Fail when"
             value={step.failWhen}
             condition
             documentId={`${quest.id}/${selected}/failWhen`}
             onChange={(failWhen) => patchStep({ failWhen })}
           />
-          <LuaField
-            label="On completion"
-            value={step.onComplete}
-            documentId={`${quest.id}/${selected}/onComplete`}
-            onChange={(onComplete) => patchStep({ onComplete })}
-          />
-
-          <Button
-            size="sm"
-            variant="outline"
-            leftIcon={<FiPlus />}
-            onClick={() => {
-              patchStep({
-                objectives: [
-                  ...step.objectives,
-                  {
-                    id: unusedQuestLocalId(step.objectives, 'objective'),
-                    kind: 'condition',
-                    text: 'New objective',
-                    condition: 'false',
-                  },
-                ],
-              });
-              setSelection({ step: selected, objective: step.objectives.length });
-            }}
-          >
-            Add objective
-          </Button>
         </>
-      ) : (
-        <Text fontSize="sm" color="editorMutedText">
-          Select a step or objective to edit its properties.
-        </Text>
       )}
     </InspectorShell>
   );
@@ -484,76 +732,12 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
         rightPanelDefaultSize={32}
         rightPanelMinSize={22}
         content={
-          <VStack h="full" align="stretch" spacing={0} bg="editorWorkspaceBg">
-            <SequenceToolbar>
-              <Text fontSize="sm" color="editorMutedText" flex={1}>
-                {quest.steps.length} steps · complete all objectives in each step
-              </Text>
-              <Button size="xs" variant="outline" leftIcon={<FiPlus />} onClick={addStep}>
-                Add step
-              </Button>
-            </SequenceToolbar>
-            <Box flex={1} minH={0} overflowY="auto" p={4}>
-              {quest.steps.map((entry, stepIndex) => (
-                <SequenceCard
-                  key={stepIndex}
-                  selected={selected === stepIndex}
-                  label={'Step ' + (stepIndex + 1)}
-                  onClick={() => setSelection({ step: stepIndex })}
-                >
-                  <HStack mb={2}>
-                    <Text fontSize="xs" color="editorMutedText">
-                      STEP {stepIndex + 1}
-                    </Text>
-                    <Text fontSize="xs" fontFamily="mono" color="editorMutedText">
-                      {entry.id}
-                    </Text>
-                    {entry.deadline && (
-                      <Text ml="auto" fontSize="xs" color="editorMutedText">
-                        Due day +{entry.deadline.days}
-                        {entry.deadline.at ? ' at ' + entry.deadline.at : ', end of day'}
-                      </Text>
-                    )}
-                  </HStack>
-                  <Text fontSize="sm" mb={3}>
-                    {entry.journal}
-                  </Text>
-                  <VStack align="stretch" spacing={1}>
-                    {entry.objectives.map((objective, objectiveIndex) => (
-                      <Button
-                        key={objectiveIndex}
-                        aria-label={'Select objective ' + objective.id}
-                        size="sm"
-                        variant="ghost"
-                        fontWeight="normal"
-                        justifyContent="start"
-                        isActive={selected === stepIndex && index === objectiveIndex}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelection({ step: stepIndex, objective: objectiveIndex });
-                        }}
-                      >
-                        <Text fontSize="xs" color="editorMutedText" mr={2}>
-                          {objective.kind}
-                        </Text>
-                        <Text noOfLines={1}>{objective.text}</Text>
-                      </Button>
-                    ))}
-                    {!entry.objectives.length && (
-                      <Text fontSize="xs" color="editorDangerText">
-                        Add an objective to this step.
-                      </Text>
-                    )}
-                  </VStack>
-                </SequenceCard>
-              ))}
-              {!quest.steps.length && (
-                <Text color="editorMutedText" fontSize="sm">
-                  Add the first step to start authoring this quest.
-                </Text>
-              )}
-            </Box>
-          </VStack>
+          <QuestGraphCanvas
+            quest={quest}
+            onChange={patch}
+            onSelect={selectNode}
+            onObjective={(step, objective) => setSelection({ step, objective })}
+          />
         }
       />
     </>

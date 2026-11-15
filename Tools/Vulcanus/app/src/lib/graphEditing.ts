@@ -1,13 +1,29 @@
 import dagre from '@dagrejs/dagre';
-import type { CutsceneGraph } from '../types/cutsceneGraph';
+import type { CutsceneGraphEdge } from '../types/cutsceneGraph';
+
+interface EditorNode {
+  id: string;
+  kind: string;
+  position: { x: number; y: number };
+  pair?: string;
+  step?: { id: string };
+}
+interface EditorGraph<N extends EditorNode> {
+  nodes: N[];
+  edges: CutsceneGraphEdge[];
+}
 
 /** Move an ordinary executable into a wire, closing its previous linear gap. */
-export function insertExecutionNode(graph: CutsceneGraph, nodeId: string, edgeId: string): boolean {
+export function insertExecutionNode<N extends EditorNode>(
+  graph: EditorGraph<N>,
+  nodeId: string,
+  edgeId: string,
+): boolean {
   const node = graph.nodes.find((n) => n.id === nodeId);
   const edge = graph.edges.find((e) => e.id === edgeId);
   if (
     !node ||
-    !['action', 'lua'].includes(node.kind) ||
+    !['action', 'lua', 'step'].includes(node.kind) ||
     !edge ||
     edge.kind !== 'execution' ||
     edge.source === nodeId ||
@@ -41,15 +57,18 @@ export function insertExecutionNode(graph: CutsceneGraph, nodeId: string, edgeId
 }
 
 /** Structural controls travel with their matching join. */
-function selectedGraphNodes(graph: CutsceneGraph, selected: Set<string>) {
+function selectedGraphNodes<N extends EditorNode>(graph: EditorGraph<N>, selected: Set<string>) {
   const ids = new Set(selected);
   for (const node of graph.nodes) if (ids.has(node.id) && node.pair) ids.add(node.pair);
-  return graph.nodes.filter((n) => ids.has(n.id) && n.kind !== 'entry' && n.kind !== 'exit');
+  return graph.nodes.filter((n) => ids.has(n.id) && !['entry', 'exit'].includes(n.kind));
 }
 
 /** Copy internal wires only. */
-export function copyGraphSelection(graph: CutsceneGraph, selected: Set<string>): CutsceneGraph {
-  const nodes = selectedGraphNodes(graph, selected);
+export function copyGraphSelection<N extends EditorNode>(
+  graph: EditorGraph<N>,
+  selected: Set<string>,
+): EditorGraph<N> {
+  const nodes = selectedGraphNodes(graph, selected).filter((n) => n.kind !== 'failure');
   const included = new Set(nodes.map((n) => n.id));
   return structuredClone({
     nodes,
@@ -57,9 +76,9 @@ export function copyGraphSelection(graph: CutsceneGraph, selected: Set<string>):
   });
 }
 
-export function pasteGraphSelection(
-  graph: CutsceneGraph,
-  copied: CutsceneGraph,
+export function pasteGraphSelection<N extends EditorNode>(
+  graph: EditorGraph<N>,
+  copied: EditorGraph<N>,
   offset = 48,
 ): string[] {
   const ids = new Map(copied.nodes.map((n) => [n.id, `node-${crypto.randomUUID()}`]));
@@ -83,8 +102,8 @@ export function pasteGraphSelection(
   return nodes.map((n) => n.id);
 }
 
-export function deleteGraphSelection(
-  graph: CutsceneGraph,
+export function deleteGraphSelection<N extends EditorNode>(
+  graph: EditorGraph<N>,
   selected: Set<string>,
   edges: Set<string>,
 ): void {
@@ -96,8 +115,8 @@ export function deleteGraphSelection(
 }
 
 /** Layout all execution and data dependencies; positions are the only authored values changed. */
-export function layoutCutsceneGraph(
-  graph: CutsceneGraph,
+export function layoutGraph<N extends EditorNode>(
+  graph: EditorGraph<N>,
   sizes: Map<string, { width: number; height: number }>,
 ): void {
   const layout = new dagre.graphlib.Graph({ multigraph: true });

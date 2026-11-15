@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { NodeTypeMenu, SortableGroupWrapper } from './DialogueNodeWidgets';
+import { StartsQuestBadges } from './StartsQuestBadges';
 import { BRANCH_COLORS, branchColor, isBranchNode } from './dialogueUtils';
 import {
   DialogueChoiceNode,
@@ -277,6 +278,7 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                 {node.lua ? node.lua.split('\n')[0] : '(empty)'}
               </Text>
             )}
+            <StartsQuestBadges lua={node.lua} />
           </Box>
         )}
 

@@ -68,6 +68,8 @@ namespace Core
             builder.RegisterBuildCallback(container =>
             {
                 container.InjectGameObject(root);
+                // Quests that start with the game wait for its start event, which the new game below raises.
+                container.Resolve<Core.Quests.QuestService>();
 #if UNITY_EDITOR
                 // A requested slot is loaded once, before any location is entered.
                 var startSlot = EditorSessionState.GetString(EditorStartSlotKey, "");

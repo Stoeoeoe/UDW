@@ -50,6 +50,26 @@
       "$ref": "#/definitions/lua",
       "description": "Lua actions run when the quest fails."
     },
+    "start": {
+      "type": "object",
+      "description": "Starts the quest by itself: when any of the moments comes, the quest starts if it never has and the condition holds. Without it the quest starts only through a Quests.Start action.",
+      "required": ["when"],
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The moments at which the quest is considered for starting.",
+          "items": {
+            "$ref": "#/definitions/startMoment"
+          }
+        },
+        "condition": {
+          "$ref": "#/definitions/condition",
+          "description": "Read-only Lua condition that must hold at the moment. Omit to start at the moment alone."
+        }
+      }
+    },
     "steps": {
       "type": "array",
       "minItems": 1,
@@ -57,6 +77,10 @@
       "items": {
         "$ref": "#/definitions/step"
       }
+    },
+    "editorGraph": {
+      "$ref": "quest-editor-graph.schema.json",
+      "description": "Vulcanus authoring metadata; saving compiles the flow into the steps and lifecycle Lua imported by Unity."
     },
     "folderPath": {
       "type": "string",
@@ -86,6 +110,109 @@
       "type": "string",
       "pattern": "\\S",
       "description": "Lua statements, like a dialogue action node."
+    },
+    "startMoment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "When a new game begins. Loading a save does not count.",
+          "required": [
+            "on"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "on": {
+              "enum": ["gameStart"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "When a new day begins.",
+          "required": [
+            "on"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "on": {
+              "enum": ["newDay"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "When a season begins.",
+          "required": [
+            "on"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "on": {
+              "enum": ["newSeason"]
+            },
+            "season": {
+              "enum": [
+                "spring",
+                "summer",
+                "autumn",
+                "winter"
+              ],
+              "description": "Only when this season begins. Omit for any."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "At every ten-minute step of the clock. This checks the most often; prefer another moment where one fits.",
+          "required": [
+            "on"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "on": {
+              "enum": ["everyTenMinutes"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "When the player's favour with a deity changes.",
+          "required": [
+            "on"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "on": {
+              "enum": ["divineFavour"]
+            },
+            "deity": {
+              "$ref": "#/definitions/resourceId",
+              "description": "Only this deity's favour. Omit for any."
+            },
+            "atLeast": {
+              "type": "integer",
+              "description": "Only once the favour is at least this much. Omit for any."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "When the player enters a map.",
+          "required": [
+            "on"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "on": {
+              "enum": ["locationChanged"]
+            },
+            "map": {
+              "$ref": "#/definitions/resourceId",
+              "description": "Only this map. Omit for any."
+            }
+          }
+        }
+      ]
     },
     "count": {
       "type": "integer",

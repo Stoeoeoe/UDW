@@ -6,6 +6,7 @@ import {
 import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { cancelPendingSaveUnit, scheduleSaveUnit, useSaveStore } from '../../lib/saveManager';
 import { validateQuest, questI18n } from '../../lib/quests';
+import { compileQuestGraph, questActionResources } from '../../lib/questGraph';
 import { useScriptingManifestStore } from '../useScriptingManifestStore';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
@@ -112,7 +113,14 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
       replace(quest.id, quest);
       syncDirty(quest.id);
       // Incomplete quest drafts stay in the workspace until their import errors are corrected.
-      if (validateQuest(quest, undefined, useScriptingManifestStore.getState().manifest).length) {
+      if (
+        validateQuest(
+          quest,
+          undefined,
+          useScriptingManifestStore.getState().manifest,
+          questActionResources(useScriptingManifestStore.getState().manifest, get()),
+        ).length
+      ) {
         return;
       }
       await get().saveQuest(quest.id);
@@ -165,14 +173,17 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
       cancelPendingSaveUnit(unit);
       if (!quest) return;
       const saves = useSaveStore.getState();
-      const errors = validateQuest(quest, undefined, useScriptingManifestStore.getState().manifest);
+      const manifest = useScriptingManifestStore.getState().manifest;
+      const resources = questActionResources(manifest, get());
+      const errors = validateQuest(quest, undefined, manifest, resources);
       if (errors.length) {
         saves.markError(unit, errors.join(' '));
         return;
       }
+      const exportedQuest = compileQuestGraph(quest, manifest, resources);
       saves.markSaving(unit);
       try {
-        await write(quest);
+        await write(exportedQuest);
         set((state) => {
           state.savedQuests[id] = castDraft(quest);
         });

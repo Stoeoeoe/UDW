@@ -1,4 +1,5 @@
 import React from 'react';
+import { StartsQuestBadges } from './StartsQuestBadges';
 import {
   Badge,
   Box,
@@ -339,6 +340,8 @@ export const DialogueActionInspectorSection: React.FC<ActionSectionProps> = ({
           : '\u00A0'}
       </Text>
     </FormControl>
+
+    <StartsQuestBadges lua={node.lua} />
 
     <Button size="xs" colorScheme="red" variant="outline" onClick={removeSelectedNode}>
       Delete Node

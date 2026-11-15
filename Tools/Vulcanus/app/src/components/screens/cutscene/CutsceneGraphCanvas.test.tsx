@@ -1,6 +1,6 @@
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { CutsceneGraphCanvas } from './CutsceneGraphCanvas';
+import { GraphCanvas } from '../../common/graph/GraphCanvas';
 import type { GraphViewNode } from './CutsceneGraphNode';
 
 const capture = vi.hoisted(() => ({ props: {} as any }));
@@ -31,16 +31,14 @@ it('retains measured dimensions and active drag positions across authored update
     },
   };
   const onChange = vi.fn();
-  const view = render(<CutsceneGraphCanvas nodes={[node]} onNodesChange={onChange} />);
+  const view = render(<GraphCanvas nodes={[node]} onNodesChange={onChange} />);
   act(() =>
     capture.props.onNodesChange([
       { id: node.id, type: 'dimensions', dimensions: { width: 300, height: 180 } },
       { id: node.id, type: 'position', position: { x: 50, y: 20 }, dragging: true },
     ]),
   );
-  view.rerender(
-    <CutsceneGraphCanvas nodes={[{ ...node, selected: true }]} onNodesChange={onChange} />,
-  );
+  view.rerender(<GraphCanvas nodes={[{ ...node, selected: true }]} onNodesChange={onChange} />);
   expect(capture.props.nodes[0]).toMatchObject({
     measured: { width: 300, height: 180 },
     position: { x: 50, y: 20 },
@@ -52,10 +50,7 @@ it('retains measured dimensions and active drag positions across authored update
     ]),
   );
   view.rerender(
-    <CutsceneGraphCanvas
-      nodes={[{ ...node, position: { x: 80, y: 40 } }]}
-      onNodesChange={onChange}
-    />,
+    <GraphCanvas nodes={[{ ...node, position: { x: 80, y: 40 } }]} onNodesChange={onChange} />,
   );
   expect(capture.props.nodes[0]).toMatchObject({
     measured: { width: 300, height: 180 },

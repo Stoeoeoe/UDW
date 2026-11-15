@@ -1,13 +1,18 @@
 import { useCallback, useLayoutEffect, useState } from 'react';
-import { applyNodeChanges, ReactFlow, type NodeChange, type ReactFlowProps } from '@xyflow/react';
-import type { GraphViewNode } from './CutsceneGraphNode';
+import {
+  applyNodeChanges,
+  ReactFlow,
+  type Node,
+  type NodeChange,
+  type ReactFlowProps,
+} from '@xyflow/react';
 
 /** Keep measurements and live drag positions local; authored edits are committed by the workspace. */
-export function CutsceneGraphCanvas({
+export function GraphCanvas<N extends Node>({
   nodes = [],
   onNodesChange,
   ...props
-}: ReactFlowProps<GraphViewNode>) {
+}: ReactFlowProps<N>) {
   const [liveNodes, setLiveNodes] = useState(nodes);
   useLayoutEffect(() => {
     setLiveNodes((previous) => {
@@ -26,7 +31,7 @@ export function CutsceneGraphCanvas({
     });
   }, [nodes]);
   const changeNodes = useCallback(
-    (changes: NodeChange<GraphViewNode>[]) => {
+    (changes: NodeChange<N>[]) => {
       // Dimensions are essential: dropping them resets React Flow's initialization on every drag.
       setLiveNodes((previous) => applyNodeChanges(changes, previous));
       onNodesChange?.(changes);

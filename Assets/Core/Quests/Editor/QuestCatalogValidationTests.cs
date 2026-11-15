@@ -40,5 +40,16 @@ namespace Core.Quests.Editor
                 "Quest 'base:festival_wine': objective 'sail' of step 'bring' goes to the unknown map 'base:island'."
             }));
         }
+
+        [Test]
+        public void AnUnknownStartMapIsReported()
+        {
+            var quest = VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
+                "{ id: 'base:festival_wine', start: { when: [{ on: 'locationChanged', map: 'base:island' }, { on: 'locationChanged', map: 'base:map-1' }] }, steps: [{ id: 'bring', objectives: [{ id: 'x', kind: 'condition' }] }] }");
+            Assert.That(QuestCatalogValidation.Problems(quest, Known()).ToArray(), Is.EqualTo(new[]
+            {
+                "Quest 'base:festival_wine': it starts on entering the unknown map 'base:island'."
+            }));
+        }
     }
 }

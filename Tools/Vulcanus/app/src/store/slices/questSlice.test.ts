@@ -6,6 +6,7 @@ import { useSaveStore } from '../../lib/saveManager';
 import { fileSystem, FileSystemManager } from '../../lib/fileSystem';
 import { saveAllDirtyWorkspaceUnits } from '../../lib/workspaceSaveActions';
 import type { Quest } from '../../types/quest';
+import { graphFromQuest } from '../../lib/questGraph';
 
 enableMapSet();
 const quest: Quest = {
@@ -32,6 +33,23 @@ afterEach(() => {
 });
 
 describe('quest saving', () => {
+  it('compiles graph hooks at save and marks the authored source clean without rescheduling', async () => {
+    const save = vi.spyOn(fileSystem, 'saveJson').mockResolvedValue();
+    await useEditorStore.getState().addQuest(quest);
+    const editorGraph = graphFromQuest({ ...quest, onComplete: 'local reward = 5' });
+    useEditorStore.getState().updateQuest(quest.id, { editorGraph });
+    await useEditorStore.getState().saveQuest(quest.id);
+    expect(save.mock.calls.filter((c) => c[1].endsWith('.quest.json')).at(-1)?.[2]).toMatchObject({
+      onComplete: 'do\nlocal reward = 5\nend',
+      editorGraph,
+    });
+    expect(useSaveStore.getState().saveUnits[`quest:${quest.id}`].dirty).toBe(false);
+    useEditorStore.getState().updateQuest(quest.id, { editorGraph: { ...editorGraph, edges: [] } });
+    save.mockClear();
+    await useEditorStore.getState().saveQuest(quest.id);
+    expect(save).not.toHaveBeenCalled();
+    expect(useSaveStore.getState().saveUnits[`quest:${quest.id}`].status).toBe('error');
+  });
   it('writes source and i18n separately and keeps a failed export dirty for retry', async () => {
     const save = vi.spyOn(fileSystem, 'saveJson').mockResolvedValue();
     await useEditorStore.getState().addQuest(quest);

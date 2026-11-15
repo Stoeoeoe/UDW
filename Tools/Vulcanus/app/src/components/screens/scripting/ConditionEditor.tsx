@@ -367,11 +367,6 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
 
       {/* Footer */}
       <HStack justify="space-between" mt="2px">
-        <Text fontSize="10px" color="gray.700">
-          {allCompletions.length > 0
-            ? `${allCompletions.length} symbol${allCompletions.length !== 1 ? 's' : ''} in scope`
-            : 'No symbols defined'}
-        </Text>
         <HStack spacing={2}>
           <Text fontSize="10px" color="gray.600">
             Advanced stdlib
