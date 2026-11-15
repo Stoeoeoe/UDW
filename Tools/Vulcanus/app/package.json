@@ -12,9 +12,10 @@
   "scripts": {
     "dev": "vite",
     "devtools": "react-devtools",
-    "build": "tsc -p tsconfig.build.json && vite build && electron-builder",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:ui": "node scripts/check-ui-hex.mjs",
+    "build": "node scripts/check-editor-language.mjs && tsc -p tsconfig.build.json && vite build && electron-builder",
+    "lint": "node scripts/check-editor-language.mjs && eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:ui": "node scripts/check-editor-language.mjs && node scripts/check-ui-hex.mjs",
+    "lint:editors": "node --test scripts/check-editor-language.test.mjs && node scripts/check-editor-language.mjs",
     "lint:ui:strict": "node scripts/check-ui-hex.mjs --strict",
     "preview": "vite preview",
     "test": "vitest run",

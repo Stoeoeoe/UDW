@@ -1,7 +1,7 @@
+import { EditorFormSave } from '../../common/EditorFormSave';
 import React, { useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
 import {
-  Badge,
   Box,
   Button,
   Divider,
@@ -19,28 +19,16 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import { CheckIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { DetailPanel } from '../../common/DetailPanel';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { CompactNumberInput, FieldStack, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
-import { SectionLabel } from '../../common/Typography.tsx';
 import { ComboboxInput } from '../../common/ComboboxInput';
 import { Item } from '../../../types/schema';
 import { fileSystem } from '../../../lib/fileSystem';
 import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { GiChest } from 'react-icons/gi';
-
-const ITEM_ACCENT = {
-  color: 'purple.300',
-  border: 'rgba(196,181,253,0.55)',
-  surface: 'rgba(196,181,253,0.08)',
-  surfaceStrong: 'rgba(196,181,253,0.12)',
-  line: 'rgba(196,181,253,0.22)',
-};
 
 export const ItemEditor: React.FC = () => {
   const items = useEditorStore((state) => state.items);
@@ -74,22 +62,14 @@ export const ItemEditor: React.FC = () => {
   );
 
   const centerContent = selectedItem ? (
-    <DetailPanel key={selectedItem.id} maxWidth="1240px">
-      <ItemDetail item={selectedItem} knownCategories={knownCategories} onUpdate={updateItem} />
-    </DetailPanel>
+    <ItemDetail item={selectedItem} knownCategories={knownCategories} onUpdate={updateItem} />
   ) : (
     emptyContent
   );
 
   return (
     <>
-      <ResizableEditorLayout
-        header={{
-          title: 'Items',
-          subtitle: `${items.length} item${items.length !== 1 ? 's' : ''} defined`,
-        }}
-        content={centerContent}
-      />
+      {centerContent}
 
       <CreateItemDialog
         idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
@@ -180,70 +160,9 @@ const ItemDetail: React.FC<{
       }}
     >
       <VStack align="stretch" spacing={6}>
-        <VStack
-          align="stretch"
-          spacing={4}
-          pl={4}
-          borderLeftWidth="3px"
-          borderLeftColor={ITEM_ACCENT.border}
-        >
-          <Text
-            fontSize="xs"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            color="editorMutedText"
-          >
-            Items /{' '}
-            <Text as="span" color={ITEM_ACCENT.color} fontWeight="bold">
-              {item.name}
-            </Text>
-          </Text>
-
-          <HStack
-            justify="space-between"
-            align="start"
-            spacing={4}
-            pb={4}
-            borderBottom="1px"
-            borderColor="whiteAlpha.100"
-          >
-            <HStack spacing={4} align="center">
-              <Box
-                boxSize="56px"
-                borderRadius="xl"
-                bg={ITEM_ACCENT.surface}
-                color={ITEM_ACCENT.color}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                flexShrink={0}
-              >
-                <GiChest size={24} />
-              </Box>
-              <VStack align="start" spacing={1}>
-                <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
-                  {item.name}
-                </Text>
-                <Text textStyle="monoMeta">{item.id}</Text>
-                <HStack spacing={2}>
-                  <Badge variant="editor" color={ITEM_ACCENT.color}>
-                    Item
-                  </Badge>
-                  {item.category ? <Badge variant="editor">{item.category}</Badge> : null}
-                </HStack>
-              </VStack>
-            </HStack>
-          </HStack>
-        </VStack>
-
         <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
           <GridItem>
-            <Box
-              borderRadius="xl"
-              px={4}
-              py={4}
-              bgGradient={`linear(to-br, ${ITEM_ACCENT.surfaceStrong}, rgba(196,181,253,0.02) 45%, transparent 80%)`}
-            >
+            <Box>
               <FieldStack>
                 <FormControl>
                   <FieldLabel>ID</FieldLabel>
@@ -342,26 +261,18 @@ const ItemDetail: React.FC<{
           </GridItem>
 
           <GridItem>
-            <Box
-              bg="rgba(255,255,255,0.025)"
-              border="1px"
-              borderColor="whiteAlpha.100"
-              borderRadius="xl"
-              px={5}
-              py={5}
-              minH="100%"
-            >
+            <Box>
               <VStack align="stretch" spacing={5}>
                 <VStack align="stretch" spacing={3}>
                   <Text
                     fontSize="xs"
                     fontWeight="black"
-                    color={ITEM_ACCENT.color}
+                    color="editorMutedText"
                     textTransform="uppercase"
                     letterSpacing="widest"
                     pb={2}
                     borderBottom="1px"
-                    borderColor={ITEM_ACCENT.line}
+                    borderColor="editorShellBorder"
                   >
                     Assets
                   </Text>
@@ -445,12 +356,12 @@ const ItemDetail: React.FC<{
                           <Text
                             fontSize="xs"
                             fontWeight="black"
-                            color={ITEM_ACCENT.color}
+                            color="editorMutedText"
                             textTransform="uppercase"
                             letterSpacing="widest"
                             pb={2}
                             borderBottom="1px"
-                            borderColor={ITEM_ACCENT.line}
+                            borderColor="editorShellBorder"
                           >
                             {selectedClass.name} Properties
                           </Text>
@@ -477,28 +388,18 @@ const ItemDetail: React.FC<{
 
         <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
           {({ isDirty, values }) => (
-            <FormAutosave isDirty={isDirty} values={values} onSave={() => form.handleSubmit()} />
+            <EditorFormSave
+              kind="item"
+              resourceId={item.id}
+              isDirty={isDirty}
+              values={values}
+              onSave={() => form.handleSubmit()}
+            />
           )}
         </form.Subscribe>
       </VStack>
     </form>
   );
-};
-
-const FormAutosave: React.FC<{
-  isDirty: boolean;
-  values: unknown;
-  onSave: () => void | Promise<void>;
-}> = ({ isDirty, values, onSave }) => {
-  React.useEffect(() => {
-    if (!isDirty) return;
-    const timeout = window.setTimeout(() => {
-      void onSave();
-    }, 300);
-    return () => window.clearTimeout(timeout);
-  }, [isDirty, onSave, values]);
-
-  return null;
 };
 
 export default ItemEditor;

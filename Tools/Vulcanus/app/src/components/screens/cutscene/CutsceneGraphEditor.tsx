@@ -1,3 +1,4 @@
+import { EditorHeaderActions } from '../../common/EditorDocumentFrame';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { produce } from 'immer';
 import {
@@ -124,10 +125,7 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
     characters = useEditorStore((s) => s.characters);
   const dialogues = useEditorStore((s) => s.dialogues),
     project = useEditorStore((s) => s.project);
-  const labels = useEditorStore((s) => s.cutsceneLabels),
-    edit = useEditorStore((s) => s.editCutscenes);
-  const canUndo = useEditorStore((s) => Boolean(s.cutscenePast[scene.id]?.length));
-  const canRedo = useEditorStore((s) => Boolean(s.cutsceneFuture[scene.id]?.length));
+  const edit = useEditorStore((s) => s.editCutscenes);
   const map = currentMap?.id === scene.mapId ? currentMap : maps.find((m) => m.id === scene.mapId);
   const resources = useMemo(
     () => withProjectCharacters(manifest?.resources, characters),
@@ -655,7 +653,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
   );
   return (
     <ResizableEditorLayout
-      header={{ title: labels[scene.id] || scene.id }}
       viewportBackground={false}
       content={
         <TopTabbedEditorLayout
@@ -687,14 +684,16 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
           }}
           headerActions={
             <>
-              <Button
-                size="xs"
-                variant="outline"
-                isDisabled={Boolean(spatial)}
-                onClick={() => setSettings('scene')}
-              >
-                Scene settings
-              </Button>
+              <EditorHeaderActions>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isDisabled={Boolean(spatial)}
+                  onClick={() => setSettings('scene')}
+                >
+                  Settings
+                </Button>
+              </EditorHeaderActions>
               {phase === 'completion' && (
                 <Button size="xs" variant="outline" onClick={() => setSettings('completion')}>
                   Final positions
@@ -713,8 +712,6 @@ function GraphWorkspace({ scene, notice }: { scene: Cutscene; notice?: React.Rea
                     ) || selectedEdges.size > 0
                   }
                   canPaste={Boolean(clipboard?.nodes.length)}
-                  canUndo={canUndo}
-                  canRedo={canRedo}
                   run={(command) => {
                     if (command === 'delete') removeSelection();
                     else if (command === 'duplicate')

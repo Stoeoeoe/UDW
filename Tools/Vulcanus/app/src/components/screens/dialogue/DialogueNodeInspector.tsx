@@ -64,8 +64,12 @@ export const DialogueNodeInspector: React.FC<DialogueNodeInspectorProps> = ({
 }) => {
   return (
     <InspectorPanel
-      title={selectedDialogue?.name || 'Dialogue'}
-      subtitle={selectedDialogue ? selectedDialogue.id : undefined}
+      title={
+        selectedNode
+          ? `${selectedNode.type[0].toUpperCase()}${selectedNode.type.slice(1)}`
+          : 'Dialogue properties'
+      }
+      subtitle={selectedNode?.id}
       emptyState={
         <InspectorEmptyState
           message="No node selected"

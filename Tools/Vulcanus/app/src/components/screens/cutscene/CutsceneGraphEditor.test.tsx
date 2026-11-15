@@ -2,6 +2,10 @@ import React from 'react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EditorDocumentFrame } from '../../common/EditorDocumentFrame';
+import { FiFilm } from 'react-icons/fi';
+import { EditorHistoryActions } from '../../layout/EditorHistoryActions';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { CutsceneEditor } from './CutsceneEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
@@ -54,6 +58,20 @@ vi.mock('../../../lib/fileSystem', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useWorkspaceStore.setState({
+    tabs: [
+      {
+        id: 'cutscene:' + prototype.id,
+        document: {
+          kind: 'cutscene',
+          cutsceneId: prototype.id,
+          label: 'Prototype',
+          saveUnitId: 'cutscene:' + prototype.id,
+        },
+      },
+    ],
+    activeTabId: 'cutscene:' + prototype.id,
+  });
   HTMLElement.prototype.scrollTo = vi.fn();
   useSaveStore.getState().reset();
   useScriptingManifestStore.setState({ path: 'C:/Unity/bindings.json', revision: -1 });
@@ -105,7 +123,15 @@ afterEach(() => {
 const mount = () =>
   render(
     <ChakraProvider theme={theme}>
-      <CutsceneEditor cutsceneId={prototype.id} />
+      <EditorHistoryActions />
+      <EditorDocumentFrame
+        title="Prototype"
+        resourceId={prototype.id}
+        icon={FiFilm}
+        layout="canvas"
+      >
+        <CutsceneEditor cutsceneId={prototype.id} />
+      </EditorDocumentFrame>
     </ChakraProvider>,
   );
 const scene = () => useEditorStore.getState().cutscenes[0];
@@ -121,7 +147,7 @@ describe('graph-only cutscene authoring', () => {
     });
     for (const node of mocks.nodes)
       if (node.id !== entry.id) expect(node.data).toBe(before.get(node.id));
-    fireEvent.click(screen.getByRole('button', { name: 'Undo (Ctrl/Cmd+Z)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByRole('textbox', { name: 'Begin comment' })).toHaveValue('');
     fireEvent.change(screen.getByRole('textbox', { name: 'Begin comment' }), {
       target: { value: 'Revised opening' },
@@ -154,7 +180,7 @@ describe('graph-only cutscene authoring', () => {
     expect(scene().graphs?.sequence?.nodes.find((n) => n.kind === 'comment')?.comment).toBe(
       'Wait for both actors here',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Undo (Ctrl/Cmd+Z)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(scene().graphs?.sequence?.nodes.find((n) => n.kind === 'comment')?.comment).toBe('');
     fireEvent.click(screen.getByRole('button', { name: 'Remove node comment' }));
     expect(
@@ -174,15 +200,15 @@ describe('graph-only cutscene authoring', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Auto layout', exact: true }));
     expect(scene().sequence).toEqual([]);
     expect(scene().graphs?.sequence?.nodes.some((n) => n.id === 'approach')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Undo (Ctrl/Cmd+Z)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(scene().graphs).toBeUndefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Redo (Ctrl/Cmd+Shift+Z)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
     expect(scene().sequence).toEqual([]);
     expect(screen.queryByRole('button', { name: 'List', exact: true })).not.toBeInTheDocument();
   });
   it('preserves names, transitions and variables in scene settings', () => {
     mount();
-    fireEvent.click(screen.getByRole('button', { name: 'Scene settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     const dialog = within(screen.getByRole('dialog'));
     fireEvent.change(dialog.getByLabelText('Name'), { target: { value: 'Intro' } });
     expect(useEditorStore.getState().cutsceneLabels[prototype.id]).toBe('Intro');

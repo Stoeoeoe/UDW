@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Flex,
-  type FlexProps,
   Box,
   Button,
   Popover,
@@ -97,16 +96,33 @@ export const SortableSequenceItem: React.FC<
 };
 
 /** Card chrome shared with Dialogue; domain content stays with each editor. */
-export const SequenceCard: React.FC<BoxProps & { selected: boolean }> = ({
-  selected,
-  children,
-  ...props
-}) => (
+export const SequenceCard: React.FC<
+  React.PropsWithChildren<{
+    selected: boolean;
+    onClick?: React.MouseEventHandler<HTMLDivElement>;
+    accent?: string;
+    comment?: boolean;
+    muted?: boolean;
+    label?: string;
+  }>
+> = ({ selected, children, onClick, accent, comment = false, muted = false, label }) => (
   <Box
     role="group"
+    opacity={muted ? 0.45 : 1}
+    aria-label={label}
+    tabIndex={onClick ? 0 : undefined}
+    onClick={onClick}
+    onKeyDown={(event) => {
+      if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        event.currentTarget.click();
+      }
+    }}
     border="1px"
     borderColor={selected ? 'blue.300' : 'editorSequenceBorder'}
+    borderStyle={comment ? 'dashed' : 'solid'}
     borderLeftWidth="3px"
+    borderLeftColor={selected ? 'blue.300' : accent}
     borderRadius="md"
     bg="editorSequenceBg"
     p={3}
@@ -114,14 +130,13 @@ export const SequenceCard: React.FC<BoxProps & { selected: boolean }> = ({
     cursor="pointer"
     boxShadow={selected ? '0 0 0 1px rgba(99, 179, 237, 0.22)' : 'none'}
     _hover={{ borderColor: selected ? 'blue.300' : 'editorSequenceHoverBorder' }}
-    {...props}
   >
     {children}
   </Box>
 );
 
 /** Shared header geometry for sequence canvases. */
-export const SequenceToolbar: React.FC<FlexProps> = ({ children, ...props }) => (
+export const SequenceToolbar: React.FC<React.PropsWithChildren> = ({ children }) => (
   <Flex
     px={4}
     py={2}
@@ -132,7 +147,6 @@ export const SequenceToolbar: React.FC<FlexProps> = ({ children, ...props }) => 
     gap={2}
     minH="40px"
     flexShrink={0}
-    {...props}
   >
     {children}
   </Flex>

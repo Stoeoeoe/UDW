@@ -1,12 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Badge, Box, Flex, HStack, Text, Tooltip, VStack } from '@chakra-ui/react';
 import { FiClock } from 'react-icons/fi';
-import { MdRedo, MdUndo } from 'react-icons/md';
 import { Panel, PanelGroup } from 'react-resizable-panels';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { EditorResizeHandle } from '../../common/EditorWorkspaceShell';
-import { GhostIconButton } from '../../common/IconButtons';
 import { EmptyScreen } from '../common/EmptyScreen';
 import {
   dayAt,
@@ -64,10 +62,6 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
   const routines = useEditorStore((state) => state.routines);
   const dialogues = useEditorStore((state) => state.dialogues);
   const updateRoutine = useEditorStore((state) => state.updateRoutine);
-  const undo = useEditorStore((state) => state.undoRoutine);
-  const redo = useEditorStore((state) => state.redoRoutine);
-  const canUndo = useEditorStore((state) => (state.routinePast[routine.id]?.length ?? 0) > 0);
-  const canRedo = useEditorStore((state) => (state.routineFuture[routine.id]?.length ?? 0) > 0);
   const animations = useScriptingManifestStore((state) => state.manifest?.resources?.animation);
 
   const [selectedDay, setSelectedDay] = useState<RoutineDayRef>(() => initialDay(routine));
@@ -121,12 +115,6 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
         align="center"
         flexShrink={0}
       >
-        <VStack align="start" spacing={0} minW="160px">
-          <Text fontWeight="bold" color="editorText" lineHeight={1.2}>
-            {name}
-          </Text>
-          <Text textStyle="monoMeta">{routine.id}</Text>
-        </VStack>
         <HStack spacing={2} flex={1} minW={0}>
           <Text fontSize="xs" color="editorMutedText" flexShrink={0}>
             Home
@@ -179,20 +167,6 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
         ) : (
           <Badge colorScheme="green">Valid</Badge>
         )}
-        <HStack spacing={0}>
-          <GhostIconButton
-            aria-label="Undo"
-            icon={<MdUndo />}
-            isDisabled={!canUndo}
-            onClick={() => undo(routine.id)}
-          />
-          <GhostIconButton
-            aria-label="Redo"
-            icon={<MdRedo />}
-            isDisabled={!canRedo}
-            onClick={() => redo(routine.id)}
-          />
-        </HStack>
       </HStack>
       {generalIssues.length > 0 && (
         <Box px={4} py={1.5} bg="red.900" flexShrink={0}>

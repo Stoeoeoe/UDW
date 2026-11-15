@@ -1,14 +1,8 @@
 import React from 'react';
-import { Box, Flex, HStack, VStack } from '@chakra-ui/react';
+import { Box, Flex } from '@chakra-ui/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { SectionLabel } from './Typography.tsx';
 
 export interface EditorWorkspaceShellProps {
-  header?: {
-    title?: string;
-    subtitle?: string;
-    //actions?: React.ReactNode;
-  };
   content: React.ReactNode;
   leftPanel?: React.ReactNode;
   rightPanel?: React.ReactNode;
@@ -55,7 +49,6 @@ const PanelSurface: React.FC<
 );
 
 export const EditorWorkspaceShell: React.FC<EditorWorkspaceShellProps> = ({
-  header,
   content,
   leftPanel,
   rightPanel,
@@ -68,28 +61,9 @@ export const EditorWorkspaceShell: React.FC<EditorWorkspaceShellProps> = ({
   bottomPanelMinSize = 10,
   viewportBackground = true,
 }) => {
-  const hasHeader = header?.title; //|| header?.subtitle || header?.actions;
-
   return (
     <Flex direction="column" h="full" w="full" overflow="hidden">
-      {hasHeader && (
-        <HStack
-          px={6}
-          py={3}
-          bg="editorHeaderBg"
-          borderBottom="1px"
-          borderColor="editorShellBorder"
-          justify="space-between"
-          h="8"
-          flexShrink={0}
-        >
-          <VStack align="start" spacing={0}>
-            {header?.title && <SectionLabel textStyle="panelLabel">{header.title}</SectionLabel>}
-          </VStack>
-        </HStack>
-      )}
-
-      <Box flex={1} overflow="hidden">
+      <Box flex={1} minH={0} overflow="hidden">
         <PanelGroup direction="horizontal" style={{ height: '100%' }}>
           {leftPanel && (
             <>

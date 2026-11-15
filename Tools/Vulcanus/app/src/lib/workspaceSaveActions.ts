@@ -53,6 +53,9 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'data' ||
     tab.document.kind === 'cutscene' ||
     tab.document.kind === 'cutscenes' ||
+    tab.document.kind === 'character' ||
+    tab.document.kind === 'item' ||
+    tab.document.kind === 'dialogue' ||
     tab.document.kind === 'shop' ||
     tab.document.kind === 'routine' ||
     tab.document.kind === 'quest' ||

@@ -13,11 +13,10 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react';
-import { FiSearch } from 'react-icons/fi';
+import { FiSearch, FiSave } from 'react-icons/fi';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fileSystem } from '../../lib/fileSystem';
-import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
-import { MapToolbar, MapToolbarActions } from './MapToolbar';
+import { EditorHistoryActions } from './EditorHistoryActions';
 import { useWorkspaceStore } from '../../store/useWorkspaceStore';
 import {
   canSaveWorkspaceTab,
@@ -209,21 +208,6 @@ export const TopBar: React.FC = () => {
               >
                 Open Project...
               </MenuItem>
-              <MenuItem
-                bg="transparent"
-                _hover={{ bg: 'editorPanelBg' }}
-                onClick={() => void handleSave()}
-                isDisabled={!canSaveActiveTab}
-              >
-                Save
-              </MenuItem>
-              <MenuItem
-                bg="transparent"
-                _hover={{ bg: 'editorPanelBg' }}
-                onClick={() => void handleSaveAll()}
-              >
-                Save All
-              </MenuItem>
               <MenuDivider borderColor="editorBorderLight" />
               <MenuItem
                 bg="transparent"
@@ -238,16 +222,28 @@ export const TopBar: React.FC = () => {
         </HStack>
       </HStack>
 
-      {activeTab?.document.kind === 'location' ? (
-        <MapToolbar />
-      ) : activeTab?.document.kind === 'tileset' ? (
-        <TilesetToolbar />
-      ) : (
-        <Box />
-      )}
-
       <HStack spacing="3">
-        {activeTab?.document.kind === 'location' && <MapToolbarActions />}
+        <Button
+          size="sm"
+          variant="ghost"
+          leftIcon={<FiSave />}
+          isDisabled={!canSaveActiveTab}
+          onClick={() => void handleSave()}
+          title="Save (Ctrl/Cmd+S)"
+        >
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          isDisabled={dirtySaveUnitCount === 0}
+          onClick={() => void handleSaveAll()}
+          title="Save all (Ctrl/Cmd+Shift+S)"
+        >
+          Save All
+        </Button>
+        <Box h="5" w="1px" bg="editorShellBorder" />
+        <EditorHistoryActions />
         <IconButton
           aria-label="Open command palette"
           icon={<FiSearch />}

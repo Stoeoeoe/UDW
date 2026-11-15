@@ -195,10 +195,6 @@ export const TilesetEditor: React.FC = () => {
     return (
       <>
         <ResizableEditorLayout
-          header={{
-            title: activeTileset.name,
-            subtitle: `${tileSize}×${tileSize} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
-          }}
           content={
             <Flex h="full" alignItems="center" justifyContent="center">
               <VStack spacing={4} align="center">
@@ -251,10 +247,6 @@ export const TilesetEditor: React.FC = () => {
   return (
     <>
       <ResizableEditorLayout
-        header={{
-          title: activeTileset.name,
-          subtitle: `${tileSize}×${tileSize} • ${activeTileset.columns} columns • ${activeTileset.tileCount} tiles`,
-        }}
         content={
           <Flex h="full" overflow="hidden" position="relative">
             <Box

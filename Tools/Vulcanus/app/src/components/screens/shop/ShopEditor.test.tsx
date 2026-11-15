@@ -2,6 +2,8 @@ import React from 'react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EditorHistoryActions } from '../../layout/EditorHistoryActions';
+import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { ShopEditor } from './ShopEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useSaveStore } from '../../../lib/saveManager';
@@ -28,6 +30,7 @@ const isDirty = () => useSaveStore.getState().saveUnits[unit]?.dirty ?? false;
 function renderEditor() {
   return render(
     <ChakraProvider theme={theme}>
+      <EditorHistoryActions />
       <ShopEditor />
     </ChakraProvider>,
   );
@@ -36,6 +39,15 @@ function renderEditor() {
 describe('ShopEditor', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    useWorkspaceStore.setState({
+      tabs: [
+        {
+          id: 'shop:' + shop.id,
+          document: { kind: 'shop', shopId: shop.id, label: shop.name, saveUnitId: unit },
+        },
+      ],
+      activeTabId: 'shop:' + shop.id,
+    });
     useSaveStore.getState().reset();
     useEditorStore.setState({
       items: [],

@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import { EditorFormSave } from '../../common/EditorFormSave';
+import React, { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import {
-  Badge,
   Box,
   Button,
-  Divider,
   FormControl,
   GridItem,
   Input,
@@ -15,15 +14,13 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { DetailPanel } from '../../common/DetailPanel';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
 import { EmotionSelect } from '../../common/EmotionSelect';
-import { PortraitField, portraitFolder, usePickPortrait, usePortraitImage } from './PortraitField';
+import { PortraitField, portraitFolder, usePickPortrait } from './PortraitField';
 import { ManifestResourceSelect } from '../../common/ManifestResourceSelect';
 import { DEFAULT_WALK_SPEED, type Character } from '../../../types/schema';
 
@@ -51,26 +48,18 @@ export const CharacterEditor: React.FC = () => {
   );
 
   const centerContent = selectedCharacter ? (
-    <DetailPanel key={selectedCharacter.id} maxWidth="1180px">
-      <CharacterDetail
-        key={selectedCharacter.id}
-        character={selectedCharacter}
-        onUpdate={updateCharacter}
-      />
-    </DetailPanel>
+    <CharacterDetail
+      key={selectedCharacter.id}
+      character={selectedCharacter}
+      onUpdate={updateCharacter}
+    />
   ) : (
     content
   );
 
   return (
     <>
-      <ResizableEditorLayout
-        header={{
-          title: 'Characters',
-          subtitle: `${characters.length} character${characters.length !== 1 ? 's' : ''} defined`,
-        }}
-        content={centerContent}
-      />
+      {centerContent}
 
       <CreateItemDialog
         idPrefix={useEditorStore.getState().project?.idPrefix ?? 'base'}
@@ -90,16 +79,15 @@ export const CharacterEditor: React.FC = () => {
 
 const CharacterDetail: React.FC<{
   character: Character;
-  onUpdate: (id: string, updates: Partial<Character>) => void;
+  onUpdate: (id: string, updates: Partial<Character>) => Promise<void>;
 }> = ({ character, onUpdate }) => {
-  const portrait = usePortraitImage(character.defaultPortrait);
   let form: ReturnType<typeof useForm<any, any, any, any, any, any, any, any, any, any, any, any>>;
   form = useForm({
     defaultValues: {
       name: character.name,
     },
     onSubmit: async ({ value }) => {
-      onUpdate(character.id, value);
+      await onUpdate(character.id, value);
       form.reset(value);
     },
   });
@@ -113,44 +101,6 @@ const CharacterDetail: React.FC<{
       }}
     >
       <VStack align="stretch" spacing={6}>
-        <HStack
-          justify="space-between"
-          align="start"
-          spacing={4}
-          pb={4}
-          borderBottom="1px"
-          borderColor="whiteAlpha.100"
-        >
-          <HStack spacing={4} align="center">
-            <Box
-              boxSize="56px"
-              borderRadius="xl"
-              bg="whiteAlpha.50"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              flexShrink={0}
-            >
-              {portrait ? (
-                <img
-                  src={portrait.src}
-                  alt=""
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }}
-                />
-              ) : (
-                <GiPerson />
-              )}
-            </Box>
-            <VStack align="start" spacing={1}>
-              <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
-                {character.name}
-              </Text>
-              <Text textStyle="monoMeta">{character.id}</Text>
-              <Badge variant="editor">Character</Badge>
-            </VStack>
-          </HStack>
-        </HStack>
-
         <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
           <GridItem>
             <VStack align="stretch" spacing={4}>
@@ -194,7 +144,13 @@ const CharacterDetail: React.FC<{
 
         <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
           {({ isDirty, values }) => (
-            <FormAutosave isDirty={isDirty} values={values} onSave={() => form.handleSubmit()} />
+            <EditorFormSave
+              kind="character"
+              resourceId={character.id}
+              isDirty={isDirty}
+              values={values}
+              onSave={() => form.handleSubmit()}
+            />
           )}
         </form.Subscribe>
       </VStack>
@@ -328,7 +284,12 @@ const VoiceSection: React.FC<{
               onChange={(next) => (next ? setOverride(emotionId, next) : removeOverride(emotionId))}
             />
           </Box>
-          <Button size="xs" variant="ghost" color="red.400" onClick={() => removeOverride(emotionId)}>
+          <Button
+            size="xs"
+            variant="ghost"
+            color="red.400"
+            onClick={() => removeOverride(emotionId)}
+          >
             Remove
           </Button>
         </HStack>
@@ -365,22 +326,6 @@ const VoiceSection: React.FC<{
       </HStack>
     </VStack>
   );
-};
-
-const FormAutosave: React.FC<{
-  isDirty: boolean;
-  values: unknown;
-  onSave: () => void | Promise<void>;
-}> = ({ isDirty, values, onSave }) => {
-  React.useEffect(() => {
-    if (!isDirty) return;
-    const timeout = window.setTimeout(() => {
-      void onSave();
-    }, 300);
-    return () => window.clearTimeout(timeout);
-  }, [isDirty, onSave, values]);
-
-  return null;
 };
 
 export default CharacterEditor;

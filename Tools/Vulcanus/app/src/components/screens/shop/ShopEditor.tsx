@@ -1,23 +1,19 @@
 import React, { useMemo } from 'react';
 import {
-  Badge,
   Box,
   Button,
   FormControl,
   HStack,
-  IconButton,
   Input,
+  IconButton,
   Switch,
   Text,
   VStack,
 } from '@chakra-ui/react';
 import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { GiShop } from 'react-icons/gi';
-import { MdRedo, MdUndo } from 'react-icons/md';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { validateShop } from '../../../store/slices/shopSlice';
-import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { DetailPanel } from '../../common/DetailPanel';
 import { EmptyScreen } from '../common/EmptyScreen';
 import { CompactNumberInput, FieldStack, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
@@ -35,9 +31,7 @@ export const ShopEditor: React.FC = () => {
   const selected = shops.find((shop) => shop.id === selectedShopId);
 
   const content = selected ? (
-    <DetailPanel key={selected.id} maxWidth="900px">
-      <ShopDetail shop={selected} />
-    </DetailPanel>
+    <ShopDetail shop={selected} />
   ) : (
     <EmptyScreen
       icon={<GiShop />}
@@ -50,24 +44,12 @@ export const ShopEditor: React.FC = () => {
     />
   );
 
-  return (
-    <ResizableEditorLayout
-      header={{
-        title: 'Shops',
-        subtitle: `${shops.length} shop${shops.length !== 1 ? 's' : ''} defined`,
-      }}
-      content={content}
-    />
-  );
+  return <>{content}</>;
 };
 
 const ShopDetail: React.FC<{ shop: Shop }> = ({ shop }) => {
   const items = useEditorStore((state) => state.items);
   const updateShop = useEditorStore((state) => state.updateShop);
-  const undoShop = useEditorStore((state) => state.undoShop);
-  const redoShop = useEditorStore((state) => state.redoShop);
-  const canUndo = useEditorStore((state) => (state.shopPast[shop.id]?.length ?? 0) > 0);
-  const canRedo = useEditorStore((state) => (state.shopFuture[shop.id]?.length ?? 0) > 0);
   const itemIds = useMemo(() => items.map((item) => item.id), [items]);
 
   const errors = useMemo(() => validateShop(shop), [shop]);
@@ -85,47 +67,11 @@ const ShopDetail: React.FC<{ shop: Shop }> = ({ shop }) => {
   const setOfferings = (offerings: ShopOffering[]) => updateShop(shop.id, { offerings });
   const updateOffering = (index: number, changes: Partial<ShopOffering>) =>
     setOfferings(
-      shop.offerings.map((offering, i) =>
-        i === index ? { ...offering, ...changes } : offering,
-      ),
+      shop.offerings.map((offering, i) => (i === index ? { ...offering, ...changes } : offering)),
     );
 
   return (
     <VStack align="stretch" spacing={6}>
-      <HStack
-        justify="space-between"
-        align="start"
-        pb={4}
-        borderBottom="1px"
-        borderColor="whiteAlpha.100"
-      >
-        <VStack align="start" spacing={1}>
-          <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
-            {shop.name}
-          </Text>
-          <Text textStyle="monoMeta">{shop.id}</Text>
-          <Badge variant="editor">Shop</Badge>
-        </VStack>
-        <HStack spacing={1}>
-          <IconButton
-            aria-label="Undo"
-            size="sm"
-            variant="ghost"
-            icon={<MdUndo />}
-            isDisabled={!canUndo}
-            onClick={() => undoShop(shop.id)}
-          />
-          <IconButton
-            aria-label="Redo"
-            size="sm"
-            variant="ghost"
-            icon={<MdRedo />}
-            isDisabled={!canRedo}
-            onClick={() => redoShop(shop.id)}
-          />
-        </HStack>
-      </HStack>
-
       <FieldStack>
         <FormControl>
           <FieldLabel>ID</FieldLabel>

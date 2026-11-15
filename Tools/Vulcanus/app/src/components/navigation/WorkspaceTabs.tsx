@@ -1,20 +1,7 @@
 import React from 'react';
 import { Box, HStack, Icon, IconButton, Text, Tooltip } from '@chakra-ui/react';
 import { CloseIcon } from '@chakra-ui/icons';
-import {
-  FiBox,
-  FiFilm,
-  FiCode,
-  FiDatabase,
-  FiGrid,
-  FiMap,
-  FiMessageSquare,
-  FiPackage,
-  FiSettings,
-  FiSliders,
-  FiUsers,
-  FiClock,
-} from 'react-icons/fi';
+import { documentPresentation } from '../workspace/documentPresentation';
 import { WorkspaceTab } from '../../types/workspace';
 import { useSaveStore } from '../../lib/saveManager';
 import { getDocumentSaveUnitId } from '../../store/useWorkspaceStore';
@@ -29,36 +16,7 @@ interface WorkspaceTabsProps {
 }
 
 function getDocumentIcon(tab: WorkspaceTab) {
-  switch (tab.document.kind) {
-    case 'location':
-      return FiMap;
-    case 'tileset':
-      return FiGrid;
-    case 'settings':
-      return FiSettings;
-    case 'configuration':
-      return FiSliders;
-    case 'entities':
-      return FiBox;
-    case 'characters':
-      return FiUsers;
-    case 'items':
-      return FiPackage;
-    case 'cutscenes':
-    case 'cutscene':
-      return FiFilm;
-    case 'quest':
-    case 'routine':
-      return FiClock;
-    case 'dialogues':
-      return FiMessageSquare;
-    case 'scripting':
-      return FiCode;
-    case 'data':
-      return FiDatabase;
-    default:
-      return FiMap;
-  }
+  return documentPresentation[tab.document.kind].icon;
 }
 
 function createDragPreviewElement(label: string): HTMLDivElement {

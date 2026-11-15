@@ -269,7 +269,7 @@ export function runEditorHistoryCommand(
   const cutsceneId =
     activeDocument?.kind === 'cutscene'
       ? activeDocument.cutsceneId
-      : state.mode === 'cutscenes'
+      : !activeDocument && state.mode === 'cutscenes'
         ? state.selectedCutsceneId
         : null;
   if (cutsceneId) {
@@ -292,6 +292,7 @@ export function runEditorHistoryCommand(
     else state.redoRoutine(activeDocument.routineId);
     return true;
   }
+  if (activeDocument && activeDocument.kind !== 'location') return false;
   if (state.mode !== 'maps' || !state.currentMap) return false;
   if (command === 'undo') undoEditorChange();
   else redoEditorChange();

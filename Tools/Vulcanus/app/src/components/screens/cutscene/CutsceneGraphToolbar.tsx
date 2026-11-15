@@ -6,8 +6,6 @@ import {
   FiClipboard,
   FiGrid,
   FiMaximize,
-  FiCornerUpLeft,
-  FiCornerUpRight,
   FiHelpCircle,
 } from 'react-icons/fi';
 import { ToolbarShell, ToolbarToggleButton } from '../../common/Toolbar';
@@ -16,15 +14,11 @@ export function CutsceneGraphToolbar({
   disabled,
   selection,
   canPaste,
-  canUndo,
-  canRedo,
   run,
 }: {
   disabled: boolean;
   selection: boolean;
   canPaste: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
   run: (
     command: 'add' | 'delete' | 'duplicate' | 'paste' | 'layout' | 'fit' | 'undo' | 'redo',
   ) => void;
@@ -46,18 +40,6 @@ export function CutsceneGraphToolbar({
         onClick={() => run('add')}
       />
       <Box w="1px" h={4} bg="editorBorderSubtle" mx={1} />
-      <ToolbarToggleButton
-        label="Undo (Ctrl/Cmd+Z)"
-        icon={<FiCornerUpLeft />}
-        isDisabled={disabled || !canUndo}
-        onClick={() => run('undo')}
-      />
-      <ToolbarToggleButton
-        label="Redo (Ctrl/Cmd+Shift+Z)"
-        icon={<FiCornerUpRight />}
-        isDisabled={disabled || !canRedo}
-        onClick={() => run('redo')}
-      />
       <ToolbarToggleButton
         label="Duplicate selection (Ctrl/Cmd+D)"
         icon={<FiCopy />}

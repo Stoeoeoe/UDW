@@ -346,10 +346,6 @@ export const SettingsEditor: React.FC = () => {
 
   return (
     <ResizableEditorLayout
-      header={{
-        title: 'Settings',
-        subtitle: 'Configure application preferences',
-      }}
       content={
         <Box h="full" overflowY="auto" p={6}>
           <VStack align="stretch" spacing={4} maxW="700px" mx="auto">

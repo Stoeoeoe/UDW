@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
 import {
-  Badge,
   Box,
   Button,
   Divider,
@@ -22,8 +21,6 @@ import { fileSystem } from '../../../lib/fileSystem';
 import { markSaveUnitDirty } from '../../../lib/saveManager';
 import { registerWorkspaceTabSaveOverride } from '../../../lib/workspaceSaveActions';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
-import { DetailPanel } from '../../common/DetailPanel';
 import { GameIcon } from '../../common/GameIcon';
 import { EntityType, EntityCategory } from '../../../types/schema';
 import { CreateEntityTypeDialog } from './CreateEntityTypeDialog';
@@ -33,7 +30,6 @@ import { IconPicker, ColorPicker } from '../common/FormFields';
 import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { SectionLabel } from '../../common/Typography.tsx';
-import { GiAbstract039 } from 'react-icons/gi';
 
 async function loadSpriteBlob(path: string): Promise<Blob> {
   const looksRelative = !path.match(/^([A-Za-z]:[/\\]|\/)/);
@@ -81,27 +77,19 @@ export const EntityEditor: React.FC = () => {
   );
 
   const centerContent = selectedType ? (
-    <DetailPanel key={selectedType.id} maxWidth="1280px">
-      <EntityTypeDetail
-        key={selectedType.id}
-        entityType={selectedType}
-        existingGroups={existingGroups}
-        onUpdate={updateEntityType}
-      />
-    </DetailPanel>
+    <EntityTypeDetail
+      key={selectedType.id}
+      entityType={selectedType}
+      existingGroups={existingGroups}
+      onUpdate={updateEntityType}
+    />
   ) : (
     emptyContent
   );
 
   return (
     <>
-      <ResizableEditorLayout
-        header={{
-          title: 'Entity Types',
-          subtitle: `${entityTypes.length} type${entityTypes.length !== 1 ? 's' : ''} defined`,
-        }}
-        content={centerContent}
-      />
+      {centerContent}
 
       <CreateEntityTypeDialog isOpen={isOpen} onClose={onClose} />
     </>
@@ -206,39 +194,6 @@ const EntityTypeDetail: React.FC<{
       }}
     >
       <VStack align="stretch" spacing={6}>
-        <HStack
-          justify="space-between"
-          align="start"
-          spacing={4}
-          pb={4}
-          borderBottom="1px"
-          borderColor="whiteAlpha.100"
-        >
-          <HStack spacing={4} align="center">
-            <Box
-              boxSize="56px"
-              borderRadius="xl"
-              bg="whiteAlpha.50"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              flexShrink={0}
-            >
-              <GameIcon iconName={entityType.icon} size={26} fallback={<GiAbstract039 />} />
-            </Box>
-            <VStack align="start" spacing={1}>
-              <Text fontSize="lg" fontWeight="bold" color="editorText" lineHeight={1.1}>
-                {entityType.displayName}
-              </Text>
-              <Text textStyle="monoMeta">{entityType.id}</Text>
-              <HStack spacing={2}>
-                <Badge variant="editor">{entityType.category}</Badge>
-                {entityType.group ? <Badge variant="editor">{entityType.group}</Badge> : null}
-              </HStack>
-            </VStack>
-          </HStack>
-        </HStack>
-
         <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
           <GridItem>
             <VStack align="stretch" spacing={4}>

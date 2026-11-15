@@ -60,7 +60,6 @@ export const CutsceneEditor: React.FC<{ cutsceneId?: string }> = ({ cutsceneId }
         />
       ) : (
         <ResizableEditorLayout
-          header={{ title: 'Cutscenes' }}
           content={
             <VStack h="full" align="stretch">
               {(loadError || manifestError) && controls}

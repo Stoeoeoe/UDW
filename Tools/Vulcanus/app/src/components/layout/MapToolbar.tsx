@@ -22,8 +22,6 @@ import {
   FiNavigation,
   FiLayers,
   FiRefreshCw,
-  FiRotateCcw,
-  FiRotateCw,
   FiBox,
   FiPenTool,
   FiPlay,
@@ -34,12 +32,7 @@ import {
   FiXCircle,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
-import {
-  redoEditorChange,
-  undoEditorChange,
-  useEditorHistory,
-  useEditorStore,
-} from '../../store/useEditorStore';
+import { useEditorStore } from '../../store/useEditorStore';
 import { getEffectiveToolLayerKind } from '../../store/storeHelpers';
 import { ToolType } from '../../types/editor';
 import { LayerKind } from '../../types/schema';
@@ -245,37 +238,9 @@ export const MapToolbarActions: React.FC = () => {
   const mapFullscreen = useEditorStore((state) => state.mapFullscreen);
   const setMapFullscreen = useEditorStore((state) => state.setMapFullscreen);
   const reloadTerrainLayers = useEditorStore((state) => state.reloadTerrainLayers);
-  const { canUndo, canRedo } = useEditorHistory((state) => ({
-    canUndo: state.pastStates.length > 0,
-    canRedo: state.futureStates.length > 0,
-  }));
 
   return (
     <HStack spacing={2}>
-      <Tooltip label="Undo (Ctrl+Z)" fontSize="xs">
-        <Button
-          size="xs"
-          variant="outline"
-          onClick={undoEditorChange}
-          isDisabled={!canUndo}
-          aria-label="Undo"
-        >
-          <FiRotateCcw />
-        </Button>
-      </Tooltip>
-
-      <Tooltip label="Redo (Ctrl+Y)" fontSize="xs">
-        <Button
-          size="xs"
-          variant="outline"
-          onClick={redoEditorChange}
-          isDisabled={!canRedo}
-          aria-label="Redo"
-        >
-          <FiRotateCw />
-        </Button>
-      </Tooltip>
-
       <Tooltip
         label={showCollisionOverlay ? 'Hide collision overlay' : 'Show collision overlay'}
         fontSize="xs"
@@ -292,7 +257,11 @@ export const MapToolbarActions: React.FC = () => {
       </Tooltip>
 
       <Tooltip
-        label={showNavigationCostOverlay ? 'Hide navigation cost overlay' : 'Show navigation cost overlay'}
+        label={
+          showNavigationCostOverlay
+            ? 'Hide navigation cost overlay'
+            : 'Show navigation cost overlay'
+        }
         fontSize="xs"
       >
         <Button

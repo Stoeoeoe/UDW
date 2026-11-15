@@ -31,7 +31,7 @@ export const InspectorShell: React.FC<InspectorShellProps> = ({
   onDelete,
   deleteLabel = 'Delete',
 }) => {
-  const hasContent = Boolean(children) || Boolean(sections?.length);
+  const hasContent = React.Children.toArray(children).length > 0 || Boolean(sections?.length);
   const hasFooter = Boolean(footerActions) || Boolean(onDelete);
 
   return (

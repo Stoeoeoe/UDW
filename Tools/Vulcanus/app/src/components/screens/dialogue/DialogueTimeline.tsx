@@ -167,16 +167,6 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
                 ? 'gray.400'
                 : 'red.300';
 
-    const cardBg = isComment
-      ? DIALOGUE_SURFACES.commentBg
-      : isAction
-        ? DIALOGUE_SURFACES.actionBg
-        : isEnd
-          ? DIALOGUE_SURFACES.endBg
-          : isJump
-            ? DIALOGUE_SURFACES.jumpBg
-            : DIALOGUE_SURFACES.defaultBg;
-
     return (
       <SequenceCard
         key={node.id}
@@ -192,30 +182,8 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
             });
           }
         }}
-        borderStyle={isComment ? 'dashed' : 'solid'}
-        borderColor={
-          selected
-            ? DIALOGUE_SURFACES.selectedBorder
-            : isComment
-              ? DIALOGUE_SURFACES.commentBorder
-              : DIALOGUE_SURFACES.defaultBorder
-        }
-        borderLeftWidth={branchMeta?.branchId ? '3px' : isComment ? '0px' : '3px'}
-        borderLeftColor={
-          branchMeta?.branchId
-            ? branchColor(branchMeta.branchOrder)
-            : isComment
-              ? undefined
-              : typeColor
-        }
-        bg={cardBg}
-        p={isComment ? 2 : 3}
-        opacity={isComment ? 0.92 : 1}
-        _hover={{
-          borderColor: selected
-            ? DIALOGUE_SURFACES.selectedBorder
-            : DIALOGUE_SURFACES.defaultHoverBorder,
-        }}
+        comment={isComment}
+        accent={branchMeta?.branchId ? branchColor(branchMeta.branchOrder) : typeColor}
       >
         <Flex align="center" gap={2} mb={isComment ? 1 : 2}>
           <Text
@@ -409,9 +377,6 @@ export const DialogueTimeline: React.FC<DialogueTimelineProps> = ({
   return (
     <VStack align="stretch" spacing={0} h="full" overflow="hidden" bg="editorWorkspaceBg">
       <SequenceToolbar>
-        <Text fontSize="13px" color="gray.50" fontWeight="semibold" flexShrink={0}>
-          {selectedDialogue.name}
-        </Text>
         <Badge colorScheme={selectedDialogue.oneShot ? 'purple' : 'green'} flexShrink={0}>
           {selectedDialogue.oneShot ? 'one-shot' : 'repeatable'}
         </Badge>

@@ -3,6 +3,8 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { enableMapSet } from 'immer';
+import { EditorDocumentFrame } from '../../common/EditorDocumentFrame';
+import { FiStar } from 'react-icons/fi';
 import { QuestEditor } from './QuestEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
@@ -75,12 +77,20 @@ afterEach(() => {
 const show = () =>
   render(
     <ChakraProvider theme={theme}>
-      <QuestEditor questId="base:festival" />
+      <EditorDocumentFrame
+        title="Festival"
+        resourceId="base:festival"
+        icon={FiStar}
+        layout="sequence"
+      >
+        <QuestEditor questId="base:festival" />
+      </EditorDocumentFrame>
     </ChakraProvider>,
   );
 describe('quest editor', () => {
   it('changes objective kind without retaining forbidden dialogue or character fields', () => {
     show();
+    fireEvent.click(screen.getByLabelText('Select objective ask'));
     fireEvent.change(screen.getByLabelText('Objective kind'), { target: { value: 'condition' } });
     const objective = useEditorStore.getState().quests[0].steps[0].objectives[0];
     expect(objective).toEqual({

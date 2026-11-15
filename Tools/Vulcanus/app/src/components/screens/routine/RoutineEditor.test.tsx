@@ -3,6 +3,8 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { enableMapSet } from 'immer';
+import { EditorDocumentFrame } from '../../common/EditorDocumentFrame';
+import { FiClock } from 'react-icons/fi';
 import { RoutineEditor } from './RoutineEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useSaveStore } from '../../../lib/saveManager';
@@ -95,7 +97,9 @@ const current = () => useEditorStore.getState().routines[0];
 function renderEditor() {
   return render(
     <ChakraProvider theme={theme}>
-      <RoutineEditor routineId={routine.id} />
+      <EditorDocumentFrame title="Fabia" resourceId={routine.id} icon={FiClock} layout="sequence">
+        <RoutineEditor routineId={routine.id} />
+      </EditorDocumentFrame>
     </ChakraProvider>,
   );
 }

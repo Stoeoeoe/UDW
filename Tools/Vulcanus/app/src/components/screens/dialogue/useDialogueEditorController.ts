@@ -1,6 +1,7 @@
 import { PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { validateLuaChunk } from '../../../lib/luaRunner';
+import { useSaveStore } from '../../../lib/saveManager';
 import { registerWorkspaceTabSaveOverride } from '../../../lib/workspaceSaveActions';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
@@ -150,7 +151,6 @@ export function useDialogueEditorController(): DialogueEditorController {
     [dialogues, selectedDialogue],
   );
 
-
   const flushSavesNow = useCallback(async () => {
     if (!project) return;
 
@@ -163,7 +163,16 @@ export function useDialogueEditorController(): DialogueEditorController {
     for (const dialogueId of dirtyIds) {
       const dialogue = dialoguesRef.current.get(dialogueId);
       if (!dialogue) continue;
-      await saveDialogueArtifacts(dialogue);
+      const unit = `dialogue:${dialogueId}`;
+      const saves = useSaveStore.getState();
+      saves.markSaving(unit);
+      try {
+        await saveDialogueArtifacts(dialogue);
+        saves.markSaved(unit);
+      } catch (error) {
+        saves.markError(unit, error instanceof Error ? error.message : String(error));
+        throw error;
+      }
     }
 
     dirtyDialogueIdsRef.current.clear();
@@ -173,7 +182,10 @@ export function useDialogueEditorController(): DialogueEditorController {
   const queueSave = useCallback(
     (dialogueId?: string) => {
       if (!project) return;
-      if (dialogueId) dirtyDialogueIdsRef.current.add(dialogueId);
+      if (dialogueId) {
+        dirtyDialogueIdsRef.current.add(dialogueId);
+        useSaveStore.getState().markDirty(`dialogue:${dialogueId}`);
+      }
       setIsDirty(true);
 
       if (saveTimerRef.current) {
@@ -202,20 +214,24 @@ export function useDialogueEditorController(): DialogueEditorController {
     };
   }, [flushSavesNow]);
 
-  useEffect(
-    () =>
-      registerWorkspaceTabSaveOverride('dialogues', {
-        saveTab: async () => {
-          if (!isDirty) return;
-          await flushSavesNow();
-        },
-        saveAll: async () => {
-          if (!isDirty) return;
-          await flushSavesNow();
-        },
-      }),
-    [flushSavesNow, isDirty],
-  );
+  useEffect(() => {
+    const overrides = {
+      saveTab: async () => {
+        if (!isDirty) return;
+        await flushSavesNow();
+      },
+      saveAll: async () => {
+        if (!isDirty) return;
+        await flushSavesNow();
+      },
+    };
+    const unregisterCollection = registerWorkspaceTabSaveOverride('dialogues', overrides);
+    const unregisterDocument = registerWorkspaceTabSaveOverride('dialogue', overrides);
+    return () => {
+      unregisterCollection();
+      unregisterDocument();
+    };
+  }, [flushSavesNow, isDirty]);
 
   useEffect(() => {
     let cancelled = false;

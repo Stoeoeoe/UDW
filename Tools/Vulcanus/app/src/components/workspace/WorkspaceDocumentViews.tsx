@@ -1,5 +1,11 @@
 import { QuestEditor } from '../screens/quest/QuestEditor';
 import React from 'react';
+import { EditorDocumentFrame } from '../common/EditorDocumentFrame';
+import { documentPresentation, documentTitle } from './documentPresentation';
+import { getEditorResourceDocumentId } from '../../lib/editorResourceTypes';
+import { MapToolbar, MapToolbarActions } from '../layout/MapToolbar';
+import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
+import { HStack } from '@chakra-ui/react';
 import { CutsceneEditor } from '../screens/cutscene/CutsceneEditor';
 import { EmptyScreen } from '../screens/common/EmptyScreen';
 import {
@@ -31,6 +37,36 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
     );
   }
 
+  return <WorkspaceDocumentFrame tab={tab} />;
+};
+
+function WorkspaceDocumentFrame({ tab }: { tab: WorkspaceTab }) {
+  const title = useEditorStore((state) => documentTitle(tab.document, state));
+  const presentation = documentPresentation[tab.document.kind];
+  const toolbar =
+    tab.document.kind === 'location' ? (
+      <>
+        <MapToolbar />
+        <HStack ml="auto">
+          <MapToolbarActions />
+        </HStack>
+      </>
+    ) : tab.document.kind === 'tileset' ? (
+      <TilesetToolbar />
+    ) : undefined;
+  return (
+    <EditorDocumentFrame
+      {...presentation}
+      title={title}
+      resourceId={getEditorResourceDocumentId(tab.document)}
+      toolbar={toolbar}
+    >
+      <WorkspaceDocumentContent tab={tab} />
+    </EditorDocumentFrame>
+  );
+}
+
+const WorkspaceDocumentContent: React.FC<{ tab: WorkspaceTab }> = ({ tab }) => {
   switch (tab.document.kind) {
     case 'location':
       return <MapEditor />;
@@ -70,8 +106,10 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <RoutineEditor routineId={tab.document.routineId} />;
     case 'dialogue':
       return <DialogueResourceDocument dialogueId={tab.document.dialogueId} />;
-    default:
-      return null;
+    default: {
+      const unhandled: never = tab.document;
+      throw new Error(`Unhandled workspace document: ${JSON.stringify(unhandled)}`);
+    }
   }
 };
 

@@ -1,3 +1,4 @@
+import { SequenceCard } from '../../common/SequenceEditor';
 import React from 'react';
 import {
   Badge,
@@ -377,15 +378,7 @@ const GoalCard: React.FC<{
 }) => {
   const conditional = goal.condition !== undefined;
   return (
-    <Box
-      p={2}
-      borderRadius="md"
-      border="1px solid"
-      borderColor={isSelected ? 'cyan.400' : 'editorInlineBorder'}
-      bg="editorInlineBg"
-      opacity={skipped ? 0.45 : 1}
-      onClick={onSelect}
-    >
+    <SequenceCard selected={isSelected} muted={skipped} onClick={onSelect}>
       <VStack align="stretch" spacing={2}>
         <HStack spacing={2}>
           <Badge colorScheme="cyan" minW="20px" textAlign="center">
@@ -513,6 +506,6 @@ const GoalCard: React.FC<{
           </Text>
         ))}
       </VStack>
-    </Box>
+    </SequenceCard>
   );
 };
