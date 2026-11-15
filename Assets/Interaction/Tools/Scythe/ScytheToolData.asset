@@ -12,34 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: ScytheToolData
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Tools.ToolData
-  _itemId: base:scythe
-  _itemName: Scythe
-  _category: Tools
-  _icon: {fileID: 4854329587640585295, guid: 2621113b4d4dc8642a0eb2eaabe25aab, type: 3}
-  _description: Harvest crops that are ready for cutting.
-  _maxStackSize: 1
-  _buyBasePrice: 0
-  _sellBasePrice: 0
-  _worldRepresentationPrefab: {fileID: 0}
-  _pickupSound: {fileID: 0}
-  _preventDropping: 1
-  _maxCharge: 0
-  _chargePerUsage: 0
-  _staminaCost: 5
-  _consumeStaminaOnFailure: 0
-  _isInInventory: 1
-  _showTileHighlighterOnPrepare: 1
-  _actionDuration: 0.2
-  _cooldownDuration: 0.2
-  _toolEffectConfiguration:
+  itemId: base:scythe
+  itemName: Scythe
+  category: Tools
+  icon: {fileID: 4854329587640585295, guid: 2621113b4d4dc8642a0eb2eaabe25aab, type: 3}
+  description: Harvest crops that are ready for cutting.
+  maxStackSize: 1
+  buyBasePrice: 0
+  sellBasePrice: 0
+  worldRepresentationPrefab: {fileID: 0}
+  pickupSound: {fileID: 0}
+  preventDropping: 1
+  maxCharge: 0
+  chargePerUsage: 0
+  staminaCost: 5
+  consumeStaminaOnFailure: 0
+  isInInventory: 1
+  showTileHighlighterOnPrepare: 1
+  actionDuration: 0.2
+  cooldownDuration: 0.2
+  toolEffectConfiguration:
     AffectedTileOffsets:
     - {x: 0, y: 1}
     IsGlobalEffect: 0
-  _prepareUseUpAnimationClip: {fileID: 0}
-  _prepareUseRightAnimationClip: {fileID: 0}
-  _prepareUseDownAnimationClip: {fileID: 0}
-  _prepareUseLeftAnimationClip: {fileID: 0}
-  _useUpAnimationClip: {fileID: 0}
-  _useRightAnimationClip: {fileID: 0}
-  _useDownAnimationClip: {fileID: 0}
-  _useLeftAnimationClip: {fileID: 0}
+  prepareUseUpAnimationClip: {fileID: 0}
+  prepareUseRightAnimationClip: {fileID: 0}
+  prepareUseDownAnimationClip: {fileID: 0}
+  prepareUseLeftAnimationClip: {fileID: 0}
+  useUpAnimationClip: {fileID: 0}
+  useRightAnimationClip: {fileID: 0}
+  useDownAnimationClip: {fileID: 0}
+  useLeftAnimationClip: {fileID: 0}

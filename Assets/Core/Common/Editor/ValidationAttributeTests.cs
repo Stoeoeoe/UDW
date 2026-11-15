@@ -236,6 +236,18 @@ namespace Core.Common.Editor
         }
 
         [Test]
+        public void OneOfLinksNameAnEntryUnlessTheyPointElsewhere()
+        {
+            var asset = Create<TraversalTestAsset>();
+            asset.Links = new[] { new LinkTestNode { Id = "a", Next = "b" }, new LinkTestNode { Id = "b" } };
+            Assert.That(asset.ValidateConfiguration(), Is.Empty, "An empty link is allowed.");
+            asset.Links[1].Next = "missing";
+            Assert.That(asset.ValidateConfiguration().Single().Setting, Is.EqualTo("Links[1].Next"));
+            asset.Links[1].Elsewhere = "other";
+            Assert.That(asset.ValidateConfiguration(), Is.Empty);
+        }
+
+        [Test]
         public void NestedCustomRulesReportOnTheOwningPathAndReadCurrentValues()
         {
             var asset = Create<TraversalTestAsset>();
@@ -302,6 +314,15 @@ namespace Core.Common.Editor
         [Validation.Unique(nameof(SequenceTestNode.Day))] public SequenceTestNode[] Distinct;
         [Validation.MemberNotEmpty(nameof(AttributeTestBase.Code))] public AttributeTestAsset Identity;
         [Validation.Nested] public NestedTestConfiguration CustomConfiguration;
+        [Validation.Nested] public LinkTestNode[] Links = Array.Empty<LinkTestNode>();
+    }
+
+    [Serializable]
+    public sealed class LinkTestNode
+    {
+        public string Id;
+        public string Elsewhere;
+        [Validation.OneOf(nameof(TraversalTestAsset.Links), nameof(Id), UnlessSet = nameof(Elsewhere))] public string Next;
     }
 
     [Serializable]

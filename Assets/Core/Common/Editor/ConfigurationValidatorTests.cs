@@ -8,10 +8,8 @@ using Core.Equipment;
 using Core.Inventory;
 using Core.Items;
 using Core.Shops;
-using Core.Tile.Editor.Vulcanus;
 using Interaction.Dialog;
 using Interaction.Tools;
-using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Plants;
 using Tools;
@@ -42,13 +40,13 @@ namespace Core.Common.Editor
         {
             var asset = ScriptableObject.CreateInstance<T>();
             _objects.Add(asset);
-            if (asset is ItemDefinition item) Set(item, "_itemId", "test:item");
+            if (asset is ItemDefinition item) Set(item, "itemId", "test:item");
             if (asset is EquipmentSlotDefinition slot) TestConfiguration.Set(slot, "_id", "test:head");
             if (asset is SkillDefinition skill) Set(skill, "_skillId", "test:skill");
             if (asset is DeityDefinition deity) Set(deity, "_id", "legacy-deity");
             if (asset is TypewriterSound sound) TestConfiguration.Set(sound, "_soundId", "test:sound");
-            if (asset is ToolData tool) TestConfiguration.Set(tool, "_toolEffectConfiguration", new ToolEffectConfiguration { AffectedTileOffsets = new[] { Vector2Int.up } });
-            if (asset is SeedItem seed) TestConfiguration.Set(seed, "_plantData", AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset"));
+            if (asset is ToolData tool) TestConfiguration.Set(tool, "toolEffectConfiguration", new ToolEffectConfiguration { AffectedTileOffsets = new[] { Vector2Int.up } });
+            if (asset is SeedItem seed) TestConfiguration.Set(seed, "plantData", AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset"));
             return asset;
         }
 
@@ -66,40 +64,27 @@ namespace Core.Common.Editor
         }
 
         [Test]
-        public void ItemImportPopulatesInheritedAndSubtypeFieldsThroughReadOnlyGetters()
-        {
-            var item = Asset<StaminaConsumableItem>();
-            Assert.That(VulcanusImportHelpers.TrySetMemberValue(
-                item, "ItemId", "import:food"), Is.True);
-            Assert.That(VulcanusImportHelpers.TryApplyPropertyToObject(
-                item, "StaminaRestored", new JValue(12f)), Is.True);
-            Assert.That(item.ItemId, Is.EqualTo("import:food"));
-            Assert.That(item.StaminaRestored, Is.EqualTo(12f));
-            Assert.That(item.ValidateConfiguration(), Is.Empty);
-        }
-
-        [Test]
         public void ItemSubtypeHooksRunBothCommonAndSubtypeRulesWithoutFillingInIds()
         {
             var tool = Asset<ToolData>();
-            Set(tool, "_itemId", " ");
-            Set(tool, "_maxStackSize", 0);
-            TestConfiguration.Set(tool, "_staminaCost", -1);
-            TestConfiguration.Set(tool, "_actionDuration", float.NaN);
-            TestConfiguration.Set(tool, "_toolEffectConfiguration", null);
+            Set(tool, "itemId", " ");
+            Set(tool, "maxStackSize", 0);
+            TestConfiguration.Set(tool, "staminaCost", -1);
+            TestConfiguration.Set(tool, "actionDuration", float.NaN);
+            TestConfiguration.Set(tool, "toolEffectConfiguration", null);
             Assert.That(tool.ValidateConfiguration().Select(e => e.Setting),
-                Does.Contain("_itemId").And.Contain("_maxStackSize").And.Contain("_staminaCost").And.Contain("_actionDuration")
-                    .And.Contain("_toolEffectConfiguration"));
+                Does.Contain("itemId").And.Contain("maxStackSize").And.Contain("staminaCost").And.Contain("actionDuration")
+                    .And.Contain("toolEffectConfiguration"));
             Assert.That(tool.ItemId, Is.EqualTo(" "));
         }
 
         [Test]
         public void SeedAndConsumableRulesRejectMissingPlantAndNonpositiveEffect()
         {
-            var seed = Asset<SeedItem>(); TestConfiguration.Set(seed, "_plantData", null);
-            AssertError(seed, "_plantData");
-            var consumable = Asset<StaminaConsumableItem>(); TestConfiguration.Set(consumable, "_staminaRestored", 0);
-            AssertError(consumable, "_staminaRestored");
+            var seed = Asset<SeedItem>(); TestConfiguration.Set(seed, "plantData", null);
+            AssertError(seed, "plantData");
+            var consumable = Asset<StaminaConsumableItem>(); TestConfiguration.Set(consumable, "staminaRestored", 0);
+            AssertError(consumable, "staminaRestored");
         }
 
         [Test]
@@ -120,9 +105,9 @@ namespace Core.Common.Editor
         {
             var item = Asset<WornEquipmentItem>();
             var slot = Asset<EquipmentSlotDefinition>(); TestConfiguration.Set(slot, "_id", "");
-            TestConfiguration.Set(item, "_allowedSlots", new[] { slot });
-            TestConfiguration.Set(item, "_modifiers", new[] { new WornEquipmentItem.Modifier { Attribute = (CharacterAttributeType)999, Percent = float.PositiveInfinity } });
-            AssertError(item, "_allowedSlots[0]._id"); AssertError(item, "_modifiers[0].Attribute"); AssertError(item, "_modifiers[0].Percent");
+            TestConfiguration.Set(item, "allowedSlots", new[] { slot });
+            TestConfiguration.Set(item, "modifiers", new[] { new WornEquipmentItem.Modifier { Attribute = (CharacterAttributeType)999, Percent = float.PositiveInfinity } });
+            AssertError(item, "allowedSlots[0]._id"); AssertError(item, "modifiers[0].Attribute"); AssertError(item, "modifiers[0].Percent");
         }
 
         [Test]
@@ -192,7 +177,7 @@ namespace Core.Common.Editor
         [Test]
         public void InheritedItemEditHookReportsSubtypeRulesAndDoesNotMintAnId()
         {
-            var item = Asset<StaminaConsumableItem>(); Set(item, "_itemId", ""); TestConfiguration.Set(item, "StaminaRestored", 0);
+            var item = Asset<StaminaConsumableItem>(); Set(item, "itemId", ""); TestConfiguration.Set(item, "StaminaRestored", 0);
             foreach (var error in item.ValidateConfiguration()) LogAssert.Expect(LogType.Error, error.ToString());
             typeof(ValidatedScriptableObject).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(item, null);
             Assert.That(item.ItemId, Is.Empty); Assert.That(item.StaminaRestored, Is.Zero);
@@ -259,8 +244,8 @@ namespace Core.Common.Editor
                     property.SetValue(target, value);
                     return;
                 }
-                var field = type.GetField(member, flags)
-                    ?? type.GetField("_" + char.ToLowerInvariant(member[0]) + member.Substring(1), flags);
+                var camel = char.ToLowerInvariant(member[0]) + member.Substring(1);
+                var field = type.GetField(member, flags) ?? type.GetField(camel, flags) ?? type.GetField("_" + camel, flags);
                 if (field != null)
                 {
                     field.SetValue(target, value);

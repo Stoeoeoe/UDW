@@ -12,35 +12,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: WateringJarToolData
   m_EditorClassIdentifier: Assembly-CSharp::Tools.ToolData
-  _itemId: WateringJarToolData
-  _itemName: Watering Jar
-  _category: 
-  _icon: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715, type: 3}
-  _description: Water your planted crops.
-  _maxStackSize: 99
-  _preventDropping: 1
-  _buyBasePrice: 0
-  _sellBasePrice: 0
-  _worldRepresentationPrefab: {fileID: 0}
-  _pickupSound: {fileID: 0}
-  _maxCharge: 20
-  _chargePerUsage: 1
-  _chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
-  _staminaCost: 5
-  _consumeStaminaOnFailure: 0
-  _isInInventory: 1
-  _showTileHighlighterOnPrepare: 1
-  _actionDuration: 0.5
-  _cooldownDuration: 0.2
-  _toolEffectConfiguration:
+  itemId: WateringJarToolData
+  itemName: Watering Jar
+  category: 
+  icon: {fileID: 21300000, guid: a0e6ec9aa481c364ca8745ea6171e715, type: 3}
+  description: Water your planted crops.
+  maxStackSize: 99
+  preventDropping: 1
+  buyBasePrice: 0
+  sellBasePrice: 0
+  worldRepresentationPrefab: {fileID: 0}
+  pickupSound: {fileID: 0}
+  maxCharge: 20
+  chargePerUsage: 1
+  chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
+  staminaCost: 5
+  consumeStaminaOnFailure: 0
+  isInInventory: 1
+  showTileHighlighterOnPrepare: 1
+  actionDuration: 0.5
+  cooldownDuration: 0.2
+  toolEffectConfiguration:
     AffectedTileOffsets:
     - {x: 0, y: 1}
     IsGlobalEffect: 0
-  _prepareUseUpAnimationClip: {fileID: 0}
-  _prepareUseRightAnimationClip: {fileID: 0}
-  _prepareUseDownAnimationClip: {fileID: 0}
-  _prepareUseLeftAnimationClip: {fileID: 0}
-  _useUpAnimationClip: {fileID: 7400000, guid: 538b1a80fa6361d41ba0affb36297fc3, type: 2}
-  _useRightAnimationClip: {fileID: 7400000, guid: 84068ea6b445e404aa10906413198def, type: 2}
-  _useDownAnimationClip: {fileID: 7400000, guid: fa324b615f7293b4ab1695b6af5b3ff6, type: 2}
-  _useLeftAnimationClip: {fileID: 7400000, guid: 74fc0907349401c48938ea137a91862e, type: 2}
+  prepareUseUpAnimationClip: {fileID: 0}
+  prepareUseRightAnimationClip: {fileID: 0}
+  prepareUseDownAnimationClip: {fileID: 0}
+  prepareUseLeftAnimationClip: {fileID: 0}
+  useUpAnimationClip: {fileID: 7400000, guid: 538b1a80fa6361d41ba0affb36297fc3, type: 2}
+  useRightAnimationClip: {fileID: 7400000, guid: 84068ea6b445e404aa10906413198def, type: 2}
+  useDownAnimationClip: {fileID: 7400000, guid: fa324b615f7293b4ab1695b6af5b3ff6, type: 2}
+  useLeftAnimationClip: {fileID: 7400000, guid: 74fc0907349401c48938ea137a91862e, type: 2}

@@ -29,8 +29,8 @@ namespace Interaction.Tools
         
         
         // Override base virtual properties - tools get values from ToolData
-        public override float CooldownTime => ToolData != null ? ToolData.cooldownDuration : 0f;
-        public virtual int StaminaCost => ToolData.staminaCost;
+        public override float CooldownTime => ToolData != null ? ToolData.CooldownDuration : 0f;
+        public virtual int StaminaCost => ToolData.StaminaCost;
         public override bool FreezeCharacterDuringAction => true; // Tools currently always freeze character
         
 
@@ -74,15 +74,15 @@ namespace Interaction.Tools
         /// </summary>
         private List<TileData> ComputeAffectedTiles(PlayerInteractionContextSnapshot snapshot = null)
         {
-            var tiles = ToolData.targeting == ToolTargeting.Pointer
+            var tiles = ToolData.Targeting == ToolTargeting.Pointer
                 ? PointerTarget(snapshot)
-                : _mapManager.GetTilesFromEffectConfiguration(Character, ToolData.toolEffectConfiguration);
+                : _mapManager.GetTilesFromEffectConfiguration(Character, ToolData.ToolEffectConfiguration);
             return tiles.Where(CanBeUsedOnTile).ToList();
         }
 
         /// <summary>Whether a pointer-targeted tile is close enough to the character, by straight-line distance between tiles.</summary>
         public static bool IsInPointerRange(ToolData tool, TileData characterTile, TileData target) =>
-            (target.Coordinates - characterTile.Coordinates).sqrMagnitude <= tool.pointerRange * tool.pointerRange;
+            (target.Coordinates - characterTile.Coordinates).sqrMagnitude <= tool.PointerRange * tool.PointerRange;
 
         // Without a snapshot there is no pointer, so a live preview has no pointer target.
         private IEnumerable<TileData> PointerTarget(PlayerInteractionContextSnapshot snapshot)

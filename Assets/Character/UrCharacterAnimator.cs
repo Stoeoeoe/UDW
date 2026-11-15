@@ -384,8 +384,8 @@ namespace Character
             bool horizontal = facing != Vector2.zero && Mathf.Abs(facing.x) >= Mathf.Abs(facing.y);
             bool positive = horizontal ? facing.x > 0 : facing.y > 0;
             AnimationClip clipFromTool = horizontal
-                ? (positive ? toolData.prepareUseRightAnimationClip : toolData.prepareUseLeftAnimationClip)
-                : (positive ? toolData.prepareUseUpAnimationClip : toolData.prepareUseDownAnimationClip);
+                ? (positive ? toolData.PrepareUseRightAnimationClip : toolData.PrepareUseLeftAnimationClip)
+                : (positive ? toolData.PrepareUseUpAnimationClip : toolData.PrepareUseDownAnimationClip);
             PlayClip(clipFromTool ? clipFromTool : animationLibrary.GetDirectional(toolPrepareAction, facing));
         }
         private void PlayToolUseAnimation(Vector2 facing, ToolData toolData)
@@ -394,8 +394,8 @@ namespace Character
             bool horizontal = facing != Vector2.zero && Mathf.Abs(facing.x) >= Mathf.Abs(facing.y);
             bool positive = horizontal ? facing.x > 0 : facing.y > 0;
             AnimationClip clipFromTool = horizontal
-                ? (positive ? toolData.useRightAnimationClip : toolData.useLeftAnimationClip)
-                : (positive ? toolData.useUpAnimationClip : toolData.useDownAnimationClip);
+                ? (positive ? toolData.UseRightAnimationClip : toolData.UseLeftAnimationClip)
+                : (positive ? toolData.UseUpAnimationClip : toolData.UseDownAnimationClip);
             PlayClip(clipFromTool ? clipFromTool : animationLibrary.GetDirectional(toolUseAction, facing)).Time = 0f;
         }
         private void PlayIdleAnimation(Vector2 facing)

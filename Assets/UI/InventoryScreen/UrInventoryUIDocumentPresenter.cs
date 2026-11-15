@@ -222,7 +222,7 @@ namespace UI.InventoryScreen
                 var inHand = stack.Item && TargetInventory.Loadout.ActiveHandInventoryIndex == i;
                 cell.EnableInClassList("inventory-slot-active", inHand);
                 cell.EnableInClassList("inventory-slot-empty", !stack.IsOccupied);
-                var charged = stack.Item is ToolData { maxCharge: > 0 };
+                var charged = stack.Item is ToolData { MaxCharge: > 0 };
                 cell.EnableInClassList("inventory-slot-charged", charged);
                 cell.tooltip = stack.IsOccupied ? stack.Item.ItemName : "Empty slot";
                 if (stack.IsOccupied)

@@ -54,8 +54,8 @@ namespace Core.Shops.Editor
         private ShopTestItem Item(string id, int sellPrice)
         {
             var item = Game.Asset<ShopTestItem>();
-            Set(item, "_itemId", id, typeof(ItemDefinition));
-            Set(item, "_sellBasePrice", sellPrice, typeof(ItemDefinition));
+            Set(item, "itemId", id, typeof(ItemDefinition));
+            Set(item, "sellBasePrice", sellPrice, typeof(ItemDefinition));
             return item;
         }
 

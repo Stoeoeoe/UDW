@@ -25,7 +25,6 @@ namespace Core.Inventory.Editor
             _owner = ScriptableObject.CreateInstance<CharacterDefinition>();
             ConfigurationTestData.Set(_owner, "id", "test:owner");
             ConfigurationTestData.Set(_owner, "displayName", "Owner");
-            ConfigurationTestData.Set(_owner, "icon", "??");
             _item = ScriptableObject.CreateInstance<ProduceItem>();
             ConfigurationTestData.Set(_item, "ItemId", "test:apple");
             ConfigurationTestData.Set(_item, "MaxStackSize", 5);

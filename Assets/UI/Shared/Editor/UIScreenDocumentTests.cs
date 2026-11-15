@@ -52,9 +52,9 @@ namespace UI.Shared.Editor
             _inventory = Game.CreatePlayer().MainInventory;
             _inventory.Bind(new InventoryState { Slots = new InventorySlotState[2] });
             _tool = ScriptableObject.CreateInstance<ToolData>();
-            Set(typeof(ItemDefinition), _tool, "_itemId", "test:tool");
-            Set(typeof(ItemDefinition), _tool, "_itemName", "Test tool");
-            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 1);
+            Set(typeof(ItemDefinition), _tool, "itemId", "test:tool");
+            Set(typeof(ItemDefinition), _tool, "itemName", "Test tool");
+            Set(typeof(ItemDefinition), _tool, "maxStackSize", 1);
             _inventory.AddItem(_tool, 1);
             _inventory.Loadout.SelectItem(-1);
             EventBus<ItemSelectedEvent>.Subscribe(this);
@@ -125,9 +125,9 @@ namespace UI.Shared.Editor
         [Test]
         public void InventorySlotShowsQuantityAndColouredChargeAndRefreshesAfterConsumption()
         {
-            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
-            Set(typeof(ToolData), _tool, "_maxCharge", 20);
-            Set(typeof(ToolData), _tool, "_chargeColor", Color.red);
+            Set(typeof(ItemDefinition), _tool, "maxStackSize", 99);
+            Set(typeof(ToolData), _tool, "maxCharge", 20);
+            Set(typeof(ToolData), _tool, "chargeColor", Color.red);
             _inventory.SetSlot(0, new ItemStack(_tool, 7));
             var presenter = CreateInventoryScreen(); presenter.OpenInventory();
             var root = _document.rootVisualElement;
@@ -159,9 +159,9 @@ namespace UI.Shared.Editor
         [Test]
         public void HotbarUsesCarriedQuantityAndRefreshesChargeWithoutPolling()
         {
-            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
-            Set(typeof(ToolData), _tool, "_maxCharge", 20);
-            Set(typeof(ToolData), _tool, "_chargeColor", Color.red);
+            Set(typeof(ItemDefinition), _tool, "maxStackSize", 99);
+            Set(typeof(ToolData), _tool, "maxCharge", 20);
+            Set(typeof(ToolData), _tool, "chargeColor", Color.red);
             _inventory.SetSlot(0, new ItemStack(_tool, 3));
             _inventory.SetSlot(1, new ItemStack(_tool, 4));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);
@@ -199,7 +199,7 @@ namespace UI.Shared.Editor
         [Test]
         public void AnotherCharactersInventoryNeverReplacesThePlayersOnTheHotbar()
         {
-            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
+            Set(typeof(ItemDefinition), _tool, "maxStackSize", 99);
             _inventory.SetSlot(0, new ItemStack(_tool, 3));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);
             var owner = new GameObject("Hotbar"); owner.SetActive(false); owner.transform.SetParent(_root.transform);
@@ -422,7 +422,7 @@ namespace UI.Shared.Editor
         [Test]
         public void ControllerSubmitInspectsAndCancelDismissesAnInlineSplitBeforeTheScreen()
         {
-            Set(typeof(ItemDefinition), _tool, "_maxStackSize", 99);
+            Set(typeof(ItemDefinition), _tool, "maxStackSize", 99);
             _inventory.AddItem(_tool, 1);
             var presenter = CreateInventoryScreen(); presenter.OpenInventory();
             using (var evt = NavigationSubmitEvent.GetPooled()) Send(_document.rootVisualElement.Q("slot0"), evt);
@@ -487,7 +487,7 @@ namespace UI.Shared.Editor
         [Test]
         public void EssentialItemsHaveNoDropActionAndAnAlreadyHeldToolShowsItsState()
         {
-            Set(typeof(ItemDefinition), _tool, "_preventDropping", true);
+            Set(typeof(ItemDefinition), _tool, "preventDropping", true);
             var presenter = CreateInventoryScreen(); presenter.OpenInventory(); presenter.SelectSlot(0);
             Assert.That(_document.rootVisualElement.Q<Button>("discardButton").style.display.value, Is.EqualTo(DisplayStyle.None));
             Submit(_document.rootVisualElement.Q<Button>("useButton"));
@@ -530,10 +530,10 @@ namespace UI.Shared.Editor
             var hat = ScriptableObject.CreateInstance<WornEquipmentItem>(); var boots = ScriptableObject.CreateInstance<WornEquipmentItem>();
             try
             {
-                Set(typeof(ItemDefinition), hat, "_itemId", "test:hat");
-                Set(typeof(ItemDefinition), hat, "_itemName", "Hat"); TestConfiguration.Set(hat, "AllowedSlots", new[] { head });
-                Set(typeof(ItemDefinition), boots, "_itemId", "test:boots");
-                Set(typeof(ItemDefinition), boots, "_itemName", "Boots"); TestConfiguration.Set(boots, "AllowedSlots", new[] { feet });
+                Set(typeof(ItemDefinition), hat, "itemId", "test:hat");
+                Set(typeof(ItemDefinition), hat, "itemName", "Hat"); TestConfiguration.Set(hat, "AllowedSlots", new[] { head });
+                Set(typeof(ItemDefinition), boots, "itemId", "test:boots");
+                Set(typeof(ItemDefinition), boots, "itemName", "Boots"); TestConfiguration.Set(boots, "AllowedSlots", new[] { feet });
                 _inventory.Configuration = config;
                 _inventory.SetSlot(0, new ItemStack(hat, 1)); _inventory.SetSlot(1, new ItemStack(boots, 1));
                 var presenter = CreateInventoryScreen(); presenter.OpenInventory(); presenter.Menu.SelectPage("equipment");

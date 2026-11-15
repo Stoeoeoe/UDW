@@ -382,7 +382,7 @@ namespace Plants.Editor
             try
             {
                 TestConfiguration.Set(seed, "plantData", _data);
-                Set(seed, "_itemId", "test:seed");
+                Set(seed, "itemId", "test:seed");
                 var inventory = Game.Inventory(2);
                 inventory.SetSlot(1, new ItemStack(seed, 2));
                 var tile = new TileData(null, 0, 0, null, Vector3.zero, true);

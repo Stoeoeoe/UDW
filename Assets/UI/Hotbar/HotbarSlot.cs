@@ -99,7 +99,7 @@ namespace UI.Hotbar
             // Update quantity
             UpdateQuantityDisplay(stack);
 
-            var charged = hasItem && stack.Item is ToolData { maxCharge: > 0 };
+            var charged = hasItem && stack.Item is ToolData { MaxCharge: > 0 };
             ChargeTrack.gameObject.SetActive(charged);
             if (charged)
             {

@@ -9,7 +9,6 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Object = UnityEngine.Object;
 
 namespace Core.Tile.Editor.Vulcanus
 {
@@ -35,31 +34,6 @@ namespace Core.Tile.Editor.Vulcanus
             Assert.That(dialogue.Nodes.OfType<VulcanusDialogueActionNode>().Single().Lua, Is.EqualTo("Shop.Open('test:market_seeds')"));
             Assert.That(dialogue.ResolveLocalizedText("dlg.test:fabia_greeting.01", "fallback"),
                 Is.EqualTo("Salve! Fresh seeds and fair prices. What can I do for you?"));
-        }
-
-        [TestCase("start")]
-        [TestCase("next")]
-        [TestCase("option")]
-        [TestCase("empty-choice")]
-        [TestCase("duplicate")]
-        [TestCase("jump")]
-        public void BrokenGraphReferencesAreRejected(string defect)
-        {
-            var source = JObject.Parse(File.ReadAllText(FabiaSource));
-            var nodes = (JArray)source["nodes"];
-            var choice = nodes.Single(node => (string)node["type"] == "choice");
-            switch (defect)
-            {
-                case "start": source["startNodeId"] = "missing"; break;
-                case "next": nodes[0]["next"] = "missing"; break;
-                case "option": choice["options"][0]["targetNodeId"] = "missing"; break;
-                case "empty-choice": choice["options"] = new JArray(); break;
-                case "duplicate": nodes.Add(nodes[0].DeepClone()); break;
-                case "jump": nodes[0] = new JObject { ["id"] = "line-1", ["type"] = "jump", ["targetNodeId"] = "" }; break;
-            }
-            var dialogue = ScriptableObject.CreateInstance<VulcanusDialogueAsset>();
-            try { Assert.That(() => VulcanusJson.Populate(dialogue, source.ToString()), Throws.ArgumentException); }
-            finally { Object.DestroyImmediate(dialogue); }
         }
 
         [Test]

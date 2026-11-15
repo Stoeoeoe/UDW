@@ -41,8 +41,8 @@ namespace Interaction.Tools.Editor
             var loadout = player.MainInventory.Loadout;
             var slot = Enumerable.Range(0, 10).First(i => loadout.GetToolbeltTool(i)?.ItemId == "base:growth_wand");
             Assert.That(loadout.SelectToolbeltSlot(slot), Is.True);
-            Assert.That(player.CurrentTool.staminaCost, Is.EqualTo(10));
-            var farTile = map.GetTileDataAtCoordinates(characterTile.Coordinates + Vector2Int.right * (player.CurrentTool.pointerRange + 1));
+            Assert.That(player.CurrentTool.StaminaCost, Is.EqualTo(10));
+            var farTile = map.GetTileDataAtCoordinates(characterTile.Coordinates + Vector2Int.right * (player.CurrentTool.PointerRange + 1));
 
             var use = player.GetComponentInChildren<UseToolAction>(true);
             PlayerInteractionContextSnapshot Aim(TileData target) => PlayerInteractionContextSnapshot.Create(true, player, null,

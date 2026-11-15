@@ -12,9 +12,9 @@ namespace Core.Items
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
         [SerializeField, Validation.Min(1, "Must restore at least one stamina.")]
-        private int _staminaRestored = 10;
+        private int staminaRestored = 10;
 
-        public int StaminaRestored => _staminaRestored;
+        public int StaminaRestored => staminaRestored;
 
         public override bool CanConsume(GameCharacter character) => character.Stamina.CurrentStamina < character.Stamina.MaxStamina;
         public override void Apply(GameCharacter character) => character.Stamina.RestoreStamina(StaminaRestored);

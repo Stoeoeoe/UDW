@@ -35,8 +35,8 @@ namespace Core.Inventory.Editor
         private T Item<T>(string id, int max) where T : ItemDefinition
         {
             var item = Game.Asset<T>();
-            Set(item, "_itemId", id);
-            Set(item, "_maxStackSize", max);
+            Set(item, "itemId", id);
+            Set(item, "maxStackSize", max);
             return item;
         }
         [Test] public void SplitMergeAndCancelConserveQuantities()

@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89b63581bba5775479ac3e0e2789fa7f, type: 3}
   m_Name: BroadBeansProduce
   m_EditorClassIdentifier: Assembly-CSharp::Plants.ProduceItem
-  _itemId: base:broad_beans
-  _itemName: Broad Beans
-  _category: Produce
-  _icon: {fileID: 21300000, guid: fcb870812d98bfb4e93e34ec9fd0a471, type: 3}
-  _description: Fat green pods of broad beans, picked fresh.
-  _maxStackSize: 99
-  _preventDropping: 0
-  _buyBasePrice: 0
-  _sellBasePrice: 10
-  _worldRepresentationPrefab: {fileID: 0}
-  _pickupSound: {fileID: 0}
+  itemId: base:broad_beans
+  itemName: Broad Beans
+  category: Produce
+  icon: {fileID: 21300000, guid: fcb870812d98bfb4e93e34ec9fd0a471, type: 3}
+  description: Fat green pods of broad beans, picked fresh.
+  maxStackSize: 99
+  preventDropping: 0
+  buyBasePrice: 0
+  sellBasePrice: 10
+  worldRepresentationPrefab: {fileID: 0}
+  pickupSound: {fileID: 0}

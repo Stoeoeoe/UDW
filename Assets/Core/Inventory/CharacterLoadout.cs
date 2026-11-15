@@ -40,7 +40,7 @@ namespace Core.Inventory
         {
             if (!_state.ToolCharges.TryGetValue(tool.ItemId, out var charge))
             {
-                charge = new ToolChargeState(tool.maxCharge);
+                charge = new ToolChargeState(tool.MaxCharge);
                 _state.ToolCharges.Add(tool.ItemId, charge);
                 charge.Bind(NotifyChargeChanged);
             }

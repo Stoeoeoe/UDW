@@ -185,7 +185,7 @@ namespace Character.Editor
         public void ConsumingABoostItemUsesTheNormalInventoryAction()
         {
             var item = Game.Asset<AttributeBoostConsumableItem>();
-            Set(item, "_itemId", "test:tonic");
+            Set(item, "itemId", "test:tonic");
             Set(item, "boosts", new[] { _rested.Boosts[0] });
             item.RequireValidConfiguration();
             _character.MainInventory.AddItem(item, 1);
@@ -228,7 +228,7 @@ namespace Character.Editor
             var bonus = new AttributeBonus();
             Set(bonus, "attribute", attribute);
             Set(bonus, "percent", percent);
-            Set(definition, "_itemId", id);
+            Set(definition, "itemId", id);
             Set(definition, "boostDurationMinutes", minutes);
             Set(definition, "boosts", new[] { bonus });
             definition.RequireValidConfiguration();

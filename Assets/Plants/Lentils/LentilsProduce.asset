@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89b63581bba5775479ac3e0e2789fa7f, type: 3}
   m_Name: LentilsProduce
   m_EditorClassIdentifier: Assembly-CSharp::Plants.ProduceItem
-  _itemId: base:lentils
-  _itemName: Lentils
-  _category: Produce
-  _icon: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582, type: 3}
-  _description: Freshly harvested lentils.
-  _maxStackSize: 99
-  _buyBasePrice: 0
-  _sellBasePrice: 0
-  _worldRepresentationPrefab: {fileID: 0}
-  _pickupSound: {fileID: 0}
+  itemId: base:lentils
+  itemName: Lentils
+  category: Produce
+  icon: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582, type: 3}
+  description: Freshly harvested lentils.
+  maxStackSize: 99
+  buyBasePrice: 0
+  sellBasePrice: 0
+  worldRepresentationPrefab: {fileID: 0}
+  pickupSound: {fileID: 0}

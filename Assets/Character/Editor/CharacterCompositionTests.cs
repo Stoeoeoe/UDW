@@ -75,7 +75,7 @@ namespace Character.Editor
         public void CharacterSelectionFollowsLoadoutWithoutSelectionEventCopies()
         {
             var tool = Game.Asset<ToolData>();
-            Set(tool, "_itemId", "test:selection");
+            Set(tool, "itemId", "test:selection");
             _character.MainInventory.AddItem(tool, 1);
             _character.Loadout.SelectItem(0);
             _character.MainInventory.MoveItem(0, 2);

@@ -150,7 +150,7 @@ namespace Core.Tile.Editor
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
             Assert.That(Game.State.World.TryGet<FarmlandState>(_location.id, "farmland:0,0", out var saved), Is.True);
             Assert.That(saved.plowed, Is.True);
-            Assert.That(character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.staminaCost));
+            Assert.That(character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.StaminaCost));
             Assert.That(executor.IsIdle, Is.True);
             Assert.That(character.IsControlBlocked, Is.False);
         }
@@ -489,7 +489,7 @@ namespace Core.Tile.Editor
             var data = Asset<PlantData>();
             TestConfiguration.Set(data, "plantId", "test:crop");
             var produce = Asset<ProduceItem>();
-            Set(produce, "_itemId", "test:produce");
+            Set(produce, "itemId", "test:produce");
             Set(data, "_harvestItem", produce);
             var seedStage = new GrowthStage();
             Set(seedStage, "_representation", new SpriteOrPrefab

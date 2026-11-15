@@ -14,87 +14,87 @@ namespace Interaction.Tools
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
         [SerializeField, Validation.Min(0, "Must be nonnegative; zero disables charge storage.")]
-        private int _maxCharge = 0;
+        private int maxCharge = 0;
 
         [SerializeField, Validation.Min(0)]
-        private int _chargePerUsage = 0;
+        private int chargePerUsage = 0;
 
         [SerializeField, Tooltip("Slot bar colour for tools with charge storage.")]
-        private Color _chargeColor = new(0.18f, 0.55f, 0.9f);
+        private Color chargeColor = new(0.18f, 0.55f, 0.9f);
 
         [SerializeField, Validation.Min(0)]
-        private int _staminaCost = 5;
+        private int staminaCost = 5;
 
         [SerializeField]
-        private bool _consumeStaminaOnFailure = true;
+        private bool consumeStaminaOnFailure = true;
 
         [SerializeField]
-        private bool _isInInventory = true;
+        private bool isInInventory = true;
 
         [SerializeField]
-        private bool _showTileHighlighterOnPrepare = true;
+        private bool showTileHighlighterOnPrepare = true;
 
         [SerializeField, Validation.Finite, Validation.Min(0)]
-        private float _actionDuration = 0.2f;
+        private float actionDuration = 0.2f;
 
         [SerializeField, Validation.Finite, Validation.Min(0)]
-        private float _cooldownDuration = 0.2f;
+        private float cooldownDuration = 0.2f;
 
         [SerializeField, Validation.Required("Assign an effect configuration."), Validation.Nested]
-        private ToolEffectConfiguration _toolEffectConfiguration;
+        private ToolEffectConfiguration toolEffectConfiguration;
 
         [Tooltip("Facing tools affect the tiles in the effect configuration. Pointer tools affect the tile under the pointer; their effect configuration stays empty.")]
         [SerializeField, Validation.DefinedEnum]
-        private ToolTargeting _targeting;
+        private ToolTargeting targeting;
 
         [Tooltip("Pointer tools only: the farthest tile from the character that can be targeted.")]
         [SerializeField, Validation.Min(1)]
-        private int _pointerRange = 3;
+        private int pointerRange = 3;
 
         [SerializeField]
-        private AnimationClip _prepareUseUpAnimationClip;
+        private AnimationClip prepareUseUpAnimationClip;
 
         [SerializeField]
-        private AnimationClip _prepareUseRightAnimationClip;
+        private AnimationClip prepareUseRightAnimationClip;
 
         [SerializeField]
-        private AnimationClip _prepareUseDownAnimationClip;
+        private AnimationClip prepareUseDownAnimationClip;
 
         [SerializeField]
-        private AnimationClip _prepareUseLeftAnimationClip;
+        private AnimationClip prepareUseLeftAnimationClip;
 
         [SerializeField]
-        private AnimationClip _useUpAnimationClip;
+        private AnimationClip useUpAnimationClip;
 
         [SerializeField]
-        private AnimationClip _useRightAnimationClip;
+        private AnimationClip useRightAnimationClip;
 
         [SerializeField]
-        private AnimationClip _useDownAnimationClip;
+        private AnimationClip useDownAnimationClip;
 
         [SerializeField]
-        private AnimationClip _useLeftAnimationClip;
+        private AnimationClip useLeftAnimationClip;
 
-        public int maxCharge => _maxCharge;
-        public int chargePerUsage => _chargePerUsage;
-        public Color ChargeColor => _chargeColor;
-        public int staminaCost => _staminaCost;
-        public bool consumeStaminaOnFailure => _consumeStaminaOnFailure;
-        public bool isInInventory => _isInInventory;
-        public bool showTileHighlighterOnPrepare => _showTileHighlighterOnPrepare;
-        public float actionDuration => _actionDuration;
-        public float cooldownDuration => _cooldownDuration;
-        public ToolEffectConfiguration toolEffectConfiguration => _toolEffectConfiguration;
-        public ToolTargeting targeting => _targeting;
-        public int pointerRange => _pointerRange;
-        public AnimationClip prepareUseUpAnimationClip => _prepareUseUpAnimationClip;
-        public AnimationClip prepareUseRightAnimationClip => _prepareUseRightAnimationClip;
-        public AnimationClip prepareUseDownAnimationClip => _prepareUseDownAnimationClip;
-        public AnimationClip prepareUseLeftAnimationClip => _prepareUseLeftAnimationClip;
-        public AnimationClip useUpAnimationClip => _useUpAnimationClip;
-        public AnimationClip useRightAnimationClip => _useRightAnimationClip;
-        public AnimationClip useDownAnimationClip => _useDownAnimationClip;
-        public AnimationClip useLeftAnimationClip => _useLeftAnimationClip;
+        public int MaxCharge => maxCharge;
+        public int ChargePerUsage => chargePerUsage;
+        public Color ChargeColor => chargeColor;
+        public int StaminaCost => staminaCost;
+        public bool ConsumeStaminaOnFailure => consumeStaminaOnFailure;
+        public bool IsInInventory => isInInventory;
+        public bool ShowTileHighlighterOnPrepare => showTileHighlighterOnPrepare;
+        public float ActionDuration => actionDuration;
+        public float CooldownDuration => cooldownDuration;
+        public ToolEffectConfiguration ToolEffectConfiguration => toolEffectConfiguration;
+        public ToolTargeting Targeting => targeting;
+        public int PointerRange => pointerRange;
+        public AnimationClip PrepareUseUpAnimationClip => prepareUseUpAnimationClip;
+        public AnimationClip PrepareUseRightAnimationClip => prepareUseRightAnimationClip;
+        public AnimationClip PrepareUseDownAnimationClip => prepareUseDownAnimationClip;
+        public AnimationClip PrepareUseLeftAnimationClip => prepareUseLeftAnimationClip;
+        public AnimationClip UseUpAnimationClip => useUpAnimationClip;
+        public AnimationClip UseRightAnimationClip => useRightAnimationClip;
+        public AnimationClip UseDownAnimationClip => useDownAnimationClip;
+        public AnimationClip UseLeftAnimationClip => useLeftAnimationClip;
 
     }
 }

@@ -12,9 +12,9 @@ namespace Plants
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
         [SerializeField, Validation.ValidReference]
-        private PlantData _plantData;
+        private PlantData plantData;
 
-        public PlantData plantData => _plantData;
+        public PlantData PlantData => plantData;
 
         public override GameObject GetPlaceableRepresentation()
         {

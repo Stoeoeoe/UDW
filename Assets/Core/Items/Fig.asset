@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e4bcf3b58924a24faddecdcb201bd8f, type: 3}
   m_Name: Fig
   m_EditorClassIdentifier: Assembly-CSharp::Plants.ProduceItem
-  _itemId: base:fig
-  _itemName: Fig
-  _category: Forage
-  _icon: {fileID: 21300000, guid: e9fca873f63dd024b9dc67c65532c4de, type: 3}
-  _description: A freshly gathered fig.
-  _maxStackSize: 99
-  _preventDropping: 0
-  _buyBasePrice: 0
-  _sellBasePrice: 0
-  _worldRepresentationPrefab: {fileID: 0}
-  _pickupSound: {fileID: 0}
+  itemId: base:fig
+  itemName: Fig
+  category: Forage
+  icon: {fileID: 21300000, guid: e9fca873f63dd024b9dc67c65532c4de, type: 3}
+  description: A freshly gathered fig.
+  maxStackSize: 99
+  preventDropping: 0
+  buyBasePrice: 0
+  sellBasePrice: 0
+  worldRepresentationPrefab: {fileID: 0}
+  pickupSound: {fileID: 0}
   groundLifetimeDays: 3

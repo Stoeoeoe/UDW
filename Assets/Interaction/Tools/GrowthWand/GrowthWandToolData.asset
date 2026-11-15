@@ -12,36 +12,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: GrowthWandToolData
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Tools.ToolData
-  _itemId: base:growth_wand
-  _itemName: Growth Wand
-  _category: Tools
-  _icon: {fileID: 21300000, guid: de8c0bdd2dc80e84a9f59c3e42c58eb5, type: 3}
-  _description: Point at a nearby crop to push it on to its next growth stage.
-  _maxStackSize: 1
-  _preventDropping: 1
-  _buyBasePrice: 0
-  _sellBasePrice: 0
-  _worldRepresentationPrefab: {fileID: 0}
-  _pickupSound: {fileID: 0}
-  _maxCharge: 0
-  _chargePerUsage: 0
-  _chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
-  _staminaCost: 10
-  _consumeStaminaOnFailure: 0
-  _isInInventory: 1
-  _showTileHighlighterOnPrepare: 0
-  _actionDuration: 0.2
-  _cooldownDuration: 0.2
-  _targeting: 1
-  _pointerRange: 3
-  _toolEffectConfiguration:
+  itemId: base:growth_wand
+  itemName: Growth Wand
+  category: Tools
+  icon: {fileID: 21300000, guid: de8c0bdd2dc80e84a9f59c3e42c58eb5, type: 3}
+  description: Point at a nearby crop to push it on to its next growth stage.
+  maxStackSize: 1
+  preventDropping: 1
+  buyBasePrice: 0
+  sellBasePrice: 0
+  worldRepresentationPrefab: {fileID: 0}
+  pickupSound: {fileID: 0}
+  maxCharge: 0
+  chargePerUsage: 0
+  chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
+  staminaCost: 10
+  consumeStaminaOnFailure: 0
+  isInInventory: 1
+  showTileHighlighterOnPrepare: 0
+  actionDuration: 0.2
+  cooldownDuration: 0.2
+  targeting: 1
+  pointerRange: 3
+  toolEffectConfiguration:
     AffectedTileOffsets: []
     IsGlobalEffect: 0
-  _prepareUseUpAnimationClip: {fileID: 0}
-  _prepareUseRightAnimationClip: {fileID: 0}
-  _prepareUseDownAnimationClip: {fileID: 0}
-  _prepareUseLeftAnimationClip: {fileID: 0}
-  _useUpAnimationClip: {fileID: 0}
-  _useRightAnimationClip: {fileID: 0}
-  _useDownAnimationClip: {fileID: 0}
-  _useLeftAnimationClip: {fileID: 0}
+  prepareUseUpAnimationClip: {fileID: 0}
+  prepareUseRightAnimationClip: {fileID: 0}
+  prepareUseDownAnimationClip: {fileID: 0}
+  prepareUseLeftAnimationClip: {fileID: 0}
+  useUpAnimationClip: {fileID: 0}
+  useRightAnimationClip: {fileID: 0}
+  useDownAnimationClip: {fileID: 0}
+  useLeftAnimationClip: {fileID: 0}

@@ -67,7 +67,7 @@ namespace Plants.Editor
             Set(stages[2], "_isHarvestable", true);
             Set(_data, "growthStages", stages);
             _item = Game.Asset<InventoryTestItem>();
-            Set(_item, "_itemId", "test:produce", typeof(ItemDefinition));
+            Set(_item, "itemId", "test:produce", typeof(ItemDefinition));
             Set(_data, "_harvestItem", _item);
             Set(_data, "_minHarvestQuantity", 3);
             Set(_data, "_maxHarvestQuantity", 3);

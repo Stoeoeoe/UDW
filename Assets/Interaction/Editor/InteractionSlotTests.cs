@@ -635,7 +635,7 @@ namespace Interaction.Editor
             Call(_character.Animator, "PlayToolUseAnimation", new Vector2(x, y), tool);
             var playback = _character.GetComponentInChildren<NamedAnimancerComponent>();
             Assert.That(playback.Layers[0].CurrentState.Clip, Is.SameAs(expected));
-            Assert.That(tool.actionDuration, Is.EqualTo(expected.length).Within(0.0001f));
+            Assert.That(tool.ActionDuration, Is.EqualTo(expected.length).Within(0.0001f));
         }
 
         [Test]

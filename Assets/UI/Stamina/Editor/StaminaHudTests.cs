@@ -42,7 +42,7 @@ namespace UI.Stamina.Editor
             Game.State.Player.Home = new PlayerHomeState("test:home", "test-bed");
             _character = Game.CreateCharacter();
             _tool = Game.Own(Game.InjectObject(Object.Instantiate(AssetDatabase.LoadAssetAtPath<ToolData>("Assets/Resources/Items/Tools/HoeToolData.asset"))));
-            Set(_tool, "_showTileHighlighterOnPrepare", false);
+            Set(_tool, "showTileHighlighterOnPrepare", false);
             var template = new GameObject("Test tool action");
             template.transform.SetParent(Game.Root.transform);
             var action = Game.Add<StaminaTestToolAction>(template);
@@ -87,7 +87,7 @@ namespace UI.Stamina.Editor
         {
             await RunTool(skipPreparation);
             Assert.That(_toolAction.Executions, Is.EqualTo(1));
-            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - _tool.staminaCost));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - _tool.StaminaCost));
             Assert.That(Game.State.Player.Stamina.Current, Is.EqualTo(95));
             Assert.That(_meter.value, Is.EqualTo(95f).Within(0.001));
             Assert.That(_value.text, Is.EqualTo("95 / 100"));
@@ -97,7 +97,7 @@ namespace UI.Stamina.Editor
         [TestCase(false, 100)]
         public async Task RejectedToolUseHonoursItsFailureCostPolicy(bool consumesOnFailure, int expected)
         {
-            Set(_tool, "_consumeStaminaOnFailure", consumesOnFailure);
+            Set(_tool, "consumeStaminaOnFailure", consumesOnFailure);
             _toolAction.Allowed = false;
             await RunTool();
             Assert.That(_toolAction.Executions, Is.Zero);

@@ -260,14 +260,14 @@ namespace Plants
             if (string.IsNullOrEmpty(locationId) || tile?.FarmlandData is not { IsPlowed: true } ||
                 tile.PlacedObject || slotIndex < 0 || slotIndex >= inventory.Capacity ||
                 inventory.GetSlot(slotIndex).Item is not SeedItem seed ||
-                !TryGetPlantData(seed.plantData.plantId, out _) ||
+                !TryGetPlantData(seed.PlantData.plantId, out _) ||
                 HasPlantAt(locationId, tile.Coordinates)) return false;
             var stack = inventory.GetSlot(slotIndex);
             var remaining = stack.Quantity > 1 ? new ItemStack(seed, stack.Quantity - 1) : ItemStack.Empty;
             inventory.Storage.SetSlot(slotIndex, remaining);
             // Both live states are complete before a listener can move inventory or start a transition.
-            _gameState.World.Set(locationId, PlantObjectId(tile.Coordinates), new PlantState(seed.plantData.plantId));
-            var sow = new SowPlantEvent { Position = tile.Coordinates, PlantId = seed.plantData.plantId, LocationId = locationId };
+            _gameState.World.Set(locationId, PlantObjectId(tile.Coordinates), new PlantState(seed.PlantData.plantId));
+            var sow = new SowPlantEvent { Position = tile.Coordinates, PlantId = seed.PlantData.plantId, LocationId = locationId };
             EventBus<SowPlantEvent>.Raise(sow);
             InventoryChangedEvent.Trigger(inventory);
             return true;

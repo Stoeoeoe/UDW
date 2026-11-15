@@ -36,7 +36,7 @@ namespace Core.Inventory.Editor
         public void SetUp()
         {
             _item = Game.Asset<InventoryTestItem>();
-            Set(_item, "_itemId", "test:grain");
+            Set(_item, "itemId", "test:grain");
             _state = new InventoryState { Slots = new InventorySlotState[2] };
             _inventory = Game.Inventory(_state, id => id == _item.ItemId ? _item : null);
             _root = _inventory.gameObject;
@@ -81,7 +81,7 @@ namespace Core.Inventory.Editor
         [Test]
         public void OverflowAndInvalidLoadoutsDoNotPartiallyAddOrMarkInitialized()
         {
-            Set(_item, "_maxStackSize", 1);
+            Set(_item, "maxStackSize", 1);
             Assert.That(_inventory.ApplyStartingLoadout(new[] { _item, _item, _item }), Is.False);
             Assert.Throws<ArgumentNullException>(() => _inventory.ApplyStartingLoadout(new ItemDefinition[] { _item, null }));
             Assert.That(_state.StartingLoadoutApplied, Is.False);

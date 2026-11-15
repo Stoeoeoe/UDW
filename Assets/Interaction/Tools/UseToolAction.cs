@@ -12,8 +12,8 @@ namespace Interaction.Tools
         public ToolData CurrentTool => Owner.CurrentTool;
 
         public override bool HasPreparationPhase => true;
-        public override float CooldownTime => _toolAction.ToolData.cooldownDuration;
-        public override float ActionDuration => _toolAction.ToolData.actionDuration;
+        public override float CooldownTime => _toolAction.ToolData.CooldownDuration;
+        public override float ActionDuration => _toolAction.ToolData.ActionDuration;
 
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot)
         {
@@ -32,7 +32,7 @@ namespace Interaction.Tools
         {
             _toolAction.gameObject.SetActive(true);
             _toolAction.CaptureTargets(snapshot);
-            if (_toolAction.ToolData.showTileHighlighterOnPrepare && snapshot.Character.TileHighlighter)
+            if (_toolAction.ToolData.ShowTileHighlighterOnPrepare && snapshot.Character.TileHighlighter)
             {
                 snapshot.Character.TileHighlighter.SetTiles(_toolAction.AffectedTiles);
                 snapshot.Character.TileHighlighter.Show();
@@ -71,7 +71,7 @@ namespace Interaction.Tools
 
         public override async Awaitable OnFailure(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
-            if (_toolAction.ToolData.consumeStaminaOnFailure)
+            if (_toolAction.ToolData.ConsumeStaminaOnFailure)
                 Owner.Stamina.ConsumeStamina(_toolAction.StaminaCost);
             await _toolAction.OnFailure(snapshot, cancellation);
             cancellation.ThrowIfCancellationRequested();

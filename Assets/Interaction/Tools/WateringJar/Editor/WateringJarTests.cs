@@ -97,12 +97,12 @@ namespace Interaction.Tools.WateringJar.Editor
         {
             var state = new InventoryState();
             _character.MainInventory.Bind(state);
-            Assert.That(_jug.Water.Current, Is.EqualTo(_jug.ToolData.maxCharge));
+            Assert.That(_jug.Water.Current, Is.EqualTo(_jug.ToolData.MaxCharge));
             _jug.Water.TryConsume(3);
             _jug.Water.IncreaseCapacity(10);
             _character.MainInventory.Bind(state);
-            Assert.That(_jug.Water.Current, Is.EqualTo(_jug.ToolData.maxCharge - 3));
-            Assert.That(_jug.Water.Capacity, Is.EqualTo(_jug.ToolData.maxCharge + 10));
+            Assert.That(_jug.Water.Current, Is.EqualTo(_jug.ToolData.MaxCharge - 3));
+            Assert.That(_jug.Water.Capacity, Is.EqualTo(_jug.ToolData.MaxCharge + 10));
         }
 
         [TestCase(0, 1, 0.25f, 0.25f)]
@@ -119,28 +119,28 @@ namespace Interaction.Tools.WateringJar.Editor
             Assert.That(executor.IsIdle, Is.True, "Completed pours must release tool animation ownership.");
             Assert.That(executor.CurrentAction, Is.Null);
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(_jug.Water.Current, Is.EqualTo(tool.maxCharge - tool.chargePerUsage));
-            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.staminaCost));
+            Assert.That(_jug.Water.Current, Is.EqualTo(tool.MaxCharge - tool.ChargePerUsage));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.StaminaCost));
 
             var expectedTarget = new Vector2Int(Mathf.FloorToInt(x) + dx, Mathf.FloorToInt(y) + dy);
             var land = Tile("dirt", true, expectedTarget);
             await Run(executor, wrapper);
             Assert.That(land.FarmlandData.IsIrrigated, Is.True);
-            Assert.That(_jug.Water.Current, Is.EqualTo(tool.maxCharge - 2 * tool.chargePerUsage));
-            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 2 * tool.staminaCost));
+            Assert.That(_jug.Water.Current, Is.EqualTo(tool.MaxCharge - 2 * tool.ChargePerUsage));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 2 * tool.StaminaCost));
             Assert.That(executor.IsIdle, Is.True);
             Assert.That(_character.IsControlBlocked, Is.False);
 
             await Run(executor, wrapper);
             Assert.That(land.FarmlandData.IsIrrigated, Is.True);
-            Assert.That(_jug.Water.Current, Is.EqualTo(tool.maxCharge - 3 * tool.chargePerUsage), "Already-wet ground still receives a pour.");
-            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 3 * tool.staminaCost));
+            Assert.That(_jug.Water.Current, Is.EqualTo(tool.MaxCharge - 3 * tool.ChargePerUsage), "Already-wet ground still receives a pour.");
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 3 * tool.StaminaCost));
 
             await Run(executor, wrapper, () => _jug.Water.Current = 0, expectExecution: false);
             Assert.That(executor.IsIdle, Is.True, "A rejection after preparation must reset the action.");
             Assert.That(executor.CurrentAction, Is.Null);
             Assert.That(_character.IsControlBlocked, Is.False);
-            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 3 * tool.staminaCost));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(100 - 3 * tool.StaminaCost));
         }
 
         private (ActionExecutor executor, UseToolAction wrapper) ToolLifecycle()
@@ -293,8 +293,8 @@ namespace Interaction.Tools.WateringJar.Editor
 
             await Run(executor, wrapper, () => _character.Orientation.ForceDirection(finishFacingWater ? Vector2.up : Vector2.down));
 
-            Assert.That(_jug.Water.Current, Is.EqualTo(finishFacingWater ? _jug.Water.Capacity : 4 - _jug.ToolData.chargePerUsage));
-            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(finishFacingWater ? 100 : 100 - _jug.ToolData.staminaCost));
+            Assert.That(_jug.Water.Current, Is.EqualTo(finishFacingWater ? _jug.Water.Capacity : 4 - _jug.ToolData.ChargePerUsage));
+            Assert.That(_character.Stamina.CurrentStamina, Is.EqualTo(finishFacingWater ? 100 : 100 - _jug.ToolData.StaminaCost));
             Assert.That(soil.FarmlandData.IsIrrigated, Is.EqualTo(!finishFacingWater));
             Assert.That(executor.IsIdle, Is.True);
             Assert.That(_character.IsControlBlocked, Is.False);
@@ -305,7 +305,7 @@ namespace Interaction.Tools.WateringJar.Editor
         {
             var first = Tile("dirt", true);
             var second = Tile("dirt", true, _front + Vector2Int.right);
-            _jug.Water.Current = _jug.ToolData.chargePerUsage;
+            _jug.Water.Current = _jug.ToolData.ChargePerUsage;
             Set(typeof(ToolAction), _jug, "_capturedAffectedTiles", new List<TileData> { first, second });
             await _jug.OnExecute(null, CancellationToken.None);
             Assert.That(first.FarmlandData.IsIrrigated, Is.True);
@@ -329,7 +329,7 @@ namespace Interaction.Tools.WateringJar.Editor
             try { await run; Assert.Fail("The remaining pour must be cancelled."); }
             catch (OperationCanceledException) { }
             Assert.That(second.FarmlandData.IsIrrigated, Is.False);
-            Assert.That(_jug.Water.Current, Is.EqualTo(initialWater - _jug.ToolData.chargePerUsage));
+            Assert.That(_jug.Water.Current, Is.EqualTo(initialWater - _jug.ToolData.ChargePerUsage));
         }
 
         [Test]

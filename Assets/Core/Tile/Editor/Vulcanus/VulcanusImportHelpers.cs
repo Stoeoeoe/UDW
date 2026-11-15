@@ -259,53 +259,6 @@ namespace Core.Tile.Editor.Vulcanus
             }
         }
 
-        public static bool TrySetMemberValue(object target, string key, object value)
-        {
-            if (target == null || string.IsNullOrWhiteSpace(key)) return false;
-            var type = target.GetType();
-            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase;
-
-            var field = type.GetField(key, flags);
-            PropertyInfo prop = null;
-            FieldInfo backingField = null;
-            if (field == null)
-            {
-                prop = type.GetProperty(key, flags);
-                if (prop == null || !prop.CanWrite)
-                {
-                    backingField = FindBackingField(type, key, flags);
-                    prop = null;
-                }
-            }
-
-            if (field == null && prop == null && backingField == null) return false;
-
-            try
-            {
-                if (field != null)
-                {
-                    var converted = ConvertIfNeeded(value, field.FieldType);
-                    field.SetValue(target, converted);
-                }
-                else if (backingField != null)
-                {
-                    var converted = ConvertIfNeeded(value, backingField.FieldType);
-                    backingField.SetValue(target, converted);
-                }
-                else
-                {
-                    var converted = ConvertIfNeeded(value, prop.PropertyType);
-                    prop.SetValue(target, converted);
-                }
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         private static FieldInfo FindBackingField(Type type, string key, BindingFlags flags)
         {
             var serializedName = "_" + char.ToLowerInvariant(key[0]) + key.Substring(1);
@@ -316,24 +269,6 @@ namespace Core.Tile.Editor.Vulcanus
                 if (field != null) return field;
             }
             return null;
-        }
-
-        private static object ConvertIfNeeded(object value, Type targetType)
-        {
-            if (value == null) return null;
-            var valType = value.GetType();
-            if (targetType.IsAssignableFrom(valType)) return value;
-            try
-            {
-                if (targetType.IsEnum && value is string s)
-                    return Enum.Parse(targetType, s, true);
-                return Convert.ChangeType(value, Nullable.GetUnderlyingType(targetType) ?? targetType,
-                    CultureInfo.InvariantCulture);
-            }
-            catch
-            {
-                return value;
-            }
         }
 
         public static Type ResolveTypeByName(string fullName)

@@ -28,7 +28,7 @@ namespace Interaction.Tools.WateringJar
         public override void Initialize(GameCharacter owner)
         {
             base.Initialize(owner);
-            if (ToolData.maxCharge <= 0 || ToolData.chargePerUsage <= 0 || ToolData.chargePerUsage > ToolData.maxCharge)
+            if (ToolData.MaxCharge <= 0 || ToolData.ChargePerUsage <= 0 || ToolData.ChargePerUsage > ToolData.MaxCharge)
                 throw new InvalidOperationException("A watering jug requires positive capacity and a usage cost within that capacity.");
             if (!refillFeedback || refillDuration <= 0f)
                 throw new InvalidOperationException("A watering jug requires refill feedback and a positive refill duration.");
@@ -36,7 +36,7 @@ namespace Interaction.Tools.WateringJar
 
         public override bool CanExecute(PlayerInteractionContextSnapshot snapshot) => IsRefilling
             ? Water.Current < Water.Capacity
-            : Water.Current >= ToolData.chargePerUsage;
+            : Water.Current >= ToolData.ChargePerUsage;
 
         public override bool CanExecuteAfterPreparation(PlayerInteractionContextSnapshot snapshot) =>
             CanExecute(snapshot);
@@ -53,14 +53,14 @@ namespace Interaction.Tools.WateringJar
             // A pour still spends water on bare or already-wet ground, even though no farmland changes.
             if (AffectedTiles.Count == 0)
             {
-                Water.TryConsume(ToolData.chargePerUsage);
+                Water.TryConsume(ToolData.ChargePerUsage);
                 return;
             }
 
             var affectedTiles = AffectedTiles;
             foreach (var tile in affectedTiles)
             {
-                if (!Water.TryConsume(ToolData.chargePerUsage)) return;
+                if (!Water.TryConsume(ToolData.ChargePerUsage)) return;
                 _mapManager.IrrigateTile(tile);
                 cancellation.ThrowIfCancellationRequested();
                 if (affectedTiles.Count > 1) await Awaitable.WaitForSecondsAsync(0.2f, cancellation);
