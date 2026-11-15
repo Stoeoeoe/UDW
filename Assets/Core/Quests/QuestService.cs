@@ -149,11 +149,19 @@ namespace Core.Quests
             _checkPending = false;
             var player = _characters.MainCharacter;
             if (!player) return; // Nothing can be met before the player exists; entering a location checks again.
+            // Failure first: a step whose deadline has passed is too late, even if it would be met now.
+            foreach (var questId in ActiveQuestIds())
+            {
+                var (quest, progress, step) = CurrentStep(questId);
+                if (step.HasDeadline && _gameState.Time.TotalMinutes >= step.DeadlineAtMinute(progress.StepStartedAtMinute) ||
+                    !string.IsNullOrWhiteSpace(step.FailWhen) && Conditions.EvaluateCondition(step.FailWhen))
+                    Fail(quest, progress);
+            }
             ForEachOpenObjective((quest, objective) => objective.Kind switch
             {
                 QuestObjectiveKind.Have => player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count,
                 QuestObjectiveKind.Reach => string.IsNullOrEmpty(objective.TriggerId) && objective.MapId == _mapId,
-                QuestObjectiveKind.Condition => (_conditions ??= _lua.CreateEngine()).EvaluateCondition(objective.Condition),
+                QuestObjectiveKind.Condition => Conditions.EvaluateCondition(objective.Condition),
                 _ => false
             });
         }
@@ -177,6 +185,16 @@ namespace Core.Quests
         public void OnLocationLeave(LocationData location) => _mapId = null;
 
         private void RequestCheck() => _checkPending = true;
+
+        private VulcanusLuaEngine Conditions => _conditions ??= _lua.CreateEngine();
+
+        /// <summary>The quest fails on its current step, which it keeps for the journal, and runs its fail actions.</summary>
+        private void Fail(QuestDefinition quest, QuestProgress progress)
+        {
+            progress.Status = QuestStatus.Failed;
+            progress.CompletedObjectives.Clear();
+            Run(quest.OnFail);
+        }
 
         /// <summary>Completes each open objective of the active quests' current steps that is met.</summary>
         private void ForEachOpenObjective(Func<QuestDefinition, QuestObjective, bool> isMet)

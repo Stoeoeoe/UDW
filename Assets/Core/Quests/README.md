@@ -79,3 +79,8 @@ Talk and deliver objectives are met by talking to their character. While the cur
 otherwise their usual dialogue. The objective is met, and a delivery's items taken, when that conversation reaches its
 end. `ShowVulcanusDialogueInteractable` makes this choice; the dialogue a routine sets is never overwritten, so the
 character goes back to it afterwards.
+
+A step fails its quest when its deadline passes or its fail condition holds, both checked like condition objectives
+and before them. A deadline falls `days` after the day the step began (when the quest started or the previous step
+finished), at `at`, or at the end of that day. A failed quest runs `onFail` and keeps the step it failed on for the
+journal; a completed quest has no current step.

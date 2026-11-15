@@ -90,6 +90,14 @@ namespace Core.Quests
         public int DeadlineDays => deadline.Days;
         /// <summary>Minutes after midnight on the deadline's day; -1 for the end of the day.</summary>
         public int DeadlineMinute => deadline.Minute;
+        /// <summary>The game minute the deadline passes, for a step that began at <paramref name="startedAtMinute"/>.</summary>
+        public long DeadlineAtMinute(long startedAtMinute)
+        {
+            const int day = 24 * 60;
+            var deadlineDay = startedAtMinute / day + DeadlineDays;
+            return deadlineDay * day + (DeadlineMinute >= 0 ? DeadlineMinute : day);
+        }
+
         /// <summary>Read-only Lua expression; the quest fails while it holds during the step. Empty for none.</summary>
         public string FailWhen => failWhen;
         /// <summary>Lua actions run when the step completes; empty for none.</summary>

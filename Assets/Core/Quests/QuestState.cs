@@ -24,9 +24,11 @@ namespace Core.Quests
     public sealed class QuestProgress
     {
         public QuestStatus Status;
-        /// <summary>The step being worked on; null once the quest has ended.</summary>
+        /// <summary>The step being worked on, or the one the quest failed on; null once it is completed.</summary>
         public string StepId;
         public long StartedAtMinute;
+        /// <summary>When the current step began: when the quest started or the previous step finished.</summary>
+        public long StepStartedAtMinute => FinishedSteps.Count == 0 ? StartedAtMinute : FinishedSteps[^1].AtMinute;
         /// <summary>Finished steps in order, for the journal's history.</summary>
         public List<FinishedQuestStep> FinishedSteps = new();
         /// <summary>The current step's objectives already done.</summary>
@@ -54,7 +56,7 @@ namespace Core.Quests
                 var progress = pair.Value;
                 if (string.IsNullOrWhiteSpace(pair.Key) || progress?.FinishedSteps == null || progress.CompletedObjectives == null ||
                     !Enum.IsDefined(typeof(QuestStatus), progress.Status) ||
-                    (progress.Status == QuestStatus.Active) == string.IsNullOrWhiteSpace(progress.StepId))
+                    (progress.Status == QuestStatus.Completed) != string.IsNullOrWhiteSpace(progress.StepId))
                     throw new FormatException($"The save contains invalid progress for quest '{pair.Key}'.");
             }
         }
