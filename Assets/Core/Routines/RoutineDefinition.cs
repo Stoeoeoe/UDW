@@ -37,7 +37,8 @@ namespace Core.Routines
     public sealed class RoutineActivity
     {
         /// <summary>Character animation played at the destination; empty for none.</summary>
-        [field: SerializeField] public string Animation { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(Character.Animations.CharacterAnimationDefinition))]
+        public string Animation { get; private set; }
     }
 
     /// <summary>One stop of a day: when to set off, where to go and what to do there.</summary>
@@ -52,11 +53,13 @@ namespace Core.Routines
         /// <summary>An empty place (no map) means the routine's home; see <see cref="ToHome"/>.</summary>
         [field: SerializeField, JsonConverter(typeof(RoutinePlace.DestinationJsonConverter)), Tooltip("Empty for the routine's home.")]
         public RoutinePlace Destination { get; private set; } = new();
-        [field: SerializeField] public RoutineActivity Activity { get; private set; } = new();
+        [field: SerializeField, Validation.Nested] public RoutineActivity Activity { get; private set; } = new();
         /// <summary>Dialogue ID while walking to this goal; empty keeps the dialogue in effect before.</summary>
-        [field: SerializeField, Tooltip("Dialogue while walking here; empty keeps the one before.")] public string WalkingDialogue { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true),
+                Tooltip("Dialogue while walking here; empty keeps the one before.")] public string WalkingDialogue { get; private set; }
         /// <summary>Dialogue ID once arrived; empty keeps the dialogue in effect before.</summary>
-        [field: SerializeField, Tooltip("Dialogue once arrived; empty keeps the one before.")] public string Dialogue { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true),
+                Tooltip("Dialogue once arrived; empty keeps the one before.")] public string Dialogue { get; private set; }
 
         public bool ToHome => string.IsNullOrEmpty(Destination.Map);
         /// <summary>Character animation played at the destination; empty for none.</summary>
@@ -95,11 +98,13 @@ namespace Core.Routines
     {
         [field: SerializeField, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
         public string Id { get; private set; }
-        [field: SerializeField, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true)]
+        [field: SerializeField, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true),
+                Validation.Reference(typeof(global::Character.CharacterDefinition))]
         public string Character { get; private set; }
         [field: SerializeField, Validation.Required("The source requires a home.")] public RoutinePlace Home { get; private set; }
         /// <summary>Dialogue ID at the start of each day; empty when the character cannot be talked to until a goal sets one.</summary>
-        [field: SerializeField, Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true),
+                Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
         public string Dialogue { get; private set; }
         [field: SerializeField, Validation.Nested] public RoutineEntry[] Overrides { get; private set; } = Array.Empty<RoutineEntry>();
         [field: SerializeField, Validation.Nested] public RoutineEntry[] Variants { get; private set; } = Array.Empty<RoutineEntry>();

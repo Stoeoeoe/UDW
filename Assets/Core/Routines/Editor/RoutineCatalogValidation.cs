@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Character;
-using Character.Animations;
 using Core.Catalogs.Editor;
-using Core.Dialogue.Vulcanus;
 using Core.Spawning;
 using Interaction.Dialogue;
 using Core.Tile.Vulcanus;
@@ -12,19 +10,13 @@ using Core.Tile.Vulcanus;
 namespace Core.Routines.Editor
 {
     /// <summary>
-    /// Routines reference characters, animations, map anchors and map placements authored elsewhere, which can change
-    /// without reimporting the routine. Catalog refresh checks them where they meet.
+    /// Routines reference map anchors and map placements authored elsewhere, which can change without reimporting the
+    /// routine. Catalog refresh checks them where they meet; references to other definitions are <c>Validation.Reference</c> rules.
     /// </summary>
     internal static class RoutineCatalogValidation
     {
         public static void Validate(IReadOnlyCollection<RoutineDefinition> routines)
         {
-            var characterIds = CatalogAssetDiscovery.Find("Assets", typeof(CharacterDefinition)).Cast<CharacterDefinition>()
-                .Select(character => character.Id).ToHashSet();
-            var animationIds = CatalogAssetDiscovery.Find("Assets", typeof(CharacterAnimationDefinition)).Cast<CharacterAnimationDefinition>()
-                .Select(animation => animation.Id).ToHashSet();
-            var dialogueIds = CatalogAssetDiscovery.Find("Assets", typeof(VulcanusDialogueAsset)).Cast<VulcanusDialogueAsset>()
-                .Select(dialogue => dialogue.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             // The routine decides what its character says, so the character's prefab must not fix a dialogue of its own.
             var fixedDialogues = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var prefab in CatalogAssetDiscovery.Find(SpawnableCatalog.PrefabFolder, typeof(SpawnedObject)).Cast<SpawnedObject>())
@@ -35,11 +27,6 @@ namespace Core.Routines.Editor
                     fixedDialogues.TryAdd(character.CharacterId, prefab.name);
             }
 
-            void RequireDialogue(RoutineDefinition routine, string dialogueId, string role)
-            {
-                if (!string.IsNullOrEmpty(dialogueId) && !dialogueIds.Contains(dialogueId))
-                    throw new InvalidOperationException($"Routine '{routine.Id}': {role} uses the unknown dialogue '{dialogueId}'.");
-            }
             var anchorsByMap = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var placedCharacters = new Dictionary<string, string>(StringComparer.Ordinal);
             var worlds = CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>().ToArray();
@@ -66,8 +53,6 @@ namespace Core.Routines.Editor
                 throw new InvalidOperationException($"Character '{duplicate.Key}' has more than one routine.");
             foreach (var routine in routines)
             {
-                if (!characterIds.Contains(routine.Character))
-                    throw new InvalidOperationException($"Routine '{routine.Id}' is for the unknown character '{routine.Character}'.");
                 // The routine decides where its character is; a map placement would add a second copy.
                 if (placedCharacters.TryGetValue(routine.Character, out var placedMap))
                     throw new InvalidOperationException($"Character '{routine.Character}' has the routine '{routine.Id}' and is also " +
@@ -76,16 +61,11 @@ namespace Core.Routines.Editor
                     throw new InvalidOperationException($"Character '{routine.Character}' has the routine '{routine.Id}', " +
                         $"but its prefab '{fixedPrefab}' fixes a dialogue. Clear it; the routine sets what the character says.");
                 RequirePlace(routine, routine.Home, "home");
-                RequireDialogue(routine, routine.Dialogue, "the start of the day");
                 var goalLists = routine.Overrides.Concat(routine.Variants)
                     .SelectMany(entry => entry.IsPool ? entry.PickOne.Select(choice => choice.Goals) : new[] { entry.Goals });
                 foreach (var goal in goalLists.SelectMany(goals => goals))
                 {
                     if (!goal.ToHome) RequirePlace(routine, goal.Destination, $"goal '{goal.Id}'");
-                    RequireDialogue(routine, goal.WalkingDialogue, $"goal '{goal.Id}' (walking)");
-                    RequireDialogue(routine, goal.Dialogue, $"goal '{goal.Id}'");
-                    if (!string.IsNullOrEmpty(goal.ActivityAnimationId) && !animationIds.Contains(goal.ActivityAnimationId))
-                        throw new InvalidOperationException($"Routine '{routine.Id}': goal '{goal.Id}' uses the unknown animation '{goal.ActivityAnimationId}'.");
                 }
                 var unreachable = UnreachableGoals(routine, links).FirstOrDefault();
                 if (unreachable != null) throw new InvalidOperationException(unreachable);

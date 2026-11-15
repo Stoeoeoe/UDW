@@ -8,7 +8,8 @@ namespace Core.Shops
     [Serializable, ImportedData]
     public sealed class ShopOffering
     {
-        [field: SerializeField, Validation.Id("The source requires an item ID.")] public string ItemId { get; private set; }
+        [field: SerializeField, Validation.Id("The source requires an item ID."), Validation.Reference(typeof(Core.Inventory.ItemDefinition))]
+        public string ItemId { get; private set; }
         [field: SerializeField, Validation.Min(0, "Must be nonnegative.")] public int Price { get; private set; }
     }
 

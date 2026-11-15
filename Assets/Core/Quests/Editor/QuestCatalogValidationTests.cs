@@ -11,9 +11,6 @@ namespace Core.Quests.Editor
         private static QuestCatalogValidation.KnownContent Known()
         {
             var known = new QuestCatalogValidation.KnownContent();
-            known.Characters.Add("base:fabia");
-            known.Dialogues.Add("base:fabia_greeting");
-            known.Items.Add("base:wine");
             known.TriggersByMap["base:map-1"] = new HashSet<string> { "temple" };
             return known;
         }
@@ -32,18 +29,13 @@ namespace Core.Quests.Editor
         }
 
         [Test]
-        public void UnknownReferencesAreReportedWithTheirPlace()
+        public void UnknownMapsAndTriggersAreReportedWithTheirPlace()
         {
-            var quest = Quest("base:nobody", @"
-                { id: 'ask', kind: 'talk', character: 'base:fabia', dialogue: 'base:missing_dialogue' },
-                { id: 'carry', kind: 'have', item: 'base:amphora', count: 1 },
+            var quest = Quest("base:fabia", @"
                 { id: 'go', kind: 'reach', map: 'base:map-1', trigger: 'harbour' },
                 { id: 'sail', kind: 'reach', map: 'base:island' }");
             Assert.That(QuestCatalogValidation.Problems(quest, Known()).ToArray(), Is.EqualTo(new[]
             {
-                "Quest 'base:festival_wine': the giver 'base:nobody' is not a known character.",
-                "Quest 'base:festival_wine': objective 'ask' of step 'bring' uses the unknown dialogue 'base:missing_dialogue'.",
-                "Quest 'base:festival_wine': objective 'carry' of step 'bring' needs the unknown item 'base:amphora'.",
                 "Quest 'base:festival_wine': objective 'go' of step 'bring' uses the unknown trigger 'harbour' on map 'base:map-1'.",
                 "Quest 'base:festival_wine': objective 'sail' of step 'bring' goes to the unknown map 'base:island'."
             }));

@@ -29,11 +29,12 @@ namespace Core.Quests
         /// <summary>The journal line in the source language; <see cref="QuestDefinition.TranslatedText"/> gives what the player reads.</summary>
         [field: SerializeField] public string Text { get; private set; }
         /// <summary>Talk and deliver: who to talk to.</summary>
-        [field: SerializeField] public string Character { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(global::Character.CharacterDefinition))] public string Character { get; private set; }
         /// <summary>Talk and deliver: the dialogue that plays instead of the character's usual one; empty for theirs.</summary>
-        [field: SerializeField] public string Dialogue { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true)]
+        public string Dialogue { get; private set; }
         /// <summary>Deliver and have: the item.</summary>
-        [field: SerializeField] public string Item { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(Core.Inventory.ItemDefinition))] public string Item { get; private set; }
         /// <summary>Deliver and have: how many.</summary>
         [field: SerializeField] public int Count { get; private set; }
         /// <summary>Reach: the map.</summary>
@@ -106,7 +107,7 @@ namespace Core.Quests
         /// <summary>The description in the source language; <see cref="TranslatedDescription"/> gives what the player reads.</summary>
         [field: SerializeField] public string Description { get; private set; }
         /// <summary>Character who gives the quest; empty for none.</summary>
-        [field: SerializeField] public string Giver { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(global::Character.CharacterDefinition))] public string Giver { get; private set; }
         /// <summary>Lua actions run when the quest starts; empty for none.</summary>
         [field: SerializeField, Validation.LuaChunk] public string OnStart { get; private set; }
         /// <summary>Lua actions run when the last step completes; empty for none.</summary>

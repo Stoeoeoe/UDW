@@ -23,24 +23,24 @@ MonoBehaviour:
   <SellBasePrice>k__BackingField: 0
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
   <PickupSound>k__BackingField: {fileID: 0}
-  maxCharge: 20
-  chargePerUsage: 1
-  chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
-  staminaCost: 5
-  consumeStaminaOnFailure: 0
-  isInInventory: 1
-  showTileHighlighterOnPrepare: 1
-  actionDuration: 0.5
-  cooldownDuration: 0.2
-  toolEffectConfiguration:
+  <MaxCharge>k__BackingField: 20
+  <ChargePerUsage>k__BackingField: 1
+  <ChargeColor>k__BackingField: {r: 0.18, g: 0.55, b: 0.9, a: 1}
+  <StaminaCost>k__BackingField: 5
+  <ConsumeStaminaOnFailure>k__BackingField: 0
+  <IsInInventory>k__BackingField: 1
+  <ShowTileHighlighterOnPrepare>k__BackingField: 1
+  <ActionDuration>k__BackingField: 0.5
+  <CooldownDuration>k__BackingField: 0.2
+  <ToolEffectConfiguration>k__BackingField:
     AffectedTileOffsets:
     - {x: 0, y: 1}
     IsGlobalEffect: 0
-  prepareUseUpAnimationClip: {fileID: 0}
-  prepareUseRightAnimationClip: {fileID: 0}
-  prepareUseDownAnimationClip: {fileID: 0}
-  prepareUseLeftAnimationClip: {fileID: 0}
-  useUpAnimationClip: {fileID: 7400000, guid: 538b1a80fa6361d41ba0affb36297fc3, type: 2}
-  useRightAnimationClip: {fileID: 7400000, guid: 84068ea6b445e404aa10906413198def, type: 2}
-  useDownAnimationClip: {fileID: 7400000, guid: fa324b615f7293b4ab1695b6af5b3ff6, type: 2}
-  useLeftAnimationClip: {fileID: 7400000, guid: 74fc0907349401c48938ea137a91862e, type: 2}
+  <PrepareUseUpAnimationClip>k__BackingField: {fileID: 0}
+  <PrepareUseRightAnimationClip>k__BackingField: {fileID: 0}
+  <PrepareUseDownAnimationClip>k__BackingField: {fileID: 0}
+  <PrepareUseLeftAnimationClip>k__BackingField: {fileID: 0}
+  <UseUpAnimationClip>k__BackingField: {fileID: 7400000, guid: 538b1a80fa6361d41ba0affb36297fc3, type: 2}
+  <UseRightAnimationClip>k__BackingField: {fileID: 7400000, guid: 84068ea6b445e404aa10906413198def, type: 2}
+  <UseDownAnimationClip>k__BackingField: {fileID: 7400000, guid: fa324b615f7293b4ab1695b6af5b3ff6, type: 2}
+  <UseLeftAnimationClip>k__BackingField: {fileID: 7400000, guid: 74fc0907349401c48938ea137a91862e, type: 2}

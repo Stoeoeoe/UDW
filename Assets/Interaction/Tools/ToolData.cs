@@ -13,88 +13,65 @@ namespace Interaction.Tools
         private static readonly ToolDataValidator Validator = new();
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
-        [SerializeField, Validation.Min(0, "Must be nonnegative; zero disables charge storage.")]
-        private int maxCharge = 0;
+        [field: SerializeField, Validation.Min(0, "Must be nonnegative; zero disables charge storage.")]
+        public int MaxCharge { get; private set; } = 0;
 
-        [SerializeField, Validation.Min(0)]
-        private int chargePerUsage = 0;
+        [field: SerializeField, Validation.Min(0)]
+        public int ChargePerUsage { get; private set; } = 0;
 
-        [SerializeField, Tooltip("Slot bar colour for tools with charge storage.")]
-        private Color chargeColor = new(0.18f, 0.55f, 0.9f);
+        [field: SerializeField, Tooltip("Slot bar colour for tools with charge storage.")]
+        public Color ChargeColor { get; private set; } = new(0.18f, 0.55f, 0.9f);
 
-        [SerializeField, Validation.Min(0)]
-        private int staminaCost = 5;
+        [field: SerializeField, Validation.Min(0)]
+        public int StaminaCost { get; private set; } = 5;
 
-        [SerializeField]
-        private bool consumeStaminaOnFailure = true;
+        [field: SerializeField]
+        public bool ConsumeStaminaOnFailure { get; private set; } = true;
 
-        [SerializeField]
-        private bool isInInventory = true;
+        [field: SerializeField]
+        public bool IsInInventory { get; private set; } = true;
 
-        [SerializeField]
-        private bool showTileHighlighterOnPrepare = true;
+        [field: SerializeField]
+        public bool ShowTileHighlighterOnPrepare { get; private set; } = true;
 
-        [SerializeField, Validation.Finite, Validation.Min(0)]
-        private float actionDuration = 0.2f;
+        [field: SerializeField, Validation.Finite, Validation.Min(0)]
+        public float ActionDuration { get; private set; } = 0.2f;
 
-        [SerializeField, Validation.Finite, Validation.Min(0)]
-        private float cooldownDuration = 0.2f;
+        [field: SerializeField, Validation.Finite, Validation.Min(0)]
+        public float CooldownDuration { get; private set; } = 0.2f;
 
-        [SerializeField, Validation.Required("Assign an effect configuration."), Validation.Nested]
-        private ToolEffectConfiguration toolEffectConfiguration;
+        [field: SerializeField, Validation.Required("Assign an effect configuration."), Validation.Nested]
+        public ToolEffectConfiguration ToolEffectConfiguration { get; private set; }
 
-        [Tooltip("Facing tools affect the tiles in the effect configuration. Pointer tools affect the tile under the pointer; their effect configuration stays empty.")]
-        [SerializeField, Validation.DefinedEnum]
-        private ToolTargeting targeting;
+        [field: Tooltip("Facing tools affect the tiles in the effect configuration. Pointer tools affect the tile under the pointer; their effect configuration stays empty."), SerializeField, Validation.DefinedEnum]
+        public ToolTargeting Targeting { get; private set; }
 
-        [Tooltip("Pointer tools only: the farthest tile from the character that can be targeted.")]
-        [SerializeField, Validation.Min(1)]
-        private int pointerRange = 3;
+        [field: Tooltip("Pointer tools only: the farthest tile from the character that can be targeted."), SerializeField, Validation.Min(1)]
+        public int PointerRange { get; private set; } = 3;
 
-        [SerializeField]
-        private AnimationClip prepareUseUpAnimationClip;
+        [field: SerializeField]
+        public AnimationClip PrepareUseUpAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip prepareUseRightAnimationClip;
+        [field: SerializeField]
+        public AnimationClip PrepareUseRightAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip prepareUseDownAnimationClip;
+        [field: SerializeField]
+        public AnimationClip PrepareUseDownAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip prepareUseLeftAnimationClip;
+        [field: SerializeField]
+        public AnimationClip PrepareUseLeftAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip useUpAnimationClip;
+        [field: SerializeField]
+        public AnimationClip UseUpAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip useRightAnimationClip;
+        [field: SerializeField]
+        public AnimationClip UseRightAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip useDownAnimationClip;
+        [field: SerializeField]
+        public AnimationClip UseDownAnimationClip { get; private set; }
 
-        [SerializeField]
-        private AnimationClip useLeftAnimationClip;
-
-        public int MaxCharge => maxCharge;
-        public int ChargePerUsage => chargePerUsage;
-        public Color ChargeColor => chargeColor;
-        public int StaminaCost => staminaCost;
-        public bool ConsumeStaminaOnFailure => consumeStaminaOnFailure;
-        public bool IsInInventory => isInInventory;
-        public bool ShowTileHighlighterOnPrepare => showTileHighlighterOnPrepare;
-        public float ActionDuration => actionDuration;
-        public float CooldownDuration => cooldownDuration;
-        public ToolEffectConfiguration ToolEffectConfiguration => toolEffectConfiguration;
-        public ToolTargeting Targeting => targeting;
-        public int PointerRange => pointerRange;
-        public AnimationClip PrepareUseUpAnimationClip => prepareUseUpAnimationClip;
-        public AnimationClip PrepareUseRightAnimationClip => prepareUseRightAnimationClip;
-        public AnimationClip PrepareUseDownAnimationClip => prepareUseDownAnimationClip;
-        public AnimationClip PrepareUseLeftAnimationClip => prepareUseLeftAnimationClip;
-        public AnimationClip UseUpAnimationClip => useUpAnimationClip;
-        public AnimationClip UseRightAnimationClip => useRightAnimationClip;
-        public AnimationClip UseDownAnimationClip => useDownAnimationClip;
-        public AnimationClip UseLeftAnimationClip => useLeftAnimationClip;
+        [field: SerializeField]
+        public AnimationClip UseLeftAnimationClip { get; private set; }
 
     }
 }

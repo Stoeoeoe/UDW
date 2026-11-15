@@ -7,7 +7,6 @@ namespace Core.Inventory
     /// Base ScriptableObject for all game items.
     /// Subclass to add game-specific data (tools, seeds, equipment, etc.).
     /// </summary>
-    [ImportedData]
     public abstract class ItemDefinition : ValidatedScriptableObject<ItemDefinitionValidator>
     {
         [field: SerializeField, Validation.Id("Assign a stable, nonblank item ID.")] public string Id { get; private set; }

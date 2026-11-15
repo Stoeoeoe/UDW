@@ -45,7 +45,7 @@ namespace Core.Common.Editor
             if (asset is SkillDefinition skill) Set(skill, "_skillId", "test:skill");
             if (asset is DeityDefinition deity) Set(deity, "_id", "legacy-deity");
             if (asset is TypewriterSound sound) TestConfiguration.Set(sound, "_soundId", "test:sound");
-            if (asset is ToolData tool) TestConfiguration.Set(tool, "toolEffectConfiguration", new ToolEffectConfiguration { AffectedTileOffsets = new[] { Vector2Int.up } });
+            if (asset is ToolData tool) TestConfiguration.Set(tool, "ToolEffectConfiguration", new ToolEffectConfiguration { AffectedTileOffsets = new[] { Vector2Int.up } });
             if (asset is SeedItem seed) TestConfiguration.Set(seed, "PlantData", AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset"));
             return asset;
         }
@@ -69,12 +69,12 @@ namespace Core.Common.Editor
             var tool = Asset<ToolData>();
             Set(tool, "Id", " ");
             Set(tool, "MaxStackSize", 0);
-            TestConfiguration.Set(tool, "staminaCost", -1);
-            TestConfiguration.Set(tool, "actionDuration", float.NaN);
-            TestConfiguration.Set(tool, "toolEffectConfiguration", null);
+            TestConfiguration.Set(tool, "StaminaCost", -1);
+            TestConfiguration.Set(tool, "ActionDuration", float.NaN);
+            TestConfiguration.Set(tool, "ToolEffectConfiguration", null);
             Assert.That(tool.ValidateConfiguration().Select(e => e.Setting),
-                Does.Contain("Id").And.Contain("MaxStackSize").And.Contain("staminaCost").And.Contain("actionDuration")
-                    .And.Contain("toolEffectConfiguration"));
+                Does.Contain("Id").And.Contain("MaxStackSize").And.Contain("StaminaCost").And.Contain("ActionDuration")
+                    .And.Contain("ToolEffectConfiguration"));
             Assert.That(tool.Id, Is.EqualTo(" "));
         }
 
@@ -105,9 +105,9 @@ namespace Core.Common.Editor
         {
             var item = Asset<WornEquipmentItem>();
             var slot = Asset<EquipmentSlotDefinition>(); TestConfiguration.Set(slot, "_id", "");
-            TestConfiguration.Set(item, "allowedSlots", new[] { slot });
-            TestConfiguration.Set(item, "modifiers", new[] { new WornEquipmentItem.Modifier { Attribute = (CharacterAttributeType)999, Percent = float.PositiveInfinity } });
-            AssertError(item, "allowedSlots[0]._id"); AssertError(item, "modifiers[0].Attribute"); AssertError(item, "modifiers[0].Percent");
+            TestConfiguration.Set(item, "AllowedSlots", new[] { slot });
+            TestConfiguration.Set(item, "Modifiers", new[] { new WornEquipmentItem.Modifier { Attribute = (CharacterAttributeType)999, Percent = float.PositiveInfinity } });
+            AssertError(item, "AllowedSlots[0]._id"); AssertError(item, "Modifiers[0].Attribute"); AssertError(item, "Modifiers[0].Percent");
         }
 
         [Test]

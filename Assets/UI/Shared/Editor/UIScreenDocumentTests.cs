@@ -126,8 +126,8 @@ namespace UI.Shared.Editor
         public void InventorySlotShowsQuantityAndColouredChargeAndRefreshesAfterConsumption()
         {
             Set(typeof(ItemDefinition), _tool, "MaxStackSize", 99);
-            Set(typeof(ToolData), _tool, "maxCharge", 20);
-            Set(typeof(ToolData), _tool, "chargeColor", Color.red);
+            Set(typeof(ToolData), _tool, "MaxCharge", 20);
+            Set(typeof(ToolData), _tool, "ChargeColor", Color.red);
             _inventory.SetSlot(0, new ItemStack(_tool, 7));
             var presenter = CreateInventoryScreen(); presenter.OpenInventory();
             var root = _document.rootVisualElement;
@@ -160,8 +160,8 @@ namespace UI.Shared.Editor
         public void HotbarUsesCarriedQuantityAndRefreshesChargeWithoutPolling()
         {
             Set(typeof(ItemDefinition), _tool, "MaxStackSize", 99);
-            Set(typeof(ToolData), _tool, "maxCharge", 20);
-            Set(typeof(ToolData), _tool, "chargeColor", Color.red);
+            Set(typeof(ToolData), _tool, "MaxCharge", 20);
+            Set(typeof(ToolData), _tool, "ChargeColor", Color.red);
             _inventory.SetSlot(0, new ItemStack(_tool, 3));
             _inventory.SetSlot(1, new ItemStack(_tool, 4));
             _inventory.Loadout.AssignToolbeltSlot(0, 0);

@@ -135,6 +135,18 @@ namespace Core.Common
             internal override string GetError(object value) => null;
         }
 
+        /// <summary>
+        /// A string that must be the <c>Id</c> of an existing <see cref="Target"/> definition. The asset cannot see other
+        /// assets, so this is checked when a catalog refreshes, through <c>Nested</c> members like the other rules.
+        /// </summary>
+        public sealed class ReferenceAttribute : RuleAttribute
+        {
+            public Type Target { get; }
+            /// <summary>Whether IDs match regardless of case, as for dialogues.</summary>
+            public bool IgnoreCase { get; set; }
+            public ReferenceAttribute(Type target, string message = null) : base(message) => Target = target;
+        }
+
         public sealed class AtLeastAttribute : RuleAttribute
         {
             public string Member { get; }

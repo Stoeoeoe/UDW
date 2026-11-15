@@ -23,25 +23,25 @@ MonoBehaviour:
   <SellBasePrice>k__BackingField: 0
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
   <PickupSound>k__BackingField: {fileID: 0}
-  maxCharge: 0
-  chargePerUsage: 0
-  chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}
-  staminaCost: 10
-  consumeStaminaOnFailure: 0
-  isInInventory: 1
-  showTileHighlighterOnPrepare: 0
-  actionDuration: 0.2
-  cooldownDuration: 0.2
-  targeting: 1
-  pointerRange: 3
-  toolEffectConfiguration:
+  <MaxCharge>k__BackingField: 0
+  <ChargePerUsage>k__BackingField: 0
+  <ChargeColor>k__BackingField: {r: 0.18, g: 0.55, b: 0.9, a: 1}
+  <StaminaCost>k__BackingField: 10
+  <ConsumeStaminaOnFailure>k__BackingField: 0
+  <IsInInventory>k__BackingField: 1
+  <ShowTileHighlighterOnPrepare>k__BackingField: 0
+  <ActionDuration>k__BackingField: 0.2
+  <CooldownDuration>k__BackingField: 0.2
+  <Targeting>k__BackingField: 1
+  <PointerRange>k__BackingField: 3
+  <ToolEffectConfiguration>k__BackingField:
     AffectedTileOffsets: []
     IsGlobalEffect: 0
-  prepareUseUpAnimationClip: {fileID: 0}
-  prepareUseRightAnimationClip: {fileID: 0}
-  prepareUseDownAnimationClip: {fileID: 0}
-  prepareUseLeftAnimationClip: {fileID: 0}
-  useUpAnimationClip: {fileID: 0}
-  useRightAnimationClip: {fileID: 0}
-  useDownAnimationClip: {fileID: 0}
-  useLeftAnimationClip: {fileID: 0}
+  <PrepareUseUpAnimationClip>k__BackingField: {fileID: 0}
+  <PrepareUseRightAnimationClip>k__BackingField: {fileID: 0}
+  <PrepareUseDownAnimationClip>k__BackingField: {fileID: 0}
+  <PrepareUseLeftAnimationClip>k__BackingField: {fileID: 0}
+  <UseUpAnimationClip>k__BackingField: {fileID: 0}
+  <UseRightAnimationClip>k__BackingField: {fileID: 0}
+  <UseDownAnimationClip>k__BackingField: {fileID: 0}
+  <UseLeftAnimationClip>k__BackingField: {fileID: 0}

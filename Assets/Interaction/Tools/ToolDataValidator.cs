@@ -8,7 +8,7 @@ namespace Interaction.Tools
         protected override void CollectConfigurationErrors(ToolData asset, List<ConfigurationError> errors)
         {
             if (asset.MaxCharge > 0 && (asset.ChargePerUsage <= 0 || asset.ChargePerUsage > asset.MaxCharge))
-                Report(errors, asset, "chargePerUsage", "Charge per usage must be positive and fit within the tool's capacity.");
+                Report(errors, asset, "ChargePerUsage", "Charge per usage must be positive and fit within the tool's capacity.");
         }
     }
 }

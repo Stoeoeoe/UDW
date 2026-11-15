@@ -12,8 +12,8 @@ namespace Core.Equipment
         private static readonly WornEquipmentItemValidator Validator = new();
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
-        [SerializeField, Validation.Required("Must not be null; an empty array fits no slots."), Validation.ValidReference]
-        private EquipmentSlotDefinition[] allowedSlots = Array.Empty<EquipmentSlotDefinition>();
+        [field: SerializeField, Validation.Required("Must not be null; an empty array fits no slots."), Validation.ValidReference]
+        public EquipmentSlotDefinition[] AllowedSlots { get; private set; } = Array.Empty<EquipmentSlotDefinition>();
 
         [Serializable] public struct Modifier
         {
@@ -21,11 +21,8 @@ namespace Core.Equipment
             [Validation.Finite("Must be finite; negative modifiers are allowed.")] public float Flat;
             [Validation.Finite("Must be finite; negative modifiers are allowed.")] public float Percent;
         }
-        [SerializeField, Validation.Required("Must not be null; an empty array grants no bonuses."), Validation.Nested]
-        private Modifier[] modifiers = Array.Empty<Modifier>();
-
-        public EquipmentSlotDefinition[] AllowedSlots => allowedSlots;
-        public Modifier[] Modifiers => modifiers;
+        [field: SerializeField, Validation.Required("Must not be null; an empty array grants no bonuses."), Validation.Nested]
+        public Modifier[] Modifiers { get; private set; } = Array.Empty<Modifier>();
 
         public bool Fits(EquipmentSlotDefinition slot) => slot && Array.Exists(AllowedSlots, s => s.Id == slot.Id);
     }
