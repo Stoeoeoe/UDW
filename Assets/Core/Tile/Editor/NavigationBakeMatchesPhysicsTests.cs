@@ -14,15 +14,15 @@ namespace Core.Tile.Editor
     /// </summary>
     public sealed class NavigationBakeMatchesPhysicsTests
     {
-        private const string World = "Assets/Vulcan/0204project/vulcan.project.world.asset";
         // Far from anything in the open scene, so only this map's colliders answer.
         private static readonly Vector3 Away = new(5000, -5000, 0);
 
-        [TestCase("base:map-1")]
+        [TestCase("test:map-1")]
         public void EveryBakedBlockedCellIsBlockedByPhysicsAndNoOther(string mapId)
         {
-            var world = AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>(World);
+            var world = TestWorld.Create();
             var instance = Object.Instantiate(world.MapBindings.Single(binding => binding.MapId == mapId).MapPrefab, Away, Quaternion.identity);
+            Object.DestroyImmediate(world);
             try
             {
                 Physics2D.SyncTransforms();

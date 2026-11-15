@@ -238,10 +238,10 @@ namespace Core.Dialogue.Vulcanus.Editor
         [Test]
         public void FabiasTopicMenuCanBeRevisitedBeyondTheExecutionLimit()
         {
-            // Use the shipped conversation, including its line-to-choice loops, rather than a synthetic cycle.
+            // Use an authored conversation, including its line-to-choice loops, rather than a synthetic cycle.
             _dialogues.Add(UnityEditor.AssetDatabase.LoadAssetAtPath<VulcanusDialogueAsset>(
-                "Assets/Vulcan/0204project/dialogues/fabia_greeting.runtime.dialogue.json"));
-            Runner().StartDialogue("base:fabia_greeting");
+                "Assets/Tests/Vulcanus/dialogues/fabia_greeting.runtime.dialogue.json"));
+            Runner().StartDialogue("test:fabia_greeting");
             _presenter.FinishLine();
             for (var visit = 0; visit < 50; visit++)
             {

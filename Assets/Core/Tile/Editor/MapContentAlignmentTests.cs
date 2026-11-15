@@ -16,9 +16,8 @@ namespace Core.Tile.Editor
     /// </summary>
     public sealed class MapContentAlignmentTests
     {
-        private const string MapId = "base:map-1";
-        private const string MapSource = "Assets/Vulcan/0204project/maps/map-1.vmap";
-        private const string World = "Assets/Vulcan/0204project/vulcan.project.world.asset";
+        private const string MapId = "test:map-1";
+        private const string MapSource = "Assets/Tests/Vulcanus/maps/map-1.vmap";
         private const int TileSize = 16;
 
         private GameObject _map;
@@ -29,8 +28,9 @@ namespace Core.Tile.Editor
         [SetUp]
         public void SetUp()
         {
-            var world = AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>(World);
+            var world = TestWorld.Create();
             _map = Object.Instantiate(world.MapBindings.Single(binding => binding.MapId == MapId).MapPrefab);
+            Object.DestroyImmediate(world);
             var imported = _map.GetComponentInChildren<VulcanusImportedMap>(true);
             _terrain = imported.TerrainTilemap;
             _height = imported.NavigationCosts.Height;

@@ -6,6 +6,8 @@ using Core.Tile.Vulcanus;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Core.Tile.Editor;
+using Object = UnityEngine.Object;
 
 namespace Core.Routines.Editor
 {
@@ -146,18 +148,17 @@ namespace Core.Routines.Editor
         [Test]
         public void TheProjectHouseLeadsToMapTwoThroughMapOne()
         {
-            var world = WorldNavigation.Build(new[]
-            {
-                AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>("Assets/Vulcan/0204project/vulcan.project.world.asset")
-            });
-            var day = DayFrom("{ map: 'base:indoor', anchor: 'anchor-1793894673996' }",
-                Goal("visit", Eight, "{ map: 'base:map-2', anchor: 'anchor-1793894643329' }"));
+            var catalog = TestWorld.Create();
+            var world = WorldNavigation.Build(new[] { catalog });
+            Object.DestroyImmediate(catalog);
+            var day = DayFrom("{ map: 'test:indoor', anchor: 'anchor-1793894673996' }",
+                Goal("visit", Eight, "{ map: 'test:map-2', anchor: 'anchor-1793894643329' }"));
 
             var timetable = RoutineTimetablePlanner.Plan(day, world, WalkSpeed, SecondsPerMinute);
 
             Assert.That(timetable.Warnings, Is.Empty);
             Assert.That(timetable.Segments.Where(s => s.IsWalk).Select(s => s.MapId),
-                Is.EqualTo(new[] { "base:indoor", "base:map-1", "base:map-2" }));
+                Is.EqualTo(new[] { "test:indoor", "test:map-1", "test:map-2" }));
         }
     }
 }
