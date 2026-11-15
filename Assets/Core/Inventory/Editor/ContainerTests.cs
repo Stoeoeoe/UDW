@@ -23,10 +23,10 @@ namespace Core.Inventory.Editor
         public void SetUp()
         {
             _owner = ScriptableObject.CreateInstance<CharacterDefinition>();
-            ConfigurationTestData.Set(_owner, "id", "test:owner");
-            ConfigurationTestData.Set(_owner, "displayName", "Owner");
+            ConfigurationTestData.Set(_owner, "Id", "test:owner");
+            ConfigurationTestData.Set(_owner, "Name", "Owner");
             _item = ScriptableObject.CreateInstance<ProduceItem>();
-            ConfigurationTestData.Set(_item, "ItemId", "test:apple");
+            ConfigurationTestData.Set(_item, "Id", "test:apple");
             ConfigurationTestData.Set(_item, "MaxStackSize", 5);
             _state = new ContainerState { prefabId = "test:chest", authored = true, OwnerCharacterId = "test:owner",
                 Inventory = new InventoryState { Slots = new InventorySlotState[2] } };
@@ -36,7 +36,7 @@ namespace Core.Inventory.Editor
         }
 
         private CharacterDefinition ResolveCharacter(string id) => id == "test:owner" ? _owner : null;
-        private ItemDefinition ResolveItem(string id) => id == _item.ItemId ? _item : null;
+        private ItemDefinition ResolveItem(string id) => id == _item.Id ? _item : null;
         [TearDown] public void TearDown() { Object.DestroyImmediate(_owner); Object.DestroyImmediate(_item); }
 
         [Test]
@@ -111,7 +111,7 @@ namespace Core.Inventory.Editor
             _state.OwnerCharacterId = "test:owner";
             _state.Inventory.Slots[0] = new InventorySlotState("missing:item", 1);
             Assert.Throws<InvalidOperationException>(() => new ContainerStorage(_state, ResolveCharacter, ResolveItem));
-            _state.Inventory.Slots[0] = new InventorySlotState(_item.ItemId, 6);
+            _state.Inventory.Slots[0] = new InventorySlotState(_item.Id, 6);
             Assert.Throws<InvalidOperationException>(() => new ContainerStorage(_state, ResolveCharacter, ResolveItem));
             _state.Inventory.Slots = null;
             Assert.Throws<InvalidOperationException>(() => new ContainerStorage(_state, ResolveCharacter, ResolveItem));

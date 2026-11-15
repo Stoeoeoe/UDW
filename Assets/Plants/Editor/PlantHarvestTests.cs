@@ -67,14 +67,14 @@ namespace Plants.Editor
             Set(stages[2], "_isHarvestable", true);
             Set(_data, "growthStages", stages);
             _item = Game.Asset<InventoryTestItem>();
-            Set(_item, "itemId", "test:produce", typeof(ItemDefinition));
+            Set(_item, "Id", "test:produce", typeof(ItemDefinition));
             Set(_data, "_harvestItem", _item);
             Set(_data, "_minHarvestQuantity", 3);
             Set(_data, "_maxHarvestQuantity", 3);
             _catalog = Game.Catalog<PlantCatalog>(_data);
             _plants = Game.Get<PlantManager>();
             Game.State.Player.Inventory.Slots = new InventorySlotState[2];
-            _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _item.ItemId ? _item : null);
+            _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _item.Id ? _item : null);
             _crop = new PlantState(_data.plantId) { daysPassedSincePlanting = 8 };
             Game.State.World.Set("farm", "plant:1,2", _crop);
             EventBus<PlantHarvestedEvent>.Subscribe(this);
@@ -120,7 +120,7 @@ namespace Plants.Editor
         {
             Set(_data, "_harvestMethod", HarvestMethod.Scythe);
             Set(_data, "_regrowthStageIndex", regrowthStage);
-            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.Id, _item.MaxStackSize), new InventorySlotState(_item.Id, _item.MaxStackSize) };
             var before = Game.State.Player.Inventory.Slots;
             var point = new Vector3(7, -3, 0);
             Assert.That(_plants.TryHarvestWithScythe("farm", new Vector2Int(1, 2), point, out var drop), Is.True);
@@ -190,7 +190,7 @@ namespace Plants.Editor
                 case "wrong-method": Set(_data, "_harvestMethod", HarvestMethod.Scythe); break;
                 case "disabled": _catalog.SetEnabled(_data, false); break;
                 case "full-inventory":
-                    Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+                    Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.Id, _item.MaxStackSize), new InventorySlotState(_item.Id, _item.MaxStackSize) };
                     break;
             }
             var slots = Game.State.Player.Inventory.Slots;
@@ -274,7 +274,7 @@ namespace Plants.Editor
         {
             Set(_data, "_harvestMethod", method);
             _crop.condition = PlantCondition.Wilted;
-            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.Id, _item.MaxStackSize), new InventorySlotState(_item.Id, _item.MaxStackSize) };
             var slots = Game.State.Player.Inventory.Slots;
             var actor = Game.Add<GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
@@ -320,7 +320,7 @@ namespace Plants.Editor
         [Test]
         public void AFullInventoryRestoresTheVisibilityOfADropThatAlreadyStartedFading()
         {
-            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+            Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.Id, _item.MaxStackSize), new InventorySlotState(_item.Id, _item.MaxStackSize) };
             var actor = Game.Add<GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Fading drop");
@@ -428,7 +428,7 @@ namespace Plants.Editor
         {
             Set(_data, "_regrowthStageIndex", 1);
             if (fullInventory)
-                Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.ItemId, _item.MaxStackSize), new InventorySlotState(_item.ItemId, _item.MaxStackSize) };
+                Game.State.Player.Inventory.Slots = new[] { new InventorySlotState(_item.Id, _item.MaxStackSize), new InventorySlotState(_item.Id, _item.MaxStackSize) };
             var actor = Game.Add<GameCharacter>(_root);
             Set(actor, "<MainInventory>k__BackingField", _inventory);
             var root = new GameObject("Bound crop");
@@ -449,7 +449,7 @@ namespace Plants.Editor
             _lastHarvest = harvest;
             _harvestEvents++;
             Assert.That(harvest.State, Is.SameAs(_crop));
-            Assert.That(harvest.ItemId, Is.EqualTo(_item.ItemId));
+            Assert.That(harvest.ItemId, Is.EqualTo(_item.Id));
             Assert.That(harvest.Quantity, Is.InRange(_data.MinHarvestQuantity, _data.MaxHarvestQuantity));
             Assert.That(harvest.Removed, Is.EqualTo(_data.RegrowthStageIndex < 0));
             _onNotification?.Invoke();

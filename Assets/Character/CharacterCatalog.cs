@@ -10,7 +10,7 @@ namespace Character
     {
         public const string ResourceName = "CharacterCatalog";
         public override string Path => "Assets";
-        protected override string GetDefinitionId(CharacterDefinition definition) => definition.CharacterId;
+        protected override string GetDefinitionId(CharacterDefinition definition) => definition.Id;
 
         public CharacterDefinition Require(string id)
         {

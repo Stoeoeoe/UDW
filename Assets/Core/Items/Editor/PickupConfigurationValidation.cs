@@ -48,7 +48,7 @@ namespace Core.Items.Editor
         public static void CheckItem(ForageableItem item)
         {
             item.RequireValidConfiguration();
-            if (Resources.Load<ItemCatalog>(ItemCatalog.ResourceName).Find(item.ItemId) != item)
+            if (Resources.Load<ItemCatalog>(ItemCatalog.ResourceName).Find(item.Id) != item)
                 throw new InvalidOperationException($"Forage '{item.name}' must be enabled in the item catalog.");
             AssetDatabase.LoadAssetAtPath<GameObject>(SystemRoot.PrefabPath)
                 .GetComponent<SystemRoot>().Items.RequirePickupSound(item.PickupSound);

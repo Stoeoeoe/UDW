@@ -30,7 +30,7 @@ namespace Interaction.Tools
             foreach (var prefab in toolActionPrefabs)
             {
                 var toolAction = _resolver.Instantiate(prefab, transform, false);
-                var id = toolAction.ToolData.ItemId;
+                var id = toolAction.ToolData.Id;
                 
                 toolAction.Initialize(owner);
                 toolAction.gameObject.SetActive(false);
@@ -40,9 +40,9 @@ namespace Interaction.Tools
 
         public void ValidateConfiguration()
         {
-            if (toolActionPrefabs == null || toolActionPrefabs.Any(action => !action || !action.ToolData || string.IsNullOrWhiteSpace(action.ToolData.ItemId)))
+            if (toolActionPrefabs == null || toolActionPrefabs.Any(action => !action || !action.ToolData || string.IsNullOrWhiteSpace(action.ToolData.Id)))
                 throw new InvalidOperationException("ToolActionRegistry requires tool prefabs with definitions and stable item IDs.");
-            if (toolActionPrefabs.GroupBy(action => action.ToolData.ItemId).Any(group => group.Count() > 1))
+            if (toolActionPrefabs.GroupBy(action => action.ToolData.Id).Any(group => group.Count() > 1))
                 throw new InvalidOperationException("ToolActionRegistry contains duplicate tool IDs.");
         }
 
@@ -59,7 +59,7 @@ namespace Interaction.Tools
         /// </summary>
         public ToolAction GetToolAction(ToolData toolData)
         {
-            return toolData != null ? GetToolAction(toolData.ItemId) : null;
+            return toolData != null ? GetToolAction(toolData.Id) : null;
         }
     }
 }

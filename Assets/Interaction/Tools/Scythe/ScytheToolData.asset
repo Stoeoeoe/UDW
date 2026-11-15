@@ -12,17 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: ScytheToolData
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Tools.ToolData
-  itemId: base:scythe
-  itemName: Scythe
-  category: Tools
-  icon: {fileID: 4854329587640585295, guid: 2621113b4d4dc8642a0eb2eaabe25aab, type: 3}
-  description: Harvest crops that are ready for cutting.
-  maxStackSize: 1
-  buyBasePrice: 0
-  sellBasePrice: 0
-  worldRepresentationPrefab: {fileID: 0}
-  pickupSound: {fileID: 0}
-  preventDropping: 1
+  <Id>k__BackingField: base:scythe
+  <Name>k__BackingField: Scythe
+  <Category>k__BackingField: Tools
+  <Icon>k__BackingField: {fileID: 4854329587640585295, guid: 2621113b4d4dc8642a0eb2eaabe25aab, type: 3}
+  <Description>k__BackingField: Harvest crops that are ready for cutting.
+  <MaxStackSize>k__BackingField: 1
+  <BuyBasePrice>k__BackingField: 0
+  <SellBasePrice>k__BackingField: 0
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
+  <PreventDropping>k__BackingField: 1
   maxCharge: 0
   chargePerUsage: 0
   staminaCost: 5

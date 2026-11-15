@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e4bcf3b58924a24faddecdcb201bd8f, type: 3}
   m_Name: RavenFlowerProduce
   m_EditorClassIdentifier: Assembly-CSharp::Plants.ProduceItem
-  itemId: raven_flower_produce
-  itemName: Raven Flower
-  category: 
-  icon: {fileID: -2592327581781634352, guid: 95efd6f0e95a2ed41897f11fed012e1e, type: 3}
-  description: 
-  maxStackSize: 99
-  preventDropping: 0
-  buyBasePrice: 0
-  sellBasePrice: 0
-  worldRepresentationPrefab: {fileID: 0}
-  pickupSound: {fileID: 0}
-  groundLifetimeDays: 2
+  <Id>k__BackingField: raven_flower_produce
+  <Name>k__BackingField: Raven Flower
+  <Category>k__BackingField: 
+  <Icon>k__BackingField: {fileID: -2592327581781634352, guid: 95efd6f0e95a2ed41897f11fed012e1e, type: 3}
+  <Description>k__BackingField: 
+  <MaxStackSize>k__BackingField: 99
+  <PreventDropping>k__BackingField: 0
+  <BuyBasePrice>k__BackingField: 0
+  <SellBasePrice>k__BackingField: 0
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
+  <GroundLifetimeDays>k__BackingField: 2

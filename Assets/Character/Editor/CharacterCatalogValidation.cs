@@ -14,10 +14,10 @@ namespace Character.Editor
             var soundIds = CatalogAssetDiscovery.Find("Assets", typeof(TypewriterSound)).Cast<TypewriterSound>().Select(sound => sound.Id).ToHashSet();
             foreach (var character in characters)
             {
-                var referenced = character.EmotionTypewriterSounds.Select(each => each.soundId).Append(character.DefaultTypewriterSoundId);
+                var referenced = character.EmotionTypewriterSounds.Select(each => each.soundId).Append(character.TypewriterSound);
                 foreach (var soundId in referenced.Where(id => !string.IsNullOrEmpty(id)))
                     if (!soundIds.Contains(soundId))
-                        throw new InvalidOperationException($"Character '{character.CharacterId}' uses the unknown typewriter sound '{soundId}'.");
+                        throw new InvalidOperationException($"Character '{character.Id}' uses the unknown typewriter sound '{soundId}'.");
             }
         }
     }

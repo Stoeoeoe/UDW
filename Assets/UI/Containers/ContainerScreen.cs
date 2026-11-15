@@ -80,7 +80,7 @@ namespace UI.Containers
             _character = character;
             _container.Changed += RequestRefresh;
             _title.text = container.DisplayName;
-            _owner.text = "Belongs to " + _characterCatalog.Require(container.Storage.State.OwnerCharacterId).DisplayName;
+            _owner.text = "Belongs to " + _characterCatalog.Require(container.Storage.State.OwnerCharacterId).Name;
             _message.text = "";
             Refresh();
             OpenScreen(character);
@@ -114,7 +114,7 @@ namespace UI.Containers
                 var stack = slots[i];
                 var button = new Button(() => Move(deposit, index, false));
                 button.AddToClassList("container-slot");
-                button.tooltip = stack.IsEmpty ? "Empty" : stack.Item.ItemName + " ×" + stack.Quantity;
+                button.tooltip = stack.IsEmpty ? "Empty" : stack.Item.Name + " ×" + stack.Quantity;
                 button.SetEnabled(stack.IsOccupied);
                 var icon = new VisualElement { pickingMode = PickingMode.Ignore };
                 icon.AddToClassList("container-icon");

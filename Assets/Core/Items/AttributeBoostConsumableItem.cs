@@ -13,14 +13,11 @@ namespace Core.Items
         private static readonly AttributeBoostConsumableItemValidator Validator = new();
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
-        [Tooltip("In-game minutes, including time skipped overnight.")]
-        [SerializeField, Validation.Min(1)] private int boostDurationMinutes = 120;
-        [SerializeField, Validation.NotEmpty, Validation.RequiredElements, Validation.Nested]
-        private AttributeBonus[] boosts;
-
-        public int BoostDurationMinutes => boostDurationMinutes;
-        public IReadOnlyList<AttributeBonus> Boosts => boosts;
+        [field: SerializeField, Validation.Min(1), Tooltip("In-game minutes, including time skipped overnight.")]
+        public int BoostDurationMinutes { get; private set; } = 120;
+        [field: SerializeField, Validation.NotEmpty, Validation.RequiredElements, Validation.Nested]
+        public AttributeBonus[] Boosts { get; private set; }
         public override bool CanConsume(GameCharacter character) => true;
-        public override void Apply(GameCharacter character) => character.Boosts.Apply($"item:{ItemId}", boostDurationMinutes, boosts);
+        public override void Apply(GameCharacter character) => character.Boosts.Apply($"item:{Id}", BoostDurationMinutes, Boosts);
     }
 }

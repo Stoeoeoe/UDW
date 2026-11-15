@@ -31,7 +31,7 @@ namespace Character
 
         [SerializeField] private CharacterDefinition definition;
         public CharacterDefinition Definition => definition;
-        public string CharacterId => definition.CharacterId;
+        public string CharacterId => definition.Id;
         [SerializeField] private UrCharacterAnimator animator;
         [SerializeField] private InteractionSensor interactionSensor;
         [SerializeField] private CharacterPerformPrimaryActionAbility performPrimaryActionAbility;

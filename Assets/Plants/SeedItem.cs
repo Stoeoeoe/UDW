@@ -11,14 +11,11 @@ namespace Plants
         private static readonly SeedItemValidator Validator = new();
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
-        [SerializeField, Validation.ValidReference]
-        private PlantData plantData;
-
-        public PlantData PlantData => plantData;
+        [field: SerializeField, Validation.ValidReference] public PlantData PlantData { get; private set; }
 
         public override GameObject GetPlaceableRepresentation()
         {
-            var seedStage = plantData.GetSeedStage();
+            var seedStage = PlantData.GetSeedStage();
             return seedStage.Representation.CreateInstance();
         }
     }

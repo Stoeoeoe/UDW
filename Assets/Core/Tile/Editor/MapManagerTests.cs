@@ -489,7 +489,7 @@ namespace Core.Tile.Editor
             var data = Asset<PlantData>();
             TestConfiguration.Set(data, "plantId", "test:crop");
             var produce = Asset<ProduceItem>();
-            Set(produce, "itemId", "test:produce");
+            Set(produce, "Id", "test:produce");
             Set(data, "_harvestItem", produce);
             var seedStage = new GrowthStage();
             Set(seedStage, "_representation", new SpriteOrPrefab

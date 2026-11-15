@@ -11,10 +11,8 @@ namespace Core.Items
         private static readonly StaminaConsumableItemValidator Validator = new();
         protected override IScriptableObjectValidator ConfigurationValidator => Validator;
 
-        [SerializeField, Validation.Min(1, "Must restore at least one stamina.")]
-        private int staminaRestored = 10;
-
-        public int StaminaRestored => staminaRestored;
+        [field: SerializeField, Validation.Min(1, "Must restore at least one stamina.")]
+        public int StaminaRestored { get; private set; } = 10;
 
         public override bool CanConsume(GameCharacter character) => character.Stamina.CurrentStamina < character.Stamina.MaxStamina;
         public override void Apply(GameCharacter character) => character.Stamina.RestoreStamina(StaminaRestored);

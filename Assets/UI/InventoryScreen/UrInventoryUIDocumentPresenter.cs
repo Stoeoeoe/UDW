@@ -228,7 +228,7 @@ namespace UI.InventoryScreen
                 cell.EnableInClassList("inventory-slot-empty", !stack.IsOccupied);
                 var charged = stack.Item is ToolData { MaxCharge: > 0 };
                 cell.EnableInClassList("inventory-slot-charged", charged);
-                cell.tooltip = stack.IsOccupied ? stack.Item.ItemName : "Empty slot";
+                cell.tooltip = stack.IsOccupied ? stack.Item.Name : "Empty slot";
                 if (stack.IsOccupied)
                 {
                     var icon = new VisualElement { pickingMode = PickingMode.Ignore }; icon.AddToClassList("inventory-icon");
@@ -239,7 +239,7 @@ namespace UI.InventoryScreen
                     {
                         var tool = (ToolData)stack.Item;
                         var charge = TargetInventory.Loadout.GetToolCharge(tool);
-                        cell.tooltip = $"{tool.ItemName}\n{charge.Current} / {charge.Capacity}";
+                        cell.tooltip = $"{tool.Name}\n{charge.Current} / {charge.Capacity}";
                         var track = new VisualElement { name = "chargeTrack", pickingMode = PickingMode.Ignore, tooltip = $"{charge.Current} / {charge.Capacity}" };
                         track.AddToClassList("inventory-charge-track");
                         var fill = new VisualElement { name = "chargeFill", pickingMode = PickingMode.Ignore };
@@ -346,7 +346,7 @@ namespace UI.InventoryScreen
             split.SetEnabled(!IsHoldingItem);
             _boundRoot.Q(className: "item-secondary-actions").style.display =
                 split.style.display.value == DisplayStyle.Flex || _dropButton.style.display.value == DisplayStyle.Flex || _beltButton.style.display.value == DisplayStyle.Flex ? DisplayStyle.Flex : DisplayStyle.None;
-            _selectionLabel.text = stack.IsOccupied ? stack.Item.ItemName : "Your bag";
+            _selectionLabel.text = stack.IsOccupied ? stack.Item.Name : "Your bag";
             _description.text = stack.Item ? stack.Item.Description : stack.IsOccupied
                 ? "This item is unavailable. Its place in your bag is preserved." : "Choose an item to see what you can do with it.";
             if (stack.Item is StaminaConsumableItem meal) _description.text += $"\nRestores {meal.StaminaRestored} stamina.";
@@ -394,7 +394,7 @@ namespace UI.InventoryScreen
                     if (!ReceivesInput || IsHoldingItem || source != _selectedSlotIndex) return;
                     var success = TargetInventory.Loadout.AssignToolbeltSlot(source, destination);
                     HideContext(); Feedback(success);
-                }) { text = $"{i + 1}: {(tool ? tool.ItemName : "Empty")}", name = $"quickChoice{i}" };
+                }) { text = $"{i + 1}: {(tool ? tool.Name : "Empty")}", name = $"quickChoice{i}" };
                 var cell = new VisualElement(); cell.AddToClassList("toolbelt-choice");
                 grid.Add(cell); button.AddToClassList("quick-choice"); cell.Add(button);
                 var clear = new Button(() =>
@@ -411,7 +411,7 @@ namespace UI.InventoryScreen
             var index = _selectedSlotIndex; var stack = Selected;
             HideContext(); _context.style.display = DisplayStyle.Flex;
             PresentPrompt();
-            AddLabel(_context, $"Leave {stack.Quantity} × {stack.Item.ItemName} on the ground?", "inventory-description");
+            AddLabel(_context, $"Leave {stack.Quantity} × {stack.Item.Name} on the ground?", "inventory-description");
             AddPromptButton("Leave on ground", () =>
             {
                 var current = Selected;
@@ -482,7 +482,7 @@ namespace UI.InventoryScreen
                 if (sprite) icon.style.backgroundImage = new StyleBackground(sprite);
                 else icon.style.display = DisplayStyle.None;
                 button.Add(icon);
-                AddLabel(button, equipped.IsOccupied ? equipped.Item.ItemName : "Nothing worn", "inventory-hint");
+                AddLabel(button, equipped.IsOccupied ? equipped.Item.Name : "Nothing worn", "inventory-hint");
                 _equipment.Add(button);
             }
             title.text = selected ? $"For your {selected.Label.ToLowerInvariant()}" : "Choose a worn slot";
@@ -499,8 +499,8 @@ namespace UI.InventoryScreen
                 {
                     if (!ReceivesInput || IsHoldingItem) return;
                     var success = TargetInventory.Actions.TryEquip(index, selected); Feedback(success);
-                    _boundRoot.Q<Label>("equipmentStatus").text = success ? $"Now wearing {item.ItemName}." : "Make room in your bag before changing equipment.";
-                }) { text = $"Wear {item.ItemName}", name = $"wearItem{i}" };
+                    _boundRoot.Q<Label>("equipmentStatus").text = success ? $"Now wearing {item.Name}." : "Make room in your bag before changing equipment.";
+                }) { text = $"Wear {item.Name}", name = $"wearItem{i}" };
                 button.AddToClassList("equipment-choice"); button.SetEnabled(!IsHoldingItem); choices.Add(button);
             }
             if (choices.childCount == 0) AddLabel(choices, "No matching items in your bag.", "inventory-description");

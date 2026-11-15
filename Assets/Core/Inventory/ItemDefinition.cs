@@ -1,5 +1,4 @@
 using Core.Common;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Core.Inventory
@@ -8,59 +7,32 @@ namespace Core.Inventory
     /// Base ScriptableObject for all game items.
     /// Subclass to add game-specific data (tools, seeds, equipment, etc.).
     /// </summary>
+    [ImportedData]
     public abstract class ItemDefinition : ValidatedScriptableObject<ItemDefinitionValidator>
     {
-        [SerializeField, Validation.Id("Assign a stable, nonblank item ID."), JsonProperty("id")]
-        private string itemId;
+        [field: SerializeField, Validation.Id("Assign a stable, nonblank item ID.")] public string Id { get; private set; }
+        [field: SerializeField] public string Name { get; private set; }
+        [field: SerializeField] public string Category { get; private set; }
+        [field: SerializeField] public Sprite Icon { get; private set; }
+        [field: SerializeField] public string Description { get; private set; }
+        [field: SerializeField, Validation.Min(1)] public int MaxStackSize { get; private set; } = 99;
 
-        [SerializeField, JsonProperty("name")]
-        private string itemName;
+        [field: SerializeField, Tooltip("Protect essential tools and quest items from being left on the ground. Redundant, replaceable items can remain droppable.")]
+        public bool PreventDropping { get; private set; }
 
-        [SerializeField]
-        private string category;
+        [field: Header("Trading")]
+        [field: SerializeField, Tooltip("Base price per item paid by the buyer."), Validation.Min(0, "Must be nonnegative.")]
+        public int BuyBasePrice { get; private set; }
 
-        [SerializeField]
-        private Sprite icon;
+        [field: SerializeField, Tooltip("Base price per item received by the seller. Zero-value items should not be sold automatically."),
+                Validation.Min(0, "Must be nonnegative.")]
+        public int SellBasePrice { get; private set; }
 
-        [SerializeField]
-        private string description;
+        [field: Header("World Item")]
+        [field: SerializeField, Tooltip("Visual prefab spawned as a child of WorldItem. If null a default sprite child is created from Icon.")]
+        public GameObject WorldRepresentationPrefab { get; private set; }
 
-        [SerializeField, Validation.Min(1)]
-        private int maxStackSize = 99;
-
-        [Tooltip("Protect essential tools and quest items from being left on the ground. Redundant, replaceable items can remain droppable.")]
-        [SerializeField]
-        private bool preventDropping;
-
-        [Header("Trading")]
-        [Tooltip("Base price per item paid by the buyer.")]
-        [SerializeField, Validation.Min(0, "Must be nonnegative.")]
-        private int buyBasePrice;
-
-        [Tooltip("Base price per item received by the seller. Zero-value items should not be sold automatically.")]
-        [SerializeField, Validation.Min(0, "Must be nonnegative.")]
-        private int sellBasePrice;
-
-        [Header("World Item")]
-        [Tooltip("Visual prefab spawned as a child of WorldItem. If null a default sprite child is created from Icon.")]
-        [SerializeField]
-        private GameObject worldRepresentationPrefab;
-
-        [Tooltip("Pickup sound override. If null ItemManager's default sound plays.")]
-        [SerializeField]
-        private AudioClip pickupSound;
-
-        public string ItemId => itemId;
-        public string ItemName => itemName;
-        public string Category => category;
-        public Sprite Icon => icon;
-        public string Description => description;
-        public int MaxStackSize => maxStackSize;
-        public bool PreventDropping => preventDropping;
-        public int BuyBasePrice => buyBasePrice;
-        public int SellBasePrice => sellBasePrice;
-        public GameObject WorldRepresentationPrefab => worldRepresentationPrefab;
-        public AudioClip PickupSound => pickupSound;
-
+        [field: SerializeField, Tooltip("Pickup sound override. If null ItemManager's default sound plays.")]
+        public AudioClip PickupSound { get; private set; }
     }
 }

@@ -38,17 +38,17 @@ namespace Core.Inventory
         {
             ValidateFields();
             foreach (var stack in startingContents)
-                if (items.Find(stack.Item.ItemId) != stack.Item)
+                if (items.Find(stack.Item.Id) != stack.Item)
                     throw new InvalidOperationException($"Container '{name}' starting contents require registered items.");
         }
 
         public override SpawnedObjectState CreateState(int currentDay)
         {
             ValidateFields();
-            var state = new ContainerState { OwnerCharacterId = owner.CharacterId,
+            var state = new ContainerState { OwnerCharacterId = owner.Id,
                 Inventory = new InventoryState { Slots = new InventorySlotState[capacity] } };
             for (int i = 0; i < startingContents.Length; i++)
-                state.Inventory.Slots[i] = new InventorySlotState(startingContents[i].Item.ItemId, startingContents[i].Quantity);
+                state.Inventory.Slots[i] = new InventorySlotState(startingContents[i].Item.Id, startingContents[i].Quantity);
             return state;
         }
 

@@ -47,7 +47,7 @@ namespace Core.Routines
         }
 
         internal static TimetableSegment Stay(int goalIndex, RoutinePlace place, Vector2 position, float start, float end) =>
-            new(false, place.MapId, start, end, goalIndex, place, new[] { position }, null, null);
+            new(false, place.Map, start, end, goalIndex, place, new[] { position }, null, null);
 
         internal static TimetableSegment Walk(int goalIndex, TimetableLeg leg, float start, float end) =>
             new(true, leg.MapId, start, end, goalIndex, null, leg.Route, leg.Enters, leg.Leaves);
@@ -147,7 +147,7 @@ namespace Core.Routines
 
                 var legs = FindLegs(world, place, goal.Destination);
                 if (legs == null)
-                    warnings.Add($"Routine '{plan.Routine.RoutineId}': no walkable route from '{place}' to '{goal.Destination}' " +
+                    warnings.Add($"Routine '{plan.Routine.Id}': no walkable route from '{place}' to '{goal.Destination}' " +
                         $"for goal '{goal.Id}'. The character is there as soon as they set off.");
                 else
                     foreach (var leg in legs)
@@ -165,7 +165,7 @@ namespace Core.Routines
         }
 
         private static TimetableSegment StayAt(WorldNavigation world, int goalIndex, RoutinePlace place, float start, float end) =>
-            TimetableSegment.Stay(goalIndex, place, world.Map(place.MapId).Anchor(place.AnchorId), start, end);
+            TimetableSegment.Stay(goalIndex, place, world.Map(place.Map).Anchor(place.Anchor), start, end);
 
         /// <summary>A step of the search: standing on a map, having come this far.</summary>
         private sealed class Stop
@@ -202,7 +202,7 @@ namespace Core.Routines
         /// </summary>
         private static List<TimetableLeg> FindLegs(WorldNavigation world, RoutinePlace from, RoutinePlace to)
         {
-            var start = new Stop { MapId = from.MapId, Position = world.Map(from.MapId).Anchor(from.AnchorId) };
+            var start = new Stop { MapId = from.Map, Position = world.Map(from.Map).Anchor(from.Anchor) };
             var open = new List<Stop> { start };
             var crossed = new HashSet<MapLink>();
             while (open.Count > 0)
@@ -213,8 +213,8 @@ namespace Core.Routines
                 // The first time a link comes out of the queue is the shortest way through it.
                 if (stop.Entered != null && !crossed.Add(stop.Entered)) continue;
                 var map = world.Map(stop.MapId);
-                if (string.Equals(stop.MapId, to.MapId, StringComparison.OrdinalIgnoreCase)
-                    && TryWalk(map, stop.Position, map.Anchor(to.AnchorId), out var toGoal))
+                if (string.Equals(stop.MapId, to.Map, StringComparison.OrdinalIgnoreCase)
+                    && TryWalk(map, stop.Position, map.Anchor(to.Anchor), out var toGoal))
                     open.Add(new Stop { MapId = stop.MapId, Position = toGoal.Route[^1], Distance = stop.Distance + toGoal.Length,
                         Crossings = stop.Crossings, Previous = stop, Walk = toGoal, IsGoal = true });
                 foreach (var link in world.Links.LinksFrom(stop.MapId))

@@ -19,7 +19,7 @@ namespace Interaction.Tools.Editor
                 .Where(tool => tool)
                 .ToArray();
             Assert.That(tools, Is.Not.Empty);
-            var missing = tools.Where(tool => !registered.Contains(tool.ItemId)).Select(tool => tool.ItemId).ToArray();
+            var missing = tools.Where(tool => !registered.Contains(tool.Id)).Select(tool => tool.Id).ToArray();
             Assert.That(missing, Is.Empty, "Add an action prefab for each tool to the player character's ToolActionRegistry.");
         }
 
@@ -28,7 +28,7 @@ namespace Interaction.Tools.Editor
             var registry = character.GetComponentInChildren<ToolActionRegistry>(true);
             var prefabs = new SerializedObject(registry).FindProperty("toolActionPrefabs");
             return Enumerable.Range(0, prefabs.arraySize)
-                .Select(i => ((ToolAction)prefabs.GetArrayElementAtIndex(i).objectReferenceValue).ToolData.ItemId)
+                .Select(i => ((ToolAction)prefabs.GetArrayElementAtIndex(i).objectReferenceValue).ToolData.Id)
                 .ToArray();
         }
     }

@@ -145,7 +145,7 @@ namespace UI.Hotbar
                     for (var slot = 0; slot < TargetInventory.Capacity; slot++)
                     {
                         var stack = TargetInventory.GetSlot(slot);
-                        if (stack.ItemId == tool.ItemId) quantity += stack.Quantity;
+                        if (stack.ItemId == tool.Id) quantity += stack.Quantity;
                     }
                 _hotbarSlots[i].UpdateDisplay(tool ? new ItemStack(tool, quantity) : ItemStack.Empty);
             }

@@ -34,7 +34,7 @@ namespace Core.Shops.Editor
             Game.Catalog<ShopCatalog>(_shop);
             _shops = Game.Get<ShopService>();
             Game.State.Player.Inventory.Slots = new InventorySlotState[2];
-            _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _seed.ItemId ? _seed : id == _bean.ItemId ? _bean : null);
+            _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _seed.Id ? _seed : id == _bean.Id ? _bean : null);
             _wallet = new Wallet();
             _wallet.Add(100);
             EventBus<ShopPurchaseEvent>.Subscribe(this);
@@ -54,8 +54,8 @@ namespace Core.Shops.Editor
         private ShopTestItem Item(string id, int sellPrice)
         {
             var item = Game.Asset<ShopTestItem>();
-            Set(item, "itemId", id, typeof(ItemDefinition));
-            Set(item, "sellBasePrice", sellPrice, typeof(ItemDefinition));
+            Set(item, "Id", id, typeof(ItemDefinition));
+            Set(item, "SellBasePrice", sellPrice, typeof(ItemDefinition));
             return item;
         }
 

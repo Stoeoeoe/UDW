@@ -10,7 +10,7 @@ namespace Core.Routines
     {
         public const string ResourceName = "RoutineCatalog";
         public override string Path => "Assets";
-        protected override string GetDefinitionId(RoutineDefinition definition) => definition.RoutineId;
+        protected override string GetDefinitionId(RoutineDefinition definition) => definition.Id;
 
         public RoutineDefinition Require(string id) =>
             Get(id) ?? throw new InvalidOperationException($"Routine '{id}' is not registered and enabled.");

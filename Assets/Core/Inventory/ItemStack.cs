@@ -22,7 +22,7 @@ namespace Core.Inventory
         {
             Item     = item;
             Quantity = quantity;
-            ItemId = item != null ? item.ItemId : null;
+            ItemId = item != null ? item.Id : null;
         }
 
         public static bool IsNull(ItemStack stack) => stack.IsEmpty;

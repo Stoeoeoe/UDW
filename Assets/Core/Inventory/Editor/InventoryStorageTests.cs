@@ -20,10 +20,10 @@ namespace Core.Inventory.Editor
         public void SetUp()
         {
             _item = ScriptableObject.CreateInstance<DropTestItem>();
-            ConfigurationTestData.Set(_item, "ItemId", "test:storage");
+            ConfigurationTestData.Set(_item, "Id", "test:storage");
             ConfigurationTestData.Set(_item, "MaxStackSize", 5);
             _state = new InventoryState();
-            _storage = new InventoryStorage(_state, id => id == _item.ItemId ? _item : null, 2);
+            _storage = new InventoryStorage(_state, id => id == _item.Id ? _item : null, 2);
             _notifications = 0;
             _interaction = new InventoryInteraction(_storage, _state, () => _notifications++);
         }
@@ -71,7 +71,7 @@ namespace Core.Inventory.Editor
             _storage.AddItem(_item, 5);
             var replacement = new InventoryState
             {
-                Slots = new[] { new InventorySlotState(_item.ItemId, 5) }
+                Slots = new[] { new InventorySlotState(_item.Id, 5) }
             };
             _storage.Bind(replacement, id => null, initialCapacity: 10);
             Assert.That(_storage.Capacity, Is.EqualTo(1), "Saved capacity wins over defaults.");
@@ -151,7 +151,7 @@ namespace Core.Inventory.Editor
             var other = ScriptableObject.CreateInstance<DropTestItem>();
             try
             {
-                ConfigurationTestData.Set(other, "ItemId", "test:other");
+                ConfigurationTestData.Set(other, "Id", "test:other");
                 ConfigurationTestData.Set(other, "MaxStackSize", 5);
                 _storage.SetSlot(0, new ItemStack(_item, 3));
                 _storage.SetSlot(1, new ItemStack(other, 2));

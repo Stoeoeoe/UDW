@@ -93,7 +93,7 @@ namespace Core.Dialogue.Vulcanus.Editor
             var dialogue = VulcanusJson.Populate(Game.Asset<VulcanusDialogueAsset>(),
                 $"{{ id: 'test:dialogue', startNodeId: 'entry', nodes: [{entry}, {{ id: 'end', type: 'end' }}] }}");
             _catalog.Synchronize(new[] { dialogue });
-            Assert.That(_runner.StartDialogue(dialogue.DialogueId, _character), Is.True);
+            Assert.That(_runner.StartDialogue(dialogue.Id, _character), Is.True);
             Assert.That(_input.PlayerControls.enabled, Is.False);
             Assert.That(_input.ActiveMapName, Is.EqualTo("UI"));
         }

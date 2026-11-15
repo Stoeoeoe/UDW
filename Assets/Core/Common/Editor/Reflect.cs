@@ -37,7 +37,8 @@ namespace Core.Common.Editor
         {
             for (var current = type; current != null; current = current.BaseType)
             {
-                var field = current.GetField(name, Fields);
+                // An auto-property is set by its property name: its serialized field is the compiler's backing field.
+                var field = current.GetField(name, Fields) ?? current.GetField($"<{name}>k__BackingField", Fields);
                 if (field != null) return field;
             }
             throw new MissingFieldException(type.Name, name);

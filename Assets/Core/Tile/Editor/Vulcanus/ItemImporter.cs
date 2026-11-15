@@ -23,7 +23,7 @@ namespace Core.Tile.Editor.Vulcanus
                 source.Remove("classProperties");
                 source.Merge(properties);
             }
-            VulcanusJson.Import(ctx, type, "item", source.ToString(), item => ((ItemDefinition)item).ItemId);
+            VulcanusJson.Import(ctx, type, "item", source.ToString(), item => ((ItemDefinition)item).Id);
         }
 
         private static Type ItemType(AssetImportContext ctx, string classId)
@@ -33,7 +33,7 @@ namespace Core.Tile.Editor.Vulcanus
             VulcanusImportHelpers.AddDependency(ctx, projectPath);
             var project = AssetDatabase.LoadAssetAtPath<VulcanusProject>(projectPath)
                 ?? throw new FormatException($"{ctx.assetPath}: project '{projectPath}' has not imported successfully.");
-            var itemClass = project.ItemClassMappings.FirstOrDefault(mapping => mapping.classId == classId)
+            var itemClass = project.ItemClasses.FirstOrDefault(mapping => mapping.id == classId)
                 ?? throw new FormatException($"{ctx.assetPath}: unknown item class '{classId}'.");
             var type = VulcanusImportHelpers.ResolveTypeByName(itemClass.className);
             return type != null && typeof(ItemDefinition).IsAssignableFrom(type) && !type.IsAbstract

@@ -22,7 +22,7 @@ namespace UI.Journal.Editor
         public void SetUp()
         {
             _wine = Game.Asset<InventoryTestItem>();
-            ConfigurationTestData.Set(_wine, "ItemId", "test:wine");
+            ConfigurationTestData.Set(_wine, "Id", "test:wine");
             Game.Catalog<ItemCatalog>(_wine);
             Game.Catalog<QuestCatalog>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(), @"{
                 id: 'test:wine', title: 'Wine for the festival', description: 'The priestess needs wine.',

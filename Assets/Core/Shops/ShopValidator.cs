@@ -12,7 +12,7 @@ namespace Core.Shops
             var items = new HashSet<string>(StringComparer.Ordinal);
             for (var i = 0; i < asset.Offerings.Length; i++)
                 if (asset.Offerings[i] != null && DefinitionIdRules.IsPresent(asset.Offerings[i].ItemId) && !items.Add(asset.Offerings[i].ItemId))
-                    Report(errors, asset, $"offerings[{i}].itemId", "An item can be offered only once in a shop.");
+                    Report(errors, asset, $"Offerings[{i}].ItemId", "An item can be offered only once in a shop.");
         }
     }
 }

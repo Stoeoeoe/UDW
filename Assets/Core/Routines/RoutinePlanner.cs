@@ -22,10 +22,10 @@ namespace Core.Routines
 
         internal PlannedGoal(RoutineGoal goal, RoutinePlace home)
         {
-            WalkingDialogueId = goal.WalkingDialogueId;
-            DialogueId = goal.DialogueId;
+            WalkingDialogueId = goal.WalkingDialogue;
+            DialogueId = goal.Dialogue;
             Id = goal.Id;
-            DepartMinute = goal.DepartMinute;
+            DepartMinute = goal.DepartAt;
             Destination = goal.ToHome ? home : goal.Destination;
             ActivityAnimationId = goal.ActivityAnimationId;
         }
@@ -60,7 +60,7 @@ namespace Core.Routines
                 if ((i < goalIndex || arrived) && !string.IsNullOrEmpty(Goals[i].DialogueId)) return Goals[i].DialogueId;
                 if (!string.IsNullOrEmpty(Goals[i].WalkingDialogueId)) return Goals[i].WalkingDialogueId;
             }
-            return string.IsNullOrEmpty(Routine.DialogueId) ? null : Routine.DialogueId;
+            return string.IsNullOrEmpty(Routine.Dialogue) ? null : Routine.Dialogue;
         }
     }
 
@@ -85,9 +85,9 @@ namespace Core.Routines
         public DayPlan PlanDay(RoutineDefinition routine, int daysSinceStart)
         {
             if (!routine) throw new ArgumentNullException(nameof(routine));
-            var day = Choose(routine.Overrides, routine.CharacterId, daysSinceStart)
-                ?? Choose(routine.Variants, routine.CharacterId, daysSinceStart)
-                ?? throw new InvalidOperationException($"Routine '{routine.RoutineId}' has no variant without a condition.");
+            var day = Choose(routine.Overrides, routine.Character, daysSinceStart)
+                ?? Choose(routine.Variants, routine.Character, daysSinceStart)
+                ?? throw new InvalidOperationException($"Routine '{routine.Id}' has no variant without a condition.");
             var goals = day.Goals.Where(goal => _conditions.EvaluateCondition(goal.Condition))
                 .Select(goal => new PlannedGoal(goal, routine.Home)).ToArray();
             return new DayPlan(routine, day.Id, goals);

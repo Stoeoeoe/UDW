@@ -101,6 +101,8 @@ namespace Core.Tile.Editor.Vulcanus
         /// <summary>Unity's serialized fields: public, [SerializeField] and [SerializeReference] ones, including inherited private fields.</summary>
         private sealed class SerializedFields : DefaultContractResolver
         {
+            private const string BackingFieldAffix = ">k__BackingField";
+
             protected override List<MemberInfo> GetSerializableMembers(Type type)
             {
                 var fields = new List<MemberInfo>();
@@ -115,6 +117,12 @@ namespace Core.Tile.Editor.Vulcanus
             {
                 var property = base.CreateProperty(member, memberSerialization);
                 property.Writable = true;
+                // An auto-property's backing field is read under the property's name in camelCase: Id -> id.
+                if (member.Name.Length > BackingFieldAffix.Length + 1 && member.Name[0] == '<' && member.Name.EndsWith(BackingFieldAffix, StringComparison.Ordinal))
+                {
+                    var name = member.Name.Substring(1, member.Name.Length - BackingFieldAffix.Length - 1);
+                    property.PropertyName = char.ToLowerInvariant(name[0]) + name.Substring(1);
+                }
                 return property;
             }
 

@@ -9,7 +9,7 @@ namespace Core.Items
         protected override void CollectConfigurationErrors(AttributeBoostConsumableItem asset, List<ConfigurationError> errors)
         {
             if (asset.Boosts == null) return; // Shared rules report missing collections and entries.
-            for (var i = 0; i < asset.Boosts.Count; i++)
+            for (var i = 0; i < asset.Boosts.Length; i++)
             {
                 var bonus = asset.Boosts[i];
                 if (bonus != null && (bonus.Flat < 0 || bonus.Percent < 0))

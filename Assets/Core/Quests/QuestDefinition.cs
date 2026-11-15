@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Core.Common;
 using Newtonsoft.Json;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Core.Quests
@@ -22,74 +21,59 @@ namespace Core.Quests
     }
 
     /// <summary>Something a step needs; which fields apply depends on <see cref="Kind"/>.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class QuestObjective
     {
-        [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly] private QuestObjectiveKind kind;
-        [SerializeField, ReadOnly] private string text;
-        [SerializeField, ReadOnly] private string character;
-        [SerializeField, ReadOnly] private string dialogue;
-        [SerializeField, ReadOnly] private string item;
-        [SerializeField, ReadOnly] private int count;
-        [SerializeField, ReadOnly] private string map;
-        [SerializeField, ReadOnly] private string trigger;
-        [SerializeField, ReadOnly, Validation.LuaExpression] private string condition;
-
-        public string Id => id;
-        public QuestObjectiveKind Kind => kind;
-        /// <summary>The journal line in the source language; <see cref="QuestDefinition.Text"/> gives what the player reads.</summary>
-        public string SourceText => text;
+        [field: SerializeField] public string Id { get; private set; }
+        [field: SerializeField] public QuestObjectiveKind Kind { get; private set; }
+        /// <summary>The journal line in the source language; <see cref="QuestDefinition.TranslatedText"/> gives what the player reads.</summary>
+        [field: SerializeField] public string Text { get; private set; }
         /// <summary>Talk and deliver: who to talk to.</summary>
-        public string CharacterId => character;
+        [field: SerializeField] public string Character { get; private set; }
         /// <summary>Talk and deliver: the dialogue that plays instead of the character's usual one; empty for theirs.</summary>
-        public string DialogueId => dialogue;
+        [field: SerializeField] public string Dialogue { get; private set; }
         /// <summary>Deliver and have: the item.</summary>
-        public string ItemId => item;
+        [field: SerializeField] public string Item { get; private set; }
         /// <summary>Deliver and have: how many.</summary>
-        public int Count => count;
+        [field: SerializeField] public int Count { get; private set; }
         /// <summary>Reach: the map.</summary>
-        public string MapId => map;
+        [field: SerializeField] public string Map { get; private set; }
         /// <summary>Reach: a trigger area on the map; empty for anywhere on it.</summary>
-        public string TriggerId => trigger;
+        [field: SerializeField] public string Trigger { get; private set; }
         /// <summary>Condition: the read-only Lua expression.</summary>
-        public string Condition => condition;
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
     }
 
     /// <summary>When a step must be done: days after it begins, at a time of day or the end of that day.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class QuestDeadline
     {
-        [SerializeField, ReadOnly, Tooltip("Days after the step begins; -1 for no deadline.")] private int days = -1;
-        [SerializeField, ReadOnly, JsonConverter(typeof(ClockTimeJsonConverter)),
-         Tooltip("Minutes after midnight on that day; -1 for the end of the day.")]
-        private int at = -1;
-
-        public int Days => days;
-        public int Minute => at;
+        [field: SerializeField, Tooltip("Days after the step begins; -1 for no deadline.")] public int Days { get; private set; } = -1;
+        [field: SerializeField, JsonConverter(typeof(ClockTimeJsonConverter)),
+                Tooltip("Minutes after midnight on that day; -1 for the end of the day.")]
+        public int At { get; private set; } = -1;
     }
 
     /// <summary>A step of a quest: journal text, the objectives that complete it, and optionally a deadline.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class QuestStep
     {
-        [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly] private string journal;
-        [SerializeField, ReadOnly, Validation.Nested, Validation.Unique(nameof(QuestObjective.Id))]
-        private QuestObjective[] objectives = Array.Empty<QuestObjective>();
-        [SerializeField, ReadOnly] private QuestDeadline deadline = new();
-        [SerializeField, ReadOnly, Validation.LuaExpression] private string failWhen;
-        [SerializeField, ReadOnly, Validation.LuaChunk] private string onComplete;
+        [field: SerializeField] public string Id { get; private set; }
+        /// <summary>Journal text in the source language; <see cref="QuestDefinition.TranslatedJournal"/> gives what the player reads.</summary>
+        [field: SerializeField] public string Journal { get; private set; }
+        [field: SerializeField, Validation.Nested, Validation.Unique(nameof(QuestObjective.Id))]
+        public QuestObjective[] Objectives { get; private set; } = Array.Empty<QuestObjective>();
+        [field: SerializeField] public QuestDeadline Deadline { get; private set; } = new();
+        /// <summary>Read-only Lua expression; the quest fails while it holds during the step. Empty for none.</summary>
+        [field: SerializeField, Validation.LuaExpression] public string FailWhen { get; private set; }
+        /// <summary>Lua actions run when the step completes; empty for none.</summary>
+        [field: SerializeField, Validation.LuaChunk] public string OnComplete { get; private set; }
 
-        public string Id => id;
-        /// <summary>Journal text in the source language; <see cref="QuestDefinition.Journal"/> gives what the player reads.</summary>
-        public string SourceJournal => journal;
-        public QuestObjective[] Objectives => objectives;
-        public bool HasDeadline => deadline.Days >= 0;
+        public bool HasDeadline => Deadline.Days >= 0;
         /// <summary>Days after the step begins; 0 is the same day.</summary>
-        public int DeadlineDays => deadline.Days;
+        public int DeadlineDays => Deadline.Days;
         /// <summary>Minutes after midnight on the deadline's day; -1 for the end of the day.</summary>
-        public int DeadlineMinute => deadline.Minute;
+        public int DeadlineMinute => Deadline.At;
         /// <summary>The game minute the deadline passes, for a step that began at <paramref name="startedAtMinute"/>.</summary>
         public long DeadlineAtMinute(long startedAtMinute)
         {
@@ -97,11 +81,6 @@ namespace Core.Quests
             var deadlineDay = startedAtMinute / day + DeadlineDays;
             return deadlineDay * day + (DeadlineMinute >= 0 ? DeadlineMinute : day);
         }
-
-        /// <summary>Read-only Lua expression; the quest fails while it holds during the step. Empty for none.</summary>
-        public string FailWhen => failWhen;
-        /// <summary>Lua actions run when the step completes; empty for none.</summary>
-        public string OnComplete => onComplete;
     }
 
     /// <summary>
@@ -110,57 +89,50 @@ namespace Core.Quests
     /// because saves refer to them too: <c>quest.&lt;quest&gt;.title</c>, <c>.description</c>,
     /// <c>.&lt;step&gt;.journal</c> and <c>.&lt;step&gt;.&lt;objective&gt;.text</c>.
     /// </summary>
+    [ImportedData]
     public sealed class QuestDefinition : ValidatedScriptableObject<QuestValidator>
     {
         /// <summary>A text from the quest's i18n file.</summary>
-        [Serializable]
+        [Serializable, ImportedData]
         public struct Message
         {
             public string msgKey;
             public string text;
         }
 
-        [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly] private string title;
-        [SerializeField, ReadOnly] private string description;
-        [SerializeField, ReadOnly, Tooltip("Character who gives the quest; empty for none.")] private string giver;
-        [SerializeField, ReadOnly, Validation.LuaChunk] private string onStart;
-        [SerializeField, ReadOnly, Validation.LuaChunk] private string onComplete;
-        [SerializeField, ReadOnly, Validation.LuaChunk] private string onFail;
+        [field: SerializeField] public string Id { get; private set; }
+        /// <summary>The title in the source language; <see cref="TranslatedTitle"/> gives what the player reads.</summary>
+        [field: SerializeField] public string Title { get; private set; }
+        /// <summary>The description in the source language; <see cref="TranslatedDescription"/> gives what the player reads.</summary>
+        [field: SerializeField] public string Description { get; private set; }
+        /// <summary>Character who gives the quest; empty for none.</summary>
+        [field: SerializeField] public string Giver { get; private set; }
+        /// <summary>Lua actions run when the quest starts; empty for none.</summary>
+        [field: SerializeField, Validation.LuaChunk] public string OnStart { get; private set; }
+        /// <summary>Lua actions run when the last step completes; empty for none.</summary>
+        [field: SerializeField, Validation.LuaChunk] public string OnComplete { get; private set; }
+        /// <summary>Lua actions run when the quest fails; empty for none.</summary>
+        [field: SerializeField, Validation.LuaChunk] public string OnFail { get; private set; }
         // The schema checks everything else at import; only unique IDs and Lua syntax are beyond it.
-        [SerializeField, ReadOnly, Validation.Nested, Validation.Unique(nameof(QuestStep.Id))]
-        private QuestStep[] steps = Array.Empty<QuestStep>();
-        [SerializeField, ReadOnly, Tooltip("Texts from the quest's i18n file.")] private Message[] messages = Array.Empty<Message>();
+        [field: SerializeField, Validation.Nested, Validation.Unique(nameof(QuestStep.Id))]
+        public QuestStep[] Steps { get; private set; } = Array.Empty<QuestStep>();
+        [field: SerializeField, Tooltip("Texts from the quest's i18n file.")]
+        public Message[] Messages { get; private set; } = Array.Empty<Message>();
 
         [NonSerialized] private Dictionary<string, string> _textByKey;
 
-        public string QuestId => id;
-        /// <summary>The title in the source language.</summary>
-        public string SourceTitle => title;
-        /// <summary>The description in the source language.</summary>
-        public string SourceDescription => description;
-        /// <summary>Character who gives the quest; empty for none.</summary>
-        public string GiverId => giver;
-        /// <summary>Lua actions run when the quest starts; empty for none.</summary>
-        public string OnStart => onStart;
-        /// <summary>Lua actions run when the last step completes; empty for none.</summary>
-        public string OnComplete => onComplete;
-        /// <summary>Lua actions run when the quest fails; empty for none.</summary>
-        public string OnFail => onFail;
-        public QuestStep[] Steps => steps;
-
         /// <summary>The title as the player reads it.</summary>
-        public string Title => Translate($"quest.{id}.title", title);
+        public string TranslatedTitle => Translate($"quest.{Id}.title", Title);
 
         /// <summary>The description as the player reads it.</summary>
-        public string Description => Translate($"quest.{id}.description", description);
+        public string TranslatedDescription => Translate($"quest.{Id}.description", Description);
 
         /// <summary>A step's journal text as the player reads it.</summary>
-        public string Journal(QuestStep step) => Translate($"quest.{id}.{step.Id}.journal", step.SourceJournal);
+        public string TranslatedJournal(QuestStep step) => Translate($"quest.{Id}.{step.Id}.journal", step.Journal);
 
         /// <summary>An objective's journal line as the player reads it.</summary>
-        public string Text(QuestStep step, QuestObjective objective) =>
-            Translate($"quest.{id}.{step.Id}.{objective.Id}.text", objective.SourceText);
+        public string TranslatedText(QuestStep step, QuestObjective objective) =>
+            Translate($"quest.{Id}.{step.Id}.{objective.Id}.text", objective.Text);
 
         /// <summary>The text from the quest's i18n file, otherwise the source text.</summary>
         private string Translate(string msgKey, string sourceText)
@@ -168,7 +140,7 @@ namespace Core.Quests
             if (_textByKey == null)
             {
                 _textByKey = new Dictionary<string, string>(StringComparer.Ordinal);
-                foreach (var message in messages)
+                foreach (var message in Messages)
                     if (!string.IsNullOrEmpty(message.text)) _textByKey[message.msgKey] = message.text;
             }
             return _textByKey.TryGetValue(msgKey, out var translated) ? translated : sourceText;

@@ -80,7 +80,7 @@ namespace Core.Tile.Editor.Vulcanus
             AssetDatabase.SaveAssets();
 
             _lastSyncSummary =
-                $"Synced {entityMappings.Length} entity rows and {mapBindings.Length} map rows from project '{project.ProjectName}'. " +
+                $"Synced {entityMappings.Length} entity rows and {mapBindings.Length} map rows from project '{project.Name}'. " +
                 $"Unresolved entities: {unresolved}. Maps without prefab asset: {unresolvedMapPrefabs}. Discovered map files: {discoveredMapCount}.";
 
             serializedObject.Update();

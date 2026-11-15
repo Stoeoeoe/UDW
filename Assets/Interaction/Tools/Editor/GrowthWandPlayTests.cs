@@ -39,7 +39,7 @@ namespace Interaction.Tools.Editor
             plants.SowPlantOnCurrentMap(cropTile.Coordinates, BeanId);
 
             var loadout = player.MainInventory.Loadout;
-            var slot = Enumerable.Range(0, 10).First(i => loadout.GetToolbeltTool(i)?.ItemId == "base:growth_wand");
+            var slot = Enumerable.Range(0, 10).First(i => loadout.GetToolbeltTool(i)?.Id == "base:growth_wand");
             Assert.That(loadout.SelectToolbeltSlot(slot), Is.True);
             Assert.That(player.CurrentTool.StaminaCost, Is.EqualTo(10));
             var farTile = map.GetTileDataAtCoordinates(characterTile.Coordinates + Vector2Int.right * (player.CurrentTool.PointerRange + 1));

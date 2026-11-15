@@ -27,8 +27,8 @@ namespace UI.Journal
         public void Show()
         {
             var started = _quests.Started.ToArray();
-            if (started.All(entry => entry.Quest.QuestId != _selected))
-                _selected = (started.FirstOrDefault(entry => entry.Progress.Status == QuestStatus.Active).Quest ?? started.FirstOrDefault().Quest)?.QuestId;
+            if (started.All(entry => entry.Quest.Id != _selected))
+                _selected = (started.FirstOrDefault(entry => entry.Progress.Status == QuestStatus.Active).Quest ?? started.FirstOrDefault().Quest)?.Id;
             _list.Clear();
             if (started.Length == 0) _list.Add(Line("No quests yet.", "inventory-hint"));
             foreach (var (status, heading) in new[] { (QuestStatus.Active, "Active"), (QuestStatus.Completed, "Completed"), (QuestStatus.Failed, "Failed") })
@@ -38,14 +38,14 @@ namespace UI.Journal
                 _list.Add(Line(heading, "inventory-kicker", "journal-section"));
                 foreach (var (quest, _) in group)
                 {
-                    var entry = new Button(() => { _selected = quest.QuestId; Show(); }) { text = quest.Title };
+                    var entry = new Button(() => { _selected = quest.Id; Show(); }) { text = quest.TranslatedTitle };
                     entry.AddToClassList("quiet-action");
                     entry.AddToClassList("journal-entry");
-                    if (quest.QuestId == _selected) entry.AddToClassList("journal-entry-selected");
+                    if (quest.Id == _selected) entry.AddToClassList("journal-entry-selected");
                     _list.Add(entry);
                 }
             }
-            ShowDetails(started.FirstOrDefault(entry => entry.Quest.QuestId == _selected));
+            ShowDetails(started.FirstOrDefault(entry => entry.Quest.Id == _selected));
         }
 
         private void ShowDetails((QuestDefinition Quest, QuestProgress Progress) entry)
@@ -53,10 +53,10 @@ namespace UI.Journal
             _details.Clear();
             var (quest, progress) = entry;
             if (quest == null) return;
-            _details.Add(Line(quest.Title, "inventory-selection"));
-            _details.Add(Line(quest.Description, "inventory-description"));
+            _details.Add(Line(quest.TranslatedTitle, "inventory-selection"));
+            _details.Add(Line(quest.TranslatedDescription, "inventory-description"));
             foreach (var finished in progress.FinishedSteps)
-                _details.Add(Line($"{quest.Journal(Step(quest, finished.StepId))} · {When(finished.AtMinute)}", "inventory-description", "journal-done"));
+                _details.Add(Line($"{quest.TranslatedJournal(Step(quest, finished.StepId))} · {When(finished.AtMinute)}", "inventory-description", "journal-done"));
 
             if (progress.Status == QuestStatus.Completed)
             {
@@ -66,18 +66,18 @@ namespace UI.Journal
             var step = Step(quest, progress.StepId);
             if (progress.Status == QuestStatus.Failed)
             {
-                _details.Add(Line($"Failed: {quest.Journal(step)}", "inventory-kicker", "journal-section"));
+                _details.Add(Line($"Failed: {quest.TranslatedJournal(step)}", "inventory-kicker", "journal-section"));
                 return;
             }
-            _details.Add(Line(quest.Journal(step), "inventory-kicker", "journal-section"));
+            _details.Add(Line(quest.TranslatedJournal(step), "inventory-kicker", "journal-section"));
             foreach (var objective in step.Objectives)
             {
                 var done = progress.CompletedObjectives.Contains(objective.Id);
                 var count = !done && objective.Kind is QuestObjectiveKind.Have or QuestObjectiveKind.Deliver
                     ? $": {_quests.Carried(quest, objective)}/{objective.Count}" : "";
                 _details.Add(done
-                    ? Line($"Done · {quest.Text(step, objective)}", "inventory-description", "journal-done")
-                    : Line(quest.Text(step, objective) + count, "inventory-description"));
+                    ? Line($"Done · {quest.TranslatedText(step, objective)}", "inventory-description", "journal-done")
+                    : Line(quest.TranslatedText(step, objective) + count, "inventory-description"));
             }
             if (step.HasDeadline)
             {

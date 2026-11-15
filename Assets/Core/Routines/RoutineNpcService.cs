@@ -220,10 +220,10 @@ namespace Core.Routines
                 var plan = planner.PlanDay(routine, day);
                 foreach (var goal in plan.Goals)
                     if (goal.DepartMinute < dayStart || goal.DepartMinute >= dayEnd)
-                        throw new InvalidOperationException($"Routine '{routine.RoutineId}': goal '{goal.Id}' departs at " +
+                        throw new InvalidOperationException($"Routine '{routine.Id}': goal '{goal.Id}' departs at " +
                             $"{goal.DepartMinute / 60:00}:{goal.DepartMinute % 60:00}, outside the day ({_clockSettings.startOfDay:00}:00-{_clockSettings.endOfDay:00}:00).");
                 // The timetable uses the authored walk speed; boons change only how fast the character walks in sight.
-                var timetable = RoutineTimetablePlanner.Plan(plan, _world, _characters.Require(routine.CharacterId).WalkSpeed,
+                var timetable = RoutineTimetablePlanner.Plan(plan, _world, _characters.Require(routine.Character).WalkSpeed,
                     _clockSettings.SecondsPerMinute);
                 foreach (var warning in timetable.Warnings) Debug.LogWarning(warning);
                 _days.Add(new Day { Timetable = timetable });
@@ -250,8 +250,8 @@ namespace Core.Routines
         {
             var routine = day.Timetable.Plan.Routine;
             _prefabs ??= ActorSpawnDefinitions.Find(_spawner.RegisteredPrefabs, _characters);
-            if (!_prefabs.TryGetValue(routine.CharacterId, out var prefab))
-                throw new InvalidOperationException($"Routine '{routine.RoutineId}' needs a spawnable prefab for character '{routine.CharacterId}'.");
+            if (!_prefabs.TryGetValue(routine.Character, out var prefab))
+                throw new InvalidOperationException($"Routine '{routine.Id}' needs a spawnable prefab for character '{routine.Character}'.");
             var instance = _resolver.Instantiate(prefab.gameObject, prefab.transform.position, prefab.transform.rotation, _root);
             instance.name = $"{prefab.name} (routine)";
             var npc = new Npc
@@ -310,7 +310,7 @@ namespace Core.Routines
                 if (npc.Route.Status == NavigationMoveStatus.Moving) return;
                 // Something stopped the walk on the way; carry on as if it had arrived, like an NPC catching up off-screen.
                 if (npc.Route.Status != NavigationMoveStatus.Arrived)
-                    Debug.LogWarning($"Routine '{npc.Day.Timetable.Plan.Routine.RoutineId}': walking on '{_mapId}' stopped " +
+                    Debug.LogWarning($"Routine '{npc.Day.Timetable.Plan.Routine.Id}': walking on '{_mapId}' stopped " +
                         $"({npc.Route.Error}). Placing the character at the end of the walk.", npc.Character);
                 npc.Route.Dispose();
                 npc.Route = null;
@@ -429,7 +429,7 @@ namespace Core.Routines
             var dialogue = plan.DialogueAt(segment.GoalIndex, arrived: !segment.IsWalk && !walking);
             if (npc.Talk) npc.Talk.UseDialogue(dialogue);
             else if (dialogue != null)
-                throw new InvalidOperationException($"Routine '{plan.Routine.RoutineId}' sets the dialogue '{dialogue}', but " +
+                throw new InvalidOperationException($"Routine '{plan.Routine.Id}' sets the dialogue '{dialogue}', but " +
                     $"character '{npc.Character.CharacterId}' has no {nameof(ShowVulcanusDialogueInteractable)} to say it.");
         }
 
@@ -468,9 +468,9 @@ namespace Core.Routines
         }
 
         private VulcanusMapAnchor Anchor(RoutinePlace place) =>
-            _maps.TryGetAnchor(place.AnchorId, out var anchor)
+            _maps.TryGetAnchor(place.Anchor, out var anchor)
                 ? anchor
-                : throw new InvalidOperationException($"Map '{place.MapId}' has no anchor '{place.AnchorId}'.");
+                : throw new InvalidOperationException($"Map '{place.Map}' has no anchor '{place.Anchor}'.");
 
         /// <summary>A timetable position, in the current map's local space, in the world.</summary>
         private Vector2 ToWorld(Vector2 local) => _maps.CurrentMap.transform.TransformPoint(local);

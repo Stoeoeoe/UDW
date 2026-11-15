@@ -24,7 +24,7 @@ namespace Core.Dialogue.Vulcanus
             }
             catch (Exception exception)
             {
-                Debug.LogError($"[VulcanusLuaDialogueScriptEngine] Condition failed in '{context?.CurrentDialogue?.DialogueId}': {exception}");
+                Debug.LogError($"[VulcanusLuaDialogueScriptEngine] Condition failed in '{context?.CurrentDialogue?.Id}': {exception}");
                 return false;
             }
         }
@@ -38,7 +38,7 @@ namespace Core.Dialogue.Vulcanus
             }
             catch (Exception exception)
             {
-                Debug.LogError($"[VulcanusLuaDialogueScriptEngine] Action failed in '{context?.CurrentDialogue?.DialogueId}': {exception}");
+                Debug.LogError($"[VulcanusLuaDialogueScriptEngine] Action failed in '{context?.CurrentDialogue?.Id}': {exception}");
                 return false;
             }
         }

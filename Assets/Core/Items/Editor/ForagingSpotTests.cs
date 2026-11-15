@@ -119,7 +119,7 @@ namespace Core.Items.Editor
         {
             var item = Game.Asset<ForageableItem>();
             var data = new SerializedObject(item);
-            data.FindProperty("itemId").stringValue = "test:unregistered-forage";
+            data.FindProperty("<Id>k__BackingField").stringValue = "test:unregistered-forage";
             data.ApplyModifiedPropertiesWithoutUndo();
             Assert.Throws<InvalidOperationException>(() => PickupConfigurationValidation.CheckItem(item));
         }
@@ -214,9 +214,9 @@ namespace Core.Items.Editor
         public void PerItemLifetimeMustBePositive()
         {
             var item = Game.Asset<ForageableItem>();
-            Reflect.Set(item, "itemId", "test:forage");
-            Reflect.Set(item, "groundLifetimeDays", 0);
-            Assert.That(item.ValidateConfiguration().Any(e => e.Setting == "groundLifetimeDays"), Is.True);
+            Reflect.Set(item, "Id", "test:forage");
+            Reflect.Set(item, "GroundLifetimeDays", 0);
+            Assert.That(item.ValidateConfiguration().Any(e => e.Setting == "GroundLifetimeDays"), Is.True);
         }
 
         [Test]

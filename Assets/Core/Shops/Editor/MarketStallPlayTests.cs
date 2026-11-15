@@ -49,20 +49,20 @@ namespace Core.Shops.Editor
             var shop = shops.Require("base:market_seeds");
 
             var seeds = shops.GetOfferings(shop).Single();
-            Assert.That(seeds.Item.ItemId, Is.EqualTo("base:broad_bean_seeds"));
+            Assert.That(seeds.Item.Id, Is.EqualTo("base:broad_bean_seeds"));
             Assert.That(seeds.Price, Is.GreaterThan(0));
-            Assert.That(shops.Buy(shop, seeds.Item.ItemId, player.Wallet, player.MainInventory, 2), Is.EqualTo(ShopTradeResult.Success));
+            Assert.That(shops.Buy(shop, seeds.Item.Id, player.Wallet, player.MainInventory, 2), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(player.Wallet.Balance, Is.EqualTo(startingMoney - 2 * seeds.Price));
-            Assert.That(Count(player, seeds.Item.ItemId), Is.EqualTo(8), "Six starting seeds and the two bought.");
+            Assert.That(Count(player, seeds.Item.Id), Is.EqualTo(8), "Six starting seeds and the two bought.");
 
             var beans = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Plants/BroadBeans/BroadBeansProduce.asset");
             Assert.That(player.MainInventory.AddItem(beans, 3), Is.True);
-            var slot = player.MainInventory.GetSnapshot().ToList().FindIndex(stack => stack.IsOccupied && stack.ItemId == beans.ItemId);
+            var slot = player.MainInventory.GetSnapshot().ToList().FindIndex(stack => stack.IsOccupied && stack.ItemId == beans.Id);
             var balance = player.Wallet.Balance;
             Assert.That(shops.Sell(shop, slot, player.Wallet, player.MainInventory, 3), Is.EqualTo(ShopTradeResult.Success));
             Assert.That(shops.GetSellPrice(beans), Is.GreaterThan(0));
             Assert.That(player.Wallet.Balance, Is.EqualTo(balance + 3 * shops.GetSellPrice(beans)));
-            Assert.That(Count(player, beans.ItemId), Is.Zero);
+            Assert.That(Count(player, beans.Id), Is.Zero);
 
             Assert.That(ShopUIDocumentPresenter.Instance, Is.Not.Null, "The shop screen is part of the game's systems.");
             stall.GetComponent<ShowShopInteractable>().TriggerInteraction(player);

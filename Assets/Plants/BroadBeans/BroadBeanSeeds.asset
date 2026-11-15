@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f099f2ad68b04f22a2c363b37d0a75b8, type: 3}
   m_Name: BroadBeanSeeds
   m_EditorClassIdentifier: Assembly-CSharp::Plants.SeedItem
-  itemId: base:broad_bean_seeds
-  itemName: Broad Bean Seeds
-  category: Seeds
-  icon: {fileID: 21300000, guid: 78db617cd665eaf4990c7237dc4d47f1, type: 3}
-  description: Plant on tilled soil. Ready to pick in about eight days of watering.
-  maxStackSize: 99
-  preventDropping: 0
-  buyBasePrice: 15
-  sellBasePrice: 0
-  worldRepresentationPrefab: {fileID: 0}
-  pickupSound: {fileID: 0}
-  placeableOnTerrainTypes: 01000000i
-  plantData: {fileID: 11400000, guid: d43cb9fb53ce50d4d9764ba51ca7415f, type: 2}
+  <Id>k__BackingField: base:broad_bean_seeds
+  <Name>k__BackingField: Broad Bean Seeds
+  <Category>k__BackingField: Seeds
+  <Icon>k__BackingField: {fileID: 21300000, guid: 78db617cd665eaf4990c7237dc4d47f1, type: 3}
+  <Description>k__BackingField: Plant on tilled soil. Ready to pick in about eight days of watering.
+  <MaxStackSize>k__BackingField: 99
+  <PreventDropping>k__BackingField: 0
+  <BuyBasePrice>k__BackingField: 15
+  <SellBasePrice>k__BackingField: 0
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
+  <PlaceableOnTerrainTypes>k__BackingField: 01000000i
+  <PlantData>k__BackingField: {fileID: 11400000, guid: d43cb9fb53ce50d4d9764ba51ca7415f, type: 2}

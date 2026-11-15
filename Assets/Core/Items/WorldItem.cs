@@ -56,7 +56,7 @@ namespace Core.Items
                 }
                 else
                 {
-                    root = new GameObject(definition.ItemName + " drop");
+                    root = new GameObject(definition.Name + " drop");
                     root.SetActive(false);
                     root.transform.SetParent(staging.transform, false);
                     root.transform.position = position;
@@ -240,7 +240,7 @@ namespace Core.Items
                 AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EditorUI/Resources/x_gizmo.png");
 
             string label = item != null
-                ? (string.IsNullOrEmpty(item.ItemName) ? item.name : item.ItemName)
+                ? (string.IsNullOrEmpty(item.Name) ? item.name : item.Name)
                 : "No Item";
 
             var centeredStyle = new GUIStyle(GUI.skin.label)

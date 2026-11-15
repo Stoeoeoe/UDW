@@ -327,7 +327,7 @@ namespace Core.Dialogue.Vulcanus
             var character = hasSpeaker ? _characters.Require(speaker) : null;
             var portrait = character ? character.PortraitFor(emotion) : null;
 
-            _speakerLabel.text = character ? character.DisplayName : string.Empty;
+            _speakerLabel.text = character ? character.Name : string.Empty;
             _portrait.style.backgroundImage = portrait ? new StyleBackground(portrait) : StyleKeyword.None;
             _portrait.EnableInClassList("is-empty", !portrait);
             if (portrait) SizePortrait(portrait);

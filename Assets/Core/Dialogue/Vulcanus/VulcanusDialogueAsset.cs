@@ -4,44 +4,38 @@ using System.Linq;
 using Core.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Core.Dialogue.Vulcanus
 {
     /// <summary>A Vulcanus dialogue: its node graph, read straight from *.runtime.dialogue.json, and its texts.</summary>
     [CreateAssetMenu(fileName = "VulcanusDialogue", menuName = "Game/Vulcanus/Dialogue")]
+    [ImportedData]
     public sealed class VulcanusDialogueAsset : ValidatedScriptableObject<VulcanusDialogueValidator>
     {
         /// <summary>A translated text, from the dialogue's sibling .i18n.json.</summary>
-        [Serializable]
+        [Serializable, ImportedData]
         public sealed class Message
         {
-            [SerializeField] private string msgKey;
-            [SerializeField] private string text;
-            public string MsgKey => msgKey;
-            public string Text => text;
+            [field: SerializeField] public string MsgKey { get; private set; }
+            [field: SerializeField] public string Text { get; private set; }
         }
 
-        internal const string NodesField = nameof(nodes);
+        internal const string NodesField = nameof(Nodes);
 
-        [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly, Validation.OneOf(NodesField, nameof(VulcanusDialogueNode.Id))] private string startNodeId;
-        [SerializeReference, ReadOnly, Validation.Nested, Validation.Unique(nameof(VulcanusDialogueNode.Id)),
-         JsonProperty(ItemConverterType = typeof(DialogueNodeJsonConverter))]
-        private VulcanusDialogueNode[] nodes = Array.Empty<VulcanusDialogueNode>();
-        [SerializeField, ReadOnly] private Message[] messages = Array.Empty<Message>();
+        [field: SerializeField] public string Id { get; private set; }
+        [field: SerializeField, Validation.OneOf(NodesField, nameof(VulcanusDialogueNode.Id))] public string StartNodeId { get; private set; }
+        [field: SerializeReference, Validation.Nested, Validation.Unique(nameof(VulcanusDialogueNode.Id)),
+                JsonProperty(ItemConverterType = typeof(DialogueNodeJsonConverter))]
+        public VulcanusDialogueNode[] Nodes { get; private set; } = Array.Empty<VulcanusDialogueNode>();
+        [field: SerializeField] public Message[] Messages { get; private set; } = Array.Empty<Message>();
 
         [NonSerialized] private Dictionary<string, int> _nodeIndexById;
         [NonSerialized] private Dictionary<string, string> _textByKey;
 
-        public string DialogueId => id;
-        public string StartNodeId => startNodeId;
-        public IReadOnlyList<VulcanusDialogueNode> Nodes => nodes;
-
         public bool TryGetNode(string nodeId, out VulcanusDialogueNode node)
         {
-            node = nodeId != null && NodeIndexById.TryGetValue(nodeId, out var index) ? nodes[index] : null;
+            node = nodeId != null && NodeIndexById.TryGetValue(nodeId, out var index) ? Nodes[index] : null;
             return node != null;
         }
 
@@ -49,19 +43,19 @@ namespace Core.Dialogue.Vulcanus
         public bool TryGetExecutableNodeAfter(string nodeId, out VulcanusDialogueNode node)
         {
             var start = nodeId != null && NodeIndexById.TryGetValue(nodeId, out var index) ? index + 1 : 0;
-            node = nodes.Skip(start).FirstOrDefault(candidate => candidate.IsExecutable);
+            node = Nodes.Skip(start).FirstOrDefault(candidate => candidate.IsExecutable);
             return node != null;
         }
 
         public string ResolveLocalizedText(string msgKey, string fallbackText)
         {
-            _textByKey ??= messages.ToDictionary(message => message.MsgKey, message => message.Text);
+            _textByKey ??= Messages.ToDictionary(message => message.MsgKey, message => message.Text);
             return !string.IsNullOrEmpty(msgKey) && _textByKey.TryGetValue(msgKey, out var text) && !string.IsNullOrEmpty(text)
                 ? text : fallbackText ?? string.Empty;
         }
 
         private Dictionary<string, int> NodeIndexById =>
-            _nodeIndexById ??= nodes.Select((node, index) => (node.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index);
+            _nodeIndexById ??= Nodes.Select((node, index) => (node.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index);
     }
 
     public sealed class VulcanusDialogueValidator : ScriptableObjectValidator<VulcanusDialogueAsset>
@@ -99,87 +93,65 @@ namespace Core.Dialogue.Vulcanus
             throw new NotSupportedException("Definitions are only read.");
     }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public abstract class VulcanusDialogueNode
     {
-        [SerializeField] private string id;
-        public string Id => id;
+        [field: SerializeField] public string Id { get; private set; }
         public virtual bool IsExecutable => true;
     }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class VulcanusDialogueLineNode : VulcanusDialogueNode
     {
-        [Tooltip("Leave empty for neutral text such as signs, boards or narration, without a portrait or nameplate.")]
-        [SerializeField] private string speaker;
-        [SerializeField] private string emotion;
-        [SerializeField] private string text;
-        [SerializeField] private string msgKey;
-        [SerializeField, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id))] private string next;
-
-        public string Speaker => speaker;
-        public string Emotion => emotion;
-        public string Text => text;
-        public string MsgKey => msgKey;
-        public string Next => next;
+        [field: SerializeField, Tooltip("Leave empty for neutral text such as signs, boards or narration, without a portrait or nameplate.")]
+        public string Speaker { get; private set; }
+        [field: SerializeField] public string Emotion { get; private set; }
+        [field: SerializeField] public string Text { get; private set; }
+        [field: SerializeField] public string MsgKey { get; private set; }
+        [field: SerializeField, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id))] public string Next { get; private set; }
     }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class VulcanusDialogueChoiceNode : VulcanusDialogueNode
     {
-        [SerializeField, Validation.NotEmpty, Validation.Nested]
-        private VulcanusDialogueChoiceOption[] options = Array.Empty<VulcanusDialogueChoiceOption>();
-        public IReadOnlyList<VulcanusDialogueChoiceOption> Options => options;
+        [field: SerializeField, Validation.NotEmpty, Validation.Nested]
+        public VulcanusDialogueChoiceOption[] Options { get; private set; } = Array.Empty<VulcanusDialogueChoiceOption>();
     }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class VulcanusDialogueActionNode : VulcanusDialogueNode
     {
-        [SerializeField, Validation.LuaChunk] private string lua;
-        [SerializeField, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id))] private string next;
-
-        public string Lua => lua;
-        public string Next => next;
+        [field: SerializeField, Validation.LuaChunk] public string Lua { get; private set; }
+        [field: SerializeField, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id))] public string Next { get; private set; }
     }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class VulcanusDialogueJumpNode : VulcanusDialogueNode
     {
-        [Tooltip("Empty jumps within this dialogue.")]
-        [SerializeField] private string targetDialogueId;
-        [SerializeField, Validation.NotEmpty,
-         Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id), UnlessSet = nameof(targetDialogueId))]
-        private string targetNodeId;
-
-        public string TargetDialogueId => targetDialogueId;
-        public string TargetNodeId => targetNodeId;
+        [field: SerializeField, Tooltip("Empty jumps within this dialogue.")] public string TargetDialogueId { get; private set; }
+        [field: SerializeField, Validation.NotEmpty,
+                Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(Id), UnlessSet = nameof(TargetDialogueId))]
+        public string TargetNodeId { get; private set; }
     }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class VulcanusDialogueCommentNode : VulcanusDialogueNode
     {
-        [SerializeField] private string text;
-        public string Text => text;
+        [field: SerializeField] public string Text { get; private set; }
         public override bool IsExecutable => false;
     }
 
     [Serializable]
     public sealed class VulcanusDialogueEndNode : VulcanusDialogueNode { }
 
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class VulcanusDialogueChoiceOption
     {
-        [SerializeField] private string id;
-        [SerializeField] private string text;
-        [SerializeField] private string msgKey;
-        [SerializeField, Validation.LuaExpression] private string condition;
-        [SerializeField, Validation.NotEmpty, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(VulcanusDialogueNode.Id))]
-        private string targetNodeId;
-
-        public string Id => id;
-        public string Text => text;
-        public string MsgKey => msgKey;
-        public string Condition => condition;
-        public string TargetNodeId => targetNodeId;
+        [field: SerializeField] public string Id { get; private set; }
+        [field: SerializeField] public string Text { get; private set; }
+        [field: SerializeField] public string MsgKey { get; private set; }
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
+        [field: SerializeField, Validation.NotEmpty, Validation.OneOf(VulcanusDialogueAsset.NodesField, nameof(VulcanusDialogueNode.Id))]
+        public string TargetNodeId { get; private set; }
     }
 }

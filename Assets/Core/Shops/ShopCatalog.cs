@@ -10,7 +10,7 @@ namespace Core.Shops
     {
         public const string ResourceName = "ShopCatalog";
         public override string Path => "Assets";
-        protected override string GetDefinitionId(Shop definition) => definition.ShopId;
+        protected override string GetDefinitionId(Shop definition) => definition.Id;
 
         public Shop Require(string id) =>
             Get(id) ?? throw new InvalidOperationException($"Shop '{id}' is not registered and enabled.");

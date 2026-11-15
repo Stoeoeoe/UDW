@@ -40,13 +40,13 @@ namespace Core.Common.Editor
         {
             var asset = ScriptableObject.CreateInstance<T>();
             _objects.Add(asset);
-            if (asset is ItemDefinition item) Set(item, "itemId", "test:item");
+            if (asset is ItemDefinition item) Set(item, "Id", "test:item");
             if (asset is EquipmentSlotDefinition slot) TestConfiguration.Set(slot, "_id", "test:head");
             if (asset is SkillDefinition skill) Set(skill, "_skillId", "test:skill");
             if (asset is DeityDefinition deity) Set(deity, "_id", "legacy-deity");
             if (asset is TypewriterSound sound) TestConfiguration.Set(sound, "_soundId", "test:sound");
             if (asset is ToolData tool) TestConfiguration.Set(tool, "toolEffectConfiguration", new ToolEffectConfiguration { AffectedTileOffsets = new[] { Vector2Int.up } });
-            if (asset is SeedItem seed) TestConfiguration.Set(seed, "plantData", AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset"));
+            if (asset is SeedItem seed) TestConfiguration.Set(seed, "PlantData", AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset"));
             return asset;
         }
 
@@ -67,24 +67,24 @@ namespace Core.Common.Editor
         public void ItemSubtypeHooksRunBothCommonAndSubtypeRulesWithoutFillingInIds()
         {
             var tool = Asset<ToolData>();
-            Set(tool, "itemId", " ");
-            Set(tool, "maxStackSize", 0);
+            Set(tool, "Id", " ");
+            Set(tool, "MaxStackSize", 0);
             TestConfiguration.Set(tool, "staminaCost", -1);
             TestConfiguration.Set(tool, "actionDuration", float.NaN);
             TestConfiguration.Set(tool, "toolEffectConfiguration", null);
             Assert.That(tool.ValidateConfiguration().Select(e => e.Setting),
-                Does.Contain("itemId").And.Contain("maxStackSize").And.Contain("staminaCost").And.Contain("actionDuration")
+                Does.Contain("Id").And.Contain("MaxStackSize").And.Contain("staminaCost").And.Contain("actionDuration")
                     .And.Contain("toolEffectConfiguration"));
-            Assert.That(tool.ItemId, Is.EqualTo(" "));
+            Assert.That(tool.Id, Is.EqualTo(" "));
         }
 
         [Test]
         public void SeedAndConsumableRulesRejectMissingPlantAndNonpositiveEffect()
         {
-            var seed = Asset<SeedItem>(); TestConfiguration.Set(seed, "plantData", null);
-            AssertError(seed, "plantData");
-            var consumable = Asset<StaminaConsumableItem>(); TestConfiguration.Set(consumable, "staminaRestored", 0);
-            AssertError(consumable, "staminaRestored");
+            var seed = Asset<SeedItem>(); TestConfiguration.Set(seed, "PlantData", null);
+            AssertError(seed, "PlantData");
+            var consumable = Asset<StaminaConsumableItem>(); TestConfiguration.Set(consumable, "StaminaRestored", 0);
+            AssertError(consumable, "StaminaRestored");
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace Core.Common.Editor
             var shop = Asset<Shop>();
             Core.Tile.Editor.Vulcanus.VulcanusJson.Fill(shop,
                 "{ offerings: [{ itemId: 'test:a', price: 1 }, { itemId: 'test:a', price: -1 }, { itemId: '', price: 1 }] }");
-            AssertError(shop, "offerings[1].itemId"); AssertError(shop, "offerings[1].price"); AssertError(shop, "offerings[2].itemId");
+            AssertError(shop, "Offerings[1].ItemId"); AssertError(shop, "Offerings[1].Price"); AssertError(shop, "Offerings[2].ItemId");
         }
 
         [Test]
@@ -177,10 +177,10 @@ namespace Core.Common.Editor
         [Test]
         public void InheritedItemEditHookReportsSubtypeRulesAndDoesNotMintAnId()
         {
-            var item = Asset<StaminaConsumableItem>(); Set(item, "itemId", ""); TestConfiguration.Set(item, "StaminaRestored", 0);
+            var item = Asset<StaminaConsumableItem>(); Set(item, "Id", ""); TestConfiguration.Set(item, "StaminaRestored", 0);
             foreach (var error in item.ValidateConfiguration()) LogAssert.Expect(LogType.Error, error.ToString());
             typeof(ValidatedScriptableObject).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(item, null);
-            Assert.That(item.ItemId, Is.Empty); Assert.That(item.StaminaRestored, Is.Zero);
+            Assert.That(item.Id, Is.Empty); Assert.That(item.StaminaRestored, Is.Zero);
         }
 
         [Test]
@@ -219,7 +219,8 @@ namespace Core.Common.Editor
         {
             for (var type = target.GetType(); type != null; type = type.BaseType)
             {
-                var field = type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                var field = type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                    ?? type.GetField($"<{name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (field == null) continue;
                 field.SetValue(target, value); return;
             }

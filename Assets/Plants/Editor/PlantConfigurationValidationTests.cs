@@ -31,7 +31,7 @@ namespace Plants.Editor
             _plant = ScriptableObject.CreateInstance<PlantData>();
             _plant.name = "Validation test crop";
             _produce = ScriptableObject.CreateInstance<ProduceItem>();
-            Set(_produce, "itemId", "test:produce");
+            Set(_produce, "Id", "test:produce");
             _visual = new GameObject("Test representation");
             Set(_plant, "_harvestItem", _produce);
             Set(_plant, "growthStages", new List<GrowthStage> { Stage(0), Stage(2), Stage(5, true) });
@@ -145,8 +145,8 @@ namespace Plants.Editor
         [TestCase(null)]
         public void MissingItemIdentityIsReported(string id)
         {
-            Set(_produce, "itemId", id);
-            Assert.That(_plant.ValidateConfiguration().Any(e => e.Setting == "_harvestItem" && e.Message.Contains("ItemId")), Is.True);
+            Set(_produce, "Id", id);
+            Assert.That(_plant.ValidateConfiguration().Any(e => e.Setting == "_harvestItem" && e.Message.Contains("nonblank Id")), Is.True);
         }
 
         [TestCase("null")]

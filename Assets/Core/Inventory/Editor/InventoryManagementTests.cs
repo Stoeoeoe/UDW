@@ -35,8 +35,8 @@ namespace Core.Inventory.Editor
         private T Item<T>(string id, int max) where T : ItemDefinition
         {
             var item = Game.Asset<T>();
-            Set(item, "itemId", id);
-            Set(item, "maxStackSize", max);
+            Set(item, "Id", id);
+            Set(item, "MaxStackSize", max);
             return item;
         }
         [Test] public void SplitMergeAndCancelConserveQuantities()
@@ -89,7 +89,7 @@ namespace Core.Inventory.Editor
             Assert.That(_bag.Actions.TryUnequip(slot), Is.True);
             Assert.That(_bag.Loadout.GetEquipment(slot.Id).IsOccupied, Is.False);
             var restored = SerializationUtility.DeserializeValue<InventoryState>(SerializationUtility.SerializeValue(_state, DataFormat.Binary), DataFormat.Binary);
-            Assert.That(restored.Slots[0].ItemId, Is.EqualTo(hat.ItemId));
+            Assert.That(restored.Slots[0].ItemId, Is.EqualTo(hat.Id));
         }
         [Test] public void ToolbeltReferencesFollowToolsAndSurviveSerializationWithoutUsingBagSpace()
         {
@@ -103,7 +103,7 @@ namespace Core.Inventory.Editor
             Assert.That(_bag.Loadout.ActiveHandItem, Is.SameAs(tool));
             Assert.That(_bag.Loadout.ActiveHandInventoryIndex, Is.EqualTo(1));
             var restored = SerializationUtility.DeserializeValue<InventoryState>(SerializationUtility.SerializeValue(_state, DataFormat.Binary), DataFormat.Binary);
-            _bag.Bind(restored, id => id == tool.ItemId ? tool : null);
+            _bag.Bind(restored, id => id == tool.Id ? tool : null);
             Assert.That(_bag.Loadout.GetToolbeltTool(9), Is.SameAs(tool));
             Assert.That(_bag.Loadout.ActiveHandItem, Is.SameAs(tool));
             _bag.RemoveItemAt(1);
@@ -128,7 +128,7 @@ namespace Core.Inventory.Editor
             _bag.AddItem(tool, 1);
             Assert.That(loadout.AssignToolbeltSlot(0, 0), Is.True);
             Assert.That(loadout.SelectToolbeltSlot(0), Is.True);
-            Assert.That(replacement.SelectedItemId, Is.EqualTo(tool.ItemId));
+            Assert.That(replacement.SelectedItemId, Is.EqualTo(tool.Id));
             Assert.That(original.SelectedItemId, Is.Null);
             Assert.That(original.Toolbelt, Has.All.Null);
             var wallet = new Wallet(); wallet.Add(10);

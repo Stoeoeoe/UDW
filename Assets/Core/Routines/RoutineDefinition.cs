@@ -2,21 +2,18 @@ using System;
 using Core.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Core.Routines
 {
     /// <summary>A map anchor a routine starts from or walks to.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class RoutinePlace
     {
-        [SerializeField, ReadOnly] private string map;
-        [SerializeField, ReadOnly] private string anchor;
-        public string MapId => map;
-        public string AnchorId => anchor;
+        [field: SerializeField] public string Map { get; private set; }
+        [field: SerializeField] public string Anchor { get; private set; }
 
-        public override string ToString() => $"{map}/{anchor}";
+        public override string ToString() => $"{Map}/{Anchor}";
 
         /// <summary>Reads a goal's destination: "home" as an empty place, otherwise a map anchor.</summary>
         public sealed class DestinationJsonConverter : JsonConverter<RoutinePlace>
@@ -36,95 +33,75 @@ namespace Core.Routines
     }
 
     /// <summary>What a character does at a goal's destination.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class RoutineActivity
     {
-        [SerializeField, ReadOnly] private string animation;
         /// <summary>Character animation played at the destination; empty for none.</summary>
-        public string AnimationId => animation;
+        [field: SerializeField] public string Animation { get; private set; }
     }
 
     /// <summary>One stop of a day: when to set off, where to go and what to do there.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class RoutineGoal
     {
-        [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly, JsonConverter(typeof(ClockTimeJsonConverter)), Tooltip("Minutes after midnight.")]
-        private int departAt;
-        [SerializeField, ReadOnly, Validation.LuaExpression] private string condition;
-        [SerializeField, ReadOnly, JsonConverter(typeof(RoutinePlace.DestinationJsonConverter)),
-         Tooltip("Empty for the routine's home.")]
-        private RoutinePlace destination = new();
-        [SerializeField, ReadOnly] private RoutineActivity activity = new();
-        [SerializeField, ReadOnly, Tooltip("Dialogue while walking here; empty keeps the one before.")] private string walkingDialogue;
-        [SerializeField, ReadOnly, Tooltip("Dialogue once arrived; empty keeps the one before.")] private string dialogue;
-
-        public string Id => id;
-        public int DepartMinute => departAt;
+        [field: SerializeField] public string Id { get; private set; }
+        [field: SerializeField, JsonConverter(typeof(ClockTimeJsonConverter)), Tooltip("Minutes after midnight.")]
+        public int DepartAt { get; private set; }
         /// <summary>Read-only Lua expression; empty means always.</summary>
-        public string Condition => condition;
-        public bool ToHome => string.IsNullOrEmpty(destination.MapId);
-        /// <summary>Null when <see cref="ToHome"/>.</summary>
-        public RoutinePlace Destination => ToHome ? null : destination;
-        /// <summary>Character animation played at the destination; empty for none.</summary>
-        public string ActivityAnimationId => activity.AnimationId;
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
+        /// <summary>An empty place (no map) means the routine's home; see <see cref="ToHome"/>.</summary>
+        [field: SerializeField, JsonConverter(typeof(RoutinePlace.DestinationJsonConverter)), Tooltip("Empty for the routine's home.")]
+        public RoutinePlace Destination { get; private set; } = new();
+        [field: SerializeField] public RoutineActivity Activity { get; private set; } = new();
         /// <summary>Dialogue ID while walking to this goal; empty keeps the dialogue in effect before.</summary>
-        public string WalkingDialogueId => walkingDialogue;
+        [field: SerializeField, Tooltip("Dialogue while walking here; empty keeps the one before.")] public string WalkingDialogue { get; private set; }
         /// <summary>Dialogue ID once arrived; empty keeps the dialogue in effect before.</summary>
-        public string DialogueId => dialogue;
+        [field: SerializeField, Tooltip("Dialogue once arrived; empty keeps the one before.")] public string Dialogue { get; private set; }
+
+        public bool ToHome => string.IsNullOrEmpty(Destination.Map);
+        /// <summary>Character animation played at the destination; empty for none.</summary>
+        public string ActivityAnimationId => Activity.Animation;
     }
 
     /// <summary>Goals for one kind of day: an override, a variant or a member of a <c>pickOne</c> pool.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public abstract class RoutineDay
     {
-        [SerializeField, ReadOnly] private string id;
-        [SerializeField, ReadOnly, Validation.LuaExpression] private string condition;
-        [SerializeField, ReadOnly, Validation.Nested] private RoutineGoal[] goals = Array.Empty<RoutineGoal>();
-
-        public string Id => id;
+        [field: SerializeField] public string Id { get; private set; }
         /// <summary>Read-only Lua expression; empty means always.</summary>
-        public string Condition => condition;
-        public RoutineGoal[] Goals => goals;
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
+        [field: SerializeField, Validation.Nested] public RoutineGoal[] Goals { get; private set; } = Array.Empty<RoutineGoal>();
     }
 
     /// <summary>A member of a <c>pickOne</c> pool.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class RoutineChoice : RoutineDay
     {
-        [SerializeField, ReadOnly] private float weight = 1f;
         /// <summary>Relative chance of being chosen among the pool's matching members.</summary>
-        public float Weight => weight;
+        [field: SerializeField] public float Weight { get; private set; } = 1f;
     }
 
     /// <summary>An override or variant: its own goals, or a pool of choices when <see cref="IsPool"/>.</summary>
-    [Serializable]
+    [Serializable, ImportedData]
     public sealed class RoutineEntry : RoutineDay
     {
-        [SerializeField, ReadOnly, Validation.Nested] private RoutineChoice[] pickOne = Array.Empty<RoutineChoice>();
-        public RoutineChoice[] PickOne => pickOne;
-        public bool IsPool => pickOne is { Length: > 0 };
+        [field: SerializeField, Validation.Nested] public RoutineChoice[] PickOne { get; private set; } = Array.Empty<RoutineChoice>();
+        public bool IsPool => PickOne is { Length: > 0 };
     }
 
     /// <summary>An NPC's daily routine authored in Vulcanus (*.routine.json). Plan a day with <see cref="RoutinePlanner"/>.</summary>
+    [ImportedData]
     public sealed class RoutineDefinition : ValidatedScriptableObject<RoutineValidator>
     {
-        [SerializeField, ReadOnly, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
-        private string id;
-        [SerializeField, ReadOnly, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true)]
-        private string character;
-        [SerializeField, ReadOnly, Validation.Required("The source requires a home.")] private RoutinePlace home;
-        [SerializeField, ReadOnly, Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
-        private string dialogue;
-        [SerializeField, ReadOnly, Validation.Nested] private RoutineEntry[] overrides = Array.Empty<RoutineEntry>();
-        [SerializeField, ReadOnly, Validation.Nested] private RoutineEntry[] variants = Array.Empty<RoutineEntry>();
-
-        public string RoutineId => id;
-        public string CharacterId => character;
-        public RoutinePlace Home => home;
+        [field: SerializeField, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
+        public string Id { get; private set; }
+        [field: SerializeField, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true)]
+        public string Character { get; private set; }
+        [field: SerializeField, Validation.Required("The source requires a home.")] public RoutinePlace Home { get; private set; }
         /// <summary>Dialogue ID at the start of each day; empty when the character cannot be talked to until a goal sets one.</summary>
-        public string DialogueId => dialogue;
-        public RoutineEntry[] Overrides => overrides;
-        public RoutineEntry[] Variants => variants;
+        [field: SerializeField, Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
+        public string Dialogue { get; private set; }
+        [field: SerializeField, Validation.Nested] public RoutineEntry[] Overrides { get; private set; } = Array.Empty<RoutineEntry>();
+        [field: SerializeField, Validation.Nested] public RoutineEntry[] Variants { get; private set; } = Array.Empty<RoutineEntry>();
     }
 }

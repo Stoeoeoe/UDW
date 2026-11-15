@@ -55,7 +55,7 @@ namespace Core.Routines.Editor
             fabia = ReEnter(service, level);
             yield return null;
             yield return null; // The activity starts once Fabia has entered the location.
-            Assert.That(FeetDistance(fabia, stay.Place.AnchorId), Is.LessThan(0.05f));
+            Assert.That(FeetDistance(fabia, stay.Place.Anchor), Is.LessThan(0.05f));
             Assert.That(PoseActive(fabia), Is.True, "The activity plays at the destination.");
 
             // Leaving the map removes Fabia; nothing about them is saved.
@@ -139,7 +139,7 @@ namespace Core.Routines.Editor
             clock.Resume(this);
 
             yield return WaitUntil(() => !fabia.Controller.IsMovementOwned && PoseActive(fabia), "Fabia walks on, arrives and starts the activity.");
-            Assert.That(FeetDistance(fabia, stay.Place.AnchorId), Is.LessThan(0.05f));
+            Assert.That(FeetDistance(fabia, stay.Place.Anchor), Is.LessThan(0.05f));
             Assert.That(Single(service), Is.SameAs(fabia), "Fabia is the same character all along.");
 
             // When the stay ends, Fabia walks to the door they leave by and fades out.
@@ -160,8 +160,8 @@ namespace Core.Routines.Editor
 
         private static RoutineTimetable FabiasDay(RoutineNpcService service)
         {
-            var day = service.Timetables.Single(each => each.Plan.Routine.CharacterId == Fabia);
-            Assert.That(day.Plan.Routine.Home.MapId, Is.Not.EqualTo(Map), "These tests expect Fabia to live on another map.");
+            var day = service.Timetables.Single(each => each.Plan.Routine.Character == Fabia);
+            Assert.That(day.Plan.Routine.Home.Map, Is.Not.EqualTo(Map), "These tests expect Fabia to live on another map.");
             Assert.That(day.Segments.Count(s => !s.IsWalk && s.MapId == Map), Is.EqualTo(1), "Fabia stays once on this map.");
             Assert.That(MinuteOfDay(), Is.LessThan(day.Plan.Goals[0].DepartMinute), "The game starts before Fabia's first departure.");
             Assert.That(day.Warnings, Is.Empty);

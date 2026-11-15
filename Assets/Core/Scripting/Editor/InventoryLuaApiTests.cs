@@ -14,7 +14,7 @@ namespace Core.Scripting.Editor
         public void SetUp()
         {
             var item = Game.Asset<InventoryTestItem>();
-            ConfigurationTestData.Set(item, "ItemId", "test:wine");
+            ConfigurationTestData.Set(item, "Id", "test:wine");
             ConfigurationTestData.Set(item, "MaxStackSize", 10);
             Game.Catalog<ItemCatalog>(item);
             _bag = Game.CreatePlayer().MainInventory;

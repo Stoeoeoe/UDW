@@ -6,9 +6,7 @@ namespace Core.Items
 {
     public abstract class PlaceableItem : EquippableItem
     {
-        [SerializeField] protected TerrainType[] placeableOnTerrainTypes;
-
-        public TerrainType[] PlaceableOnTerrainTypes => placeableOnTerrainTypes;
+        [field: SerializeField] public TerrainType[] PlaceableOnTerrainTypes { get; private set; }
 
         public virtual GameObject GetPlaceableRepresentation() => null;
     }

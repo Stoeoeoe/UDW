@@ -32,10 +32,10 @@ namespace Core.Tile.Editor.Vulcanus
 
             foreach (var definition in entityDefinitions ?? Array.Empty<VulcanEntityDefinition>())
             {
-                if (definition == null || string.IsNullOrWhiteSpace(definition.EntityTypeId))
+                if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
                     continue;
 
-                existingByType.TryGetValue(definition.EntityTypeId, out var old);
+                existingByType.TryGetValue(definition.Id, out var old);
                 var mapping = new VulcanusProject.EntityPrefabMapping
                 {
                     prefab            = old?.prefab,
@@ -45,7 +45,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                 if (mapping.prefab == null)
                 {
-                    var candidates = FindCandidatePrefabPaths(definition.EntityTypeId, definition.DisplayName);
+                    var candidates = FindCandidatePrefabPaths(definition.Id, definition.DisplayName);
                     mapping.candidatePrefabPaths = candidates;
 
                     if (autoAssignSingleMatch && candidates.Length == 1)
@@ -58,11 +58,11 @@ namespace Core.Tile.Editor.Vulcanus
                 if (mapping.prefab == null)
                 {
                     unresolved++;
-                    warnings?.Add($"No prefab mapped for entity type '{definition.EntityTypeId}'. Assign it in a VulcanusWorldCatalog asset.");
+                    warnings?.Add($"No prefab mapped for entity type '{definition.Id}'. Assign it in a VulcanusWorldCatalog asset.");
                 }
 
                 result.Add(mapping);
-                existingByType.Remove(definition.EntityTypeId);
+                existingByType.Remove(definition.Id);
             }
 
             // Keep any manual rows for entity types not in the current definition.

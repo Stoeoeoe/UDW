@@ -36,7 +36,7 @@ namespace Plants
         private HarvestMethod _harvestMethod;
 
         [SerializeField, Validation.Required]
-        [Validation.MemberNotEmpty(nameof(ItemDefinition.ItemId), "The referenced harvest item must have a nonblank ItemId.")]
+        [Validation.MemberNotEmpty(nameof(ItemDefinition.Id), "The referenced harvest item must have a nonblank Id.")]
         private ItemDefinition _harvestItem;
 
         [SerializeField, Validation.Min(1)]

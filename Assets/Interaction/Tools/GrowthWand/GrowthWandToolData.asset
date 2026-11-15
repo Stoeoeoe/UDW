@@ -12,17 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13d0f48f3c714468a9f07bf00ebf1afc, type: 3}
   m_Name: GrowthWandToolData
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Tools.ToolData
-  itemId: base:growth_wand
-  itemName: Growth Wand
-  category: Tools
-  icon: {fileID: 21300000, guid: de8c0bdd2dc80e84a9f59c3e42c58eb5, type: 3}
-  description: Point at a nearby crop to push it on to its next growth stage.
-  maxStackSize: 1
-  preventDropping: 1
-  buyBasePrice: 0
-  sellBasePrice: 0
-  worldRepresentationPrefab: {fileID: 0}
-  pickupSound: {fileID: 0}
+  <Id>k__BackingField: base:growth_wand
+  <Name>k__BackingField: Growth Wand
+  <Category>k__BackingField: Tools
+  <Icon>k__BackingField: {fileID: 21300000, guid: de8c0bdd2dc80e84a9f59c3e42c58eb5, type: 3}
+  <Description>k__BackingField: Point at a nearby crop to push it on to its next growth stage.
+  <MaxStackSize>k__BackingField: 1
+  <PreventDropping>k__BackingField: 1
+  <BuyBasePrice>k__BackingField: 0
+  <SellBasePrice>k__BackingField: 0
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
   maxCharge: 0
   chargePerUsage: 0
   chargeColor: {r: 0.18, g: 0.55, b: 0.9, a: 1}

@@ -36,7 +36,7 @@ namespace Core.Dialogue.Vulcanus
         }
 
         public VulcanusDialogueExecutionContext ActiveContext => _activeContext;
-        public string CurrentDialogueId => _activeContext?.CurrentDialogue?.DialogueId;
+        public string CurrentDialogueId => _activeContext?.CurrentDialogue?.Id;
 
         public string CurrentSpeakerId =>
             _activeContext?.CurrentNode is VulcanusDialogueLineNode lineNode ? lineNode.Speaker : null;
@@ -122,7 +122,7 @@ namespace Core.Dialogue.Vulcanus
                     context.StepsExecuted++;
                     if (++stepsWithoutInput > MaxStepsWithoutInput)
                     {
-                        Debug.LogError($"Dialogue '{context.CurrentDialogue.DialogueId}' exceeded {MaxStepsWithoutInput} steps without player input.");
+                        Debug.LogError($"Dialogue '{context.CurrentDialogue.Id}' exceeded {MaxStepsWithoutInput} steps without player input.");
                         return;
                     }
 
@@ -232,7 +232,7 @@ namespace Core.Dialogue.Vulcanus
             // An empty Next means the flow ends here.
             if (string.IsNullOrWhiteSpace(nodeId)) return null;
             if (dialogue.TryGetNode(nodeId, out var node)) return node;
-            throw new InvalidOperationException($"Dialogue '{dialogue.DialogueId}' references missing node '{nodeId}'.");
+            throw new InvalidOperationException($"Dialogue '{dialogue.Id}' references missing node '{nodeId}'.");
         }
 
         private void FinishDialogue(VulcanusDialogueExecutionContext context)

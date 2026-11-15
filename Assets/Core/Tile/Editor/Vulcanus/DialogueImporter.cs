@@ -15,7 +15,7 @@ namespace Core.Tile.Editor.Vulcanus
 
         public static void ImportDialogue(AssetImportContext ctx)
         {
-            var dialogue = VulcanusJson.Import<VulcanusDialogueAsset>(ctx, "dialogue", definition => definition.DialogueId);
+            var dialogue = VulcanusJson.Import<VulcanusDialogueAsset>(ctx, "dialogue", definition => definition.Id);
             var i18nPath = ctx.assetPath[..^Extension.Length] + ".i18n.json";
             if (!File.Exists(i18nPath)) return;
             VulcanusImportHelpers.AddDependency(ctx, i18nPath);
@@ -34,9 +34,9 @@ namespace Core.Tile.Editor.Vulcanus
             foreach (var jump in dialogue.Nodes.OfType<VulcanusDialogueJumpNode>().Where(jump => !string.IsNullOrEmpty(jump.TargetDialogueId)))
             {
                 var target = catalog.Get(jump.TargetDialogueId)
-                    ?? throw new InvalidOperationException($"Dialogue '{dialogue.DialogueId}', jump '{jump.Id}' requires enabled dialogue '{jump.TargetDialogueId}'.");
+                    ?? throw new InvalidOperationException($"Dialogue '{dialogue.Id}', jump '{jump.Id}' requires enabled dialogue '{jump.TargetDialogueId}'.");
                 if (!target.TryGetNode(jump.TargetNodeId, out _))
-                    throw new InvalidOperationException($"Dialogue '{dialogue.DialogueId}', jump '{jump.Id}' references missing node '{jump.TargetNodeId}' in '{jump.TargetDialogueId}'.");
+                    throw new InvalidOperationException($"Dialogue '{dialogue.Id}', jump '{jump.Id}' references missing node '{jump.TargetNodeId}' in '{jump.TargetDialogueId}'.");
             }
         }
     }

@@ -12,19 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8a6edd58ea490c45981ee2780eb8224, type: 3}
   m_Name: EnergyTonic
   m_EditorClassIdentifier: Assembly-CSharp::Core.Items.AttributeBoostConsumableItem
-  itemId: base:energy-tonic
-  itemName: Energy Tonic
-  category: Consumable
-  icon: {fileID: 0}
-  description: Raises maximum stamina by 25% for two in-game hours. Does not restore stamina.
-  maxStackSize: 99
-  preventDropping: 0
-  buyBasePrice: 0
-  sellBasePrice: 0
-  worldRepresentationPrefab: {fileID: 0}
-  pickupSound: {fileID: 0}
-  boostDurationMinutes: 120
-  boosts:
+  <Id>k__BackingField: base:energy-tonic
+  <Name>k__BackingField: Energy Tonic
+  <Category>k__BackingField: Consumable
+  <Icon>k__BackingField: {fileID: 0}
+  <Description>k__BackingField: Raises maximum stamina by 25% for two in-game hours. Does not restore stamina.
+  <MaxStackSize>k__BackingField: 99
+  <PreventDropping>k__BackingField: 0
+  <BuyBasePrice>k__BackingField: 0
+  <SellBasePrice>k__BackingField: 0
+  <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
+  <PickupSound>k__BackingField: {fileID: 0}
+  <BoostDurationMinutes>k__BackingField: 120
+  <Boosts>k__BackingField:
   - attribute: 1
     flat: 0
     percent: 0.25

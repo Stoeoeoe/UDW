@@ -381,8 +381,8 @@ namespace Plants.Editor
             var seed = ScriptableObject.CreateInstance<SeedItem>();
             try
             {
-                TestConfiguration.Set(seed, "plantData", _data);
-                Set(seed, "itemId", "test:seed");
+                TestConfiguration.Set(seed, "PlantData", _data);
+                Set(seed, "Id", "test:seed");
                 var inventory = Game.Inventory(2);
                 inventory.SetSlot(1, new ItemStack(seed, 2));
                 var tile = new TileData(null, 0, 0, null, Vector3.zero, true);

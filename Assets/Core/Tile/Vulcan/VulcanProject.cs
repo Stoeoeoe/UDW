@@ -46,14 +46,14 @@ namespace Core.Tile.Vulcanus
             public GameObject prefab;
             public string[] candidatePrefabPaths = Array.Empty<string>();
 
-            public string GetEntityTypeId() => entityDefinition != null ? entityDefinition.EntityTypeId : entityTypeId;
+            public string GetEntityTypeId() => entityDefinition != null ? entityDefinition.Id : entityTypeId;
 
             public string GetEntityDisplayName() => entityDefinition != null ? entityDefinition.DisplayName : entityDisplayName;
 
             public void BindDefinition(VulcanEntityDefinition definition)
             {
                 entityDefinition = definition;
-                entityTypeId = definition != null ? definition.EntityTypeId : entityTypeId;
+                entityTypeId = definition != null ? definition.Id : entityTypeId;
                 entityDisplayName = definition != null ? definition.DisplayName : entityDisplayName;
             }
         }
@@ -66,38 +66,26 @@ namespace Core.Tile.Vulcanus
             public string description;
         }
 
-        [SerializeField] private string version;
-        [SerializeField, JsonProperty("name")] private string projectName;
-        [SerializeField] private int tileSize;
-        [SerializeField] private int defaultMapWidth;
-        [SerializeField] private int defaultMapHeight;
-        [SerializeField] private TerrainDefinition[] terrainTypes = Array.Empty<TerrainDefinition>();
-        [SerializeField] private LayerDefinition[] layerDefinitions = Array.Empty<LayerDefinition>();
-        [SerializeField] private PropertyDefinition[] tileMetadataDefinitions = Array.Empty<PropertyDefinition>();
-        [SerializeField] private DialogueTypeDefinition[] dialogueTypes = Array.Empty<DialogueTypeDefinition>();
+        [field: SerializeField] public string Version { get; private set; }
+        [field: SerializeField] public string Name { get; private set; }
+        [field: SerializeField] public int TileSize { get; private set; }
+        [field: SerializeField] public int DefaultMapWidth { get; private set; }
+        [field: SerializeField] public int DefaultMapHeight { get; private set; }
+        [field: SerializeField] public TerrainDefinition[] TerrainTypes { get; private set; } = Array.Empty<TerrainDefinition>();
+        [field: SerializeField] public LayerDefinition[] LayerDefinitions { get; private set; } = Array.Empty<LayerDefinition>();
+        [field: SerializeField] public PropertyDefinition[] TileMetadataDefinitions { get; private set; } = Array.Empty<PropertyDefinition>();
+        [field: SerializeField] public DialogueTypeDefinition[] DialogueTypes { get; private set; } = Array.Empty<DialogueTypeDefinition>();
 
-        [Header("Mappings")]
-        [SerializeField, JsonProperty("itemClasses")] private ItemClassMapping[] itemClassMappings = Array.Empty<ItemClassMapping>();
+        [field: Header("Mappings")]
+        [field: SerializeField] public ItemClassMapping[] ItemClasses { get; private set; } = Array.Empty<ItemClassMapping>();
 
-        [Header("Importer Diagnostics")]
-        [SerializeField] private string[] mappingWarnings = Array.Empty<string>();
-
-        public string Version => version;
-        public string ProjectName => projectName;
-        public int TileSize => tileSize;
-        public int DefaultMapWidth => defaultMapWidth;
-        public int DefaultMapHeight => defaultMapHeight;
-        public TerrainDefinition[] TerrainTypes => terrainTypes;
-        public LayerDefinition[] LayerDefinitions => layerDefinitions;
-        public PropertyDefinition[] TileMetadataDefinitions => tileMetadataDefinitions;
-        public DialogueTypeDefinition[] DialogueTypes => dialogueTypes;
-        public ItemClassMapping[] ItemClassMappings => itemClassMappings;
-        public string[] MappingWarnings => mappingWarnings;
+        [field: Header("Importer Diagnostics")]
+        [field: SerializeField] public string[] MappingWarnings { get; private set; } = Array.Empty<string>();
 
         [Serializable]
         public class ItemClassMapping
         {
-            [JsonProperty("id")] public string classId;
+            public string id;
             public string className;
         }
     }

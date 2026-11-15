@@ -19,7 +19,7 @@ namespace Core.Quests
         public string StepId { get; }
         public QuestObjective Objective { get; }
         /// <summary>The quest dialogue to play; empty for the character's usual one.</summary>
-        public string DialogueId => Objective.DialogueId;
+        public string DialogueId => Objective.Dialogue;
 
         internal QuestConversation(string questId, string stepId, QuestObjective objective)
         {
@@ -123,7 +123,7 @@ namespace Core.Quests
         public bool HasObjectiveFor(string characterId) => ActiveQuestIds().Any(questId =>
         {
             var (_, progress, step) = CurrentStep(questId);
-            return step.Objectives.Any(objective => objective.CharacterId == characterId &&
+            return step.Objectives.Any(objective => objective.Character == characterId &&
                 objective.Kind is QuestObjectiveKind.Talk or QuestObjectiveKind.Deliver &&
                 !progress.CompletedObjectives.Contains(objective.Id));
         });
@@ -139,7 +139,7 @@ namespace Core.Quests
             {
                 var (quest, progress, step) = CurrentStep(questId);
                 foreach (var objective in step.Objectives)
-                    if (objective.CharacterId == characterId && !progress.CompletedObjectives.Contains(objective.Id) &&
+                    if (objective.Character == characterId && !progress.CompletedObjectives.Contains(objective.Id) &&
                         (objective.Kind == QuestObjectiveKind.Talk || objective.Kind == QuestObjectiveKind.Deliver &&
                             player && player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count))
                         return new QuestConversation(questId, step.Id, objective);
@@ -179,7 +179,7 @@ namespace Core.Quests
             ForEachOpenObjective((quest, objective) => objective.Kind switch
             {
                 QuestObjectiveKind.Have => player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count,
-                QuestObjectiveKind.Reach => string.IsNullOrEmpty(objective.TriggerId) && objective.MapId == _mapId,
+                QuestObjectiveKind.Reach => string.IsNullOrEmpty(objective.Trigger) && objective.Map == _mapId,
                 QuestObjectiveKind.Condition => Conditions.EvaluateCondition(objective.Condition),
                 _ => false
             });
@@ -193,7 +193,7 @@ namespace Core.Quests
         public void OnEvent(GameTimeChangedEvent e) => RequestCheck();
 
         public void OnEvent(MapTriggerEnteredEvent e) => ForEachOpenObjective((_, objective) =>
-            objective.Kind == QuestObjectiveKind.Reach && objective.MapId == _mapId && objective.TriggerId == e.TriggerId);
+            objective.Kind == QuestObjectiveKind.Reach && objective.Map == _mapId && objective.Trigger == e.TriggerId);
 
         public void OnLocationEnter(LocationData location)
         {
@@ -234,8 +234,8 @@ namespace Core.Quests
         private string[] ActiveQuestIds() =>
             _gameState.Quests.All.Where(pair => pair.Value.Status == QuestStatus.Active).Select(pair => pair.Key).ToArray();
 
-        private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _items.Find(objective.ItemId) ??
-            throw new InvalidOperationException($"Quest '{quest.QuestId}' needs the unknown item '{objective.ItemId}'.");
+        private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _items.Find(objective.Item) ??
+            throw new InvalidOperationException($"Quest '{quest.Id}' needs the unknown item '{objective.Item}'.");
 
         private (QuestDefinition, QuestProgress, QuestStep) CurrentStep(string questId)
         {

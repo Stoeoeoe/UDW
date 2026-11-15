@@ -21,7 +21,7 @@ namespace Core.Quests.Editor
         public void SetUp()
         {
             _wine = Game.Asset<InventoryTestItem>();
-            ConfigurationTestData.Set(_wine, "ItemId", "test:wine");
+            ConfigurationTestData.Set(_wine, "Id", "test:wine");
             Game.Catalog<ItemCatalog>(_wine);
         }
 

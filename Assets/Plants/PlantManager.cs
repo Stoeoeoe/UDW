@@ -242,7 +242,7 @@ namespace Plants
             return new PlantHarvestedEvent
             {
                 LocationId = locationId, Position = position, PlantId = state.plantID,
-                ItemId = data.HarvestItem.ItemId, Quantity = quantity, Method = data.HarvestMethod,
+                ItemId = data.HarvestItem.Id, Quantity = quantity, Method = data.HarvestMethod,
                 Removed = removed, NewStageIndex = removed ? -1 : data.RegrowthStageIndex, State = state
             };
         }

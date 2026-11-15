@@ -36,9 +36,9 @@ namespace Core.Inventory.Editor
         public void SetUp()
         {
             _item = Game.Asset<InventoryTestItem>();
-            Set(_item, "itemId", "test:grain");
+            Set(_item, "Id", "test:grain");
             _state = new InventoryState { Slots = new InventorySlotState[2] };
-            _inventory = Game.Inventory(_state, id => id == _item.ItemId ? _item : null);
+            _inventory = Game.Inventory(_state, id => id == _item.Id ? _item : null);
             _root = _inventory.gameObject;
             _events = 0;
             _checkMarker = false;
@@ -81,7 +81,7 @@ namespace Core.Inventory.Editor
         [Test]
         public void OverflowAndInvalidLoadoutsDoNotPartiallyAddOrMarkInitialized()
         {
-            Set(_item, "maxStackSize", 1);
+            Set(_item, "MaxStackSize", 1);
             Assert.That(_inventory.ApplyStartingLoadout(new[] { _item, _item, _item }), Is.False);
             Assert.Throws<ArgumentNullException>(() => _inventory.ApplyStartingLoadout(new ItemDefinition[] { _item, null }));
             Assert.That(_state.StartingLoadoutApplied, Is.False);
@@ -98,7 +98,7 @@ namespace Core.Inventory.Editor
             var bytes = SerializationUtility.SerializeValue(_state, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var restored = SerializationUtility.DeserializeValue<InventoryState>(bytes, DataFormat.JSON);
-            _inventory.Bind(restored, id => id == _item.ItemId ? _item : null);
+            _inventory.Bind(restored, id => id == _item.Id ? _item : null);
             Assert.That(_inventory.Capacity, Is.EqualTo(2));
             Assert.That(_inventory.GetSlot(0).IsEmpty, Is.True);
             Assert.That(_inventory.GetSlot(1).Item, Is.SameAs(_item));

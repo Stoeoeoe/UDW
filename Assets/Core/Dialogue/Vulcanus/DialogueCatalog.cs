@@ -12,6 +12,6 @@ namespace Core.Dialogue.Vulcanus
         public const string ResourceName = "DialogueCatalog";
         public override string Path => "Assets";
         public override StringComparer IdComparer => StringComparer.OrdinalIgnoreCase;
-        protected override string GetDefinitionId(VulcanusDialogueAsset definition) => definition.DialogueId;
+        protected override string GetDefinitionId(VulcanusDialogueAsset definition) => definition.Id;
     }
 }

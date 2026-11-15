@@ -25,28 +25,18 @@ namespace Core.Tile.Vulcanus
             public string path;
         }
 
-        [SerializeField] private string id;
-        [SerializeField] private string displayName;
-        [SerializeField] private string category;
-        [SerializeField] private string group;
-        [SerializeField] private string description;
-        [SerializeField, JsonConverter(typeof(HexColorJsonConverter))] private Color placeholderColor = Color.gray;
-        [SerializeField] private string icon;
-        [SerializeField] private string folderPath;
-        [SerializeField, JsonConverter(typeof(Vector2IntJsonConverter))] private Vector2Int defaultSize = Vector2Int.one;
-        [SerializeField] private SpriteReference sprite = new();
-        [SerializeField] private PropertyDefinition[] properties = Array.Empty<PropertyDefinition>();
+        [field: SerializeField] public string Id { get; private set; }
+        [field: SerializeField] public string DisplayName { get; private set; }
+        [field: SerializeField] public string Category { get; private set; }
+        [field: SerializeField] public string Group { get; private set; }
+        [field: SerializeField] public string Description { get; private set; }
+        [field: SerializeField, JsonConverter(typeof(HexColorJsonConverter))] public Color PlaceholderColor { get; private set; } = Color.gray;
+        [field: SerializeField] public string Icon { get; private set; }
+        [field: SerializeField] public string FolderPath { get; private set; }
+        [field: SerializeField, JsonConverter(typeof(Vector2IntJsonConverter))] public Vector2Int DefaultSize { get; private set; } = Vector2Int.one;
+        [field: SerializeField] public SpriteReference Sprite { get; private set; } = new();
+        [field: SerializeField] public PropertyDefinition[] Properties { get; private set; } = Array.Empty<PropertyDefinition>();
 
-        public string EntityTypeId => id;
-        public string DisplayName => displayName;
-        public string Category => category;
-        public string Group => group;
-        public string Description => description;
-        public Color PlaceholderColor => placeholderColor;
-        public string Icon => icon;
-        public string FolderPath => folderPath;
-        public Vector2Int DefaultSize => defaultSize;
-        public string SpritePath => sprite.path;
-        public PropertyDefinition[] Properties => properties;
+        public string SpritePath => Sprite.path;
     }
 }

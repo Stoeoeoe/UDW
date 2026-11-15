@@ -39,7 +39,7 @@ namespace Core.Catalogs.Editor
         private static InventoryTestItem CreateItem(string id)
         {
             var item = ScriptableObject.CreateInstance<InventoryTestItem>();
-            typeof(ItemDefinition).GetField("itemId", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(ItemDefinition).GetField("<Id>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(item, id);
             return item;
         }
@@ -97,7 +97,7 @@ namespace Core.Catalogs.Editor
         public void InvalidDiscoveryDoesNotReplaceExistingEntries()
         {
             _catalog.Synchronize(CatalogDiscovery.Discover(_catalog));
-            typeof(ItemDefinition).GetField("itemId", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(ItemDefinition).GetField("<Id>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(_second, "first");
             AssetDatabase.CreateAsset(_second, _folder + "/Second.asset");
             Assert.Throws<InvalidOperationException>(() => CatalogDiscovery.Refresh(_catalog));
@@ -198,7 +198,7 @@ namespace Core.Catalogs.Editor
             var itemPath = _folder + "/Imported.vitm";
             WriteImportedItem(itemPath, "test:imported");
             yield return WaitFor(() => _catalog.Get("test:imported"));
-            Assert.That(_catalog.Get("test:imported").ItemName, Is.EqualTo("Imported item"));
+            Assert.That(_catalog.Get("test:imported").Name, Is.EqualTo("Imported item"));
 
             WriteImportedItem(itemPath, "test:updated");
             yield return WaitFor(() => _catalog.Get("test:updated"));

@@ -96,6 +96,6 @@ namespace Core.Shops
         }
 
         private ItemDefinition RequireItem(Shop shop, string itemId) => _items.Find(itemId) ??
-            throw new InvalidOperationException($"Shop '{shop.ShopId}' offers the unknown item '{itemId}'.");
+            throw new InvalidOperationException($"Shop '{shop.Id}' offers the unknown item '{itemId}'.");
     }
 }

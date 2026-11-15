@@ -93,7 +93,7 @@ namespace Character.Editor
             var health = new AttributeBonus();
             Set(health, "attribute", CharacterAttributeType.MaxHealth);
             Set(health, "flat", 20f);
-            Set(_rested, "boosts", new[] { _rested.Boosts[0], health });
+            Set(_rested, "Boosts", new[] { _rested.Boosts[0], health });
             _rested.RequireValidConfiguration();
             _rested.Apply(_character);
             Assert.That(_character.Stamina.MaxStamina, Is.EqualTo(125));
@@ -185,8 +185,8 @@ namespace Character.Editor
         public void ConsumingABoostItemUsesTheNormalInventoryAction()
         {
             var item = Game.Asset<AttributeBoostConsumableItem>();
-            Set(item, "itemId", "test:tonic");
-            Set(item, "boosts", new[] { _rested.Boosts[0] });
+            Set(item, "Id", "test:tonic");
+            Set(item, "Boosts", new[] { _rested.Boosts[0] });
             item.RequireValidConfiguration();
             _character.MainInventory.AddItem(item, 1);
             Assert.That(_character.MainInventory.Actions.TryConsume(0, _character), Is.True);
@@ -212,9 +212,9 @@ namespace Character.Editor
         [Test]
         public void InvalidAuthoredBoostsAreRejectedByValidation()
         {
-            Set(_rested, "boostDurationMinutes", 0);
+            Set(_rested, "BoostDurationMinutes", 0);
             Assert.That(_rested.ValidateConfiguration(), Is.Not.Empty);
-            Set(_rested, "boostDurationMinutes", 120);
+            Set(_rested, "BoostDurationMinutes", 120);
             var bonus = _rested.Boosts[0];
             Set(bonus, "percent", -0.25f);
             Assert.That(_rested.ValidateConfiguration(), Is.Not.Empty);
@@ -228,14 +228,14 @@ namespace Character.Editor
             var bonus = new AttributeBonus();
             Set(bonus, "attribute", attribute);
             Set(bonus, "percent", percent);
-            Set(definition, "itemId", id);
-            Set(definition, "boostDurationMinutes", minutes);
-            Set(definition, "boosts", new[] { bonus });
+            Set(definition, "Id", id);
+            Set(definition, "BoostDurationMinutes", minutes);
+            Set(definition, "Boosts", new[] { bonus });
             definition.RequireValidConfiguration();
             return definition;
         }
 
-        private static string Source(AttributeBoostConsumableItem item) => $"item:{item.ItemId}";
+        private static string Source(AttributeBoostConsumableItem item) => $"item:{item.Id}";
 
         private static ActiveAttributeBoost Snapshot(AttributeBoostConsumableItem item, long expiry) => new()
         {

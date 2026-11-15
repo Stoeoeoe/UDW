@@ -34,24 +34,24 @@ namespace Core.Quests.Editor
 
         internal static IEnumerable<string> Problems(QuestDefinition quest, KnownContent known)
         {
-            string Prefix(string where) => $"Quest '{quest.QuestId}': {where}";
-            if (!string.IsNullOrEmpty(quest.GiverId) && !known.Characters.Contains(quest.GiverId))
-                yield return Prefix($"the giver '{quest.GiverId}' is not a known character.");
+            string Prefix(string where) => $"Quest '{quest.Id}': {where}";
+            if (!string.IsNullOrEmpty(quest.Giver) && !known.Characters.Contains(quest.Giver))
+                yield return Prefix($"the giver '{quest.Giver}' is not a known character.");
             foreach (var step in quest.Steps)
                 foreach (var objective in step.Objectives)
                 {
                     var where = $"objective '{objective.Id}' of step '{step.Id}'";
-                    if (!string.IsNullOrEmpty(objective.CharacterId) && !known.Characters.Contains(objective.CharacterId))
-                        yield return Prefix($"{where} talks to the unknown character '{objective.CharacterId}'.");
-                    if (!string.IsNullOrEmpty(objective.DialogueId) && !known.Dialogues.Contains(objective.DialogueId))
-                        yield return Prefix($"{where} uses the unknown dialogue '{objective.DialogueId}'.");
-                    if (!string.IsNullOrEmpty(objective.ItemId) && !known.Items.Contains(objective.ItemId))
-                        yield return Prefix($"{where} needs the unknown item '{objective.ItemId}'.");
-                    if (string.IsNullOrEmpty(objective.MapId)) continue;
-                    if (!known.TriggersByMap.TryGetValue(objective.MapId, out var triggers))
-                        yield return Prefix($"{where} goes to the unknown map '{objective.MapId}'.");
-                    else if (!string.IsNullOrEmpty(objective.TriggerId) && !triggers.Contains(objective.TriggerId))
-                        yield return Prefix($"{where} uses the unknown trigger '{objective.TriggerId}' on map '{objective.MapId}'.");
+                    if (!string.IsNullOrEmpty(objective.Character) && !known.Characters.Contains(objective.Character))
+                        yield return Prefix($"{where} talks to the unknown character '{objective.Character}'.");
+                    if (!string.IsNullOrEmpty(objective.Dialogue) && !known.Dialogues.Contains(objective.Dialogue))
+                        yield return Prefix($"{where} uses the unknown dialogue '{objective.Dialogue}'.");
+                    if (!string.IsNullOrEmpty(objective.Item) && !known.Items.Contains(objective.Item))
+                        yield return Prefix($"{where} needs the unknown item '{objective.Item}'.");
+                    if (string.IsNullOrEmpty(objective.Map)) continue;
+                    if (!known.TriggersByMap.TryGetValue(objective.Map, out var triggers))
+                        yield return Prefix($"{where} goes to the unknown map '{objective.Map}'.");
+                    else if (!string.IsNullOrEmpty(objective.Trigger) && !triggers.Contains(objective.Trigger))
+                        yield return Prefix($"{where} uses the unknown trigger '{objective.Trigger}' on map '{objective.Map}'.");
                 }
         }
 
@@ -59,11 +59,11 @@ namespace Core.Quests.Editor
         {
             var known = new KnownContent();
             foreach (var character in CatalogAssetDiscovery.Find("Assets", typeof(CharacterDefinition)).Cast<CharacterDefinition>())
-                known.Characters.Add(character.CharacterId);
+                known.Characters.Add(character.Id);
             foreach (var dialogue in CatalogAssetDiscovery.Find("Assets", typeof(VulcanusDialogueAsset)).Cast<VulcanusDialogueAsset>())
-                known.Dialogues.Add(dialogue.DialogueId);
+                known.Dialogues.Add(dialogue.Id);
             foreach (var item in CatalogAssetDiscovery.Find("Assets", typeof(ItemDefinition)).Cast<ItemDefinition>())
-                known.Items.Add(item.ItemId);
+                known.Items.Add(item.Id);
             foreach (var world in CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>())
                 foreach (var binding in world.MapBindings)
                     if (binding.MapPrefab)

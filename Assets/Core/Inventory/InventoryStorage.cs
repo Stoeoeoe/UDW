@@ -45,7 +45,7 @@ namespace Core.Inventory
             return new ItemStack(item, slot.Quantity);
         }
 
-        internal void RememberItem(ItemDefinition item) => _knownItems[item.ItemId] = item;
+        internal void RememberItem(ItemDefinition item) => _knownItems[item.Id] = item;
         internal InventorySlotState Encode(ItemStack stack)
         {
             if (stack.Quantity < 0) throw new ArgumentOutOfRangeException(nameof(stack));
@@ -53,7 +53,7 @@ namespace Core.Inventory
             if (!stack.Item) throw new ArgumentException("An occupied slot requires an item definition.", nameof(stack));
             if (stack.Quantity > stack.Item.MaxStackSize) throw new ArgumentException("Stack exceeds its item limit.", nameof(stack));
             RememberItem(stack.Item);
-            return new InventorySlotState(stack.Item.ItemId, stack.Quantity);
+            return new InventorySlotState(stack.Item.Id, stack.Quantity);
         }
 
         public void SetSlot(int index, ItemStack stack)
@@ -158,7 +158,7 @@ namespace Core.Inventory
         {
             var sorted = GetSnapshot().OrderBy(s => s.IsEmpty)
                 .ThenBy(s => s.IsEmpty ? string.Empty : s.Item.Category, StringComparer.Ordinal)
-                .ThenBy(s => s.IsEmpty ? string.Empty : s.Item.ItemName, StringComparer.Ordinal)
+                .ThenBy(s => s.IsEmpty ? string.Empty : s.Item.Name, StringComparer.Ordinal)
                 .ThenBy(s => s.ItemId, StringComparer.Ordinal).ToArray();
             CommitContent(sorted);
         }

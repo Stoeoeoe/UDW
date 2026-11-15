@@ -793,7 +793,7 @@ namespace Core.Scripting.Editor
                 { id: 'response', type: 'line', text: 'You may enter.', next: 'end' },
                 { id: 'end', type: 'end' }");
             _catalog.Synchronize(_catalog.Entries.Select(entry => entry.Definition).Append(dialogue));
-            var definition = CreateCutscene("fixture:decision", false, "fixture:completion", dialogue.DialogueId);
+            var definition = CreateCutscene("fixture:decision", false, "fixture:completion", dialogue.Id);
             try
             {
                 Assert.That(service.TryStart(definition, out var run), Is.True);

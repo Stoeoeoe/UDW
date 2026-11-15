@@ -6,6 +6,6 @@ namespace Core.Catalogs.Editor
     {
         public string Folder;
         public override string Path => Folder;
-        protected override string GetDefinitionId(ItemDefinition definition) => definition.ItemId;
+        protected override string GetDefinitionId(ItemDefinition definition) => definition.Id;
     }
 }

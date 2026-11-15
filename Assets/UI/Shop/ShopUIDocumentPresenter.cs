@@ -122,7 +122,7 @@ namespace UI.Shops
         private void Refresh()
         {
             _refreshPending = false;
-            _title.text = _shop.DisplayName;
+            _title.text = _shop.Name;
             _balance.text = $"{_wallet.Balance:N0}g";
             RefreshOffers();
             RefreshInventory();
@@ -139,7 +139,7 @@ namespace UI.Shops
             foreach (var offer in offers)
             {
                 var row = CreateRow(offer.Item, offer.Item.Category);
-                var button = new Button(() => Buy(offer.Item.ItemId)) { text = $"Buy {offer.Price}g" };
+                var button = new Button(() => Buy(offer.Item.Id)) { text = $"Buy {offer.Price}g" };
                 button.AddToClassList("trade-button");
                 button.SetEnabled(_wallet.Balance >= offer.Price);
                 row.Add(button);
@@ -198,7 +198,7 @@ namespace UI.Shops
 
             var copy = new VisualElement();
             copy.AddToClassList("item-copy");
-            var name = new Label(item.ItemName);
+            var name = new Label(item.Name);
             name.AddToClassList("item-name");
             var description = new Label(meta);
             description.AddToClassList("item-meta");

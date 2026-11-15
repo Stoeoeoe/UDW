@@ -38,10 +38,10 @@ namespace Core.Inventory
         /// <summary>First acquisition/use starts a charged tool full. Rebinding keeps its saved level and upgrades.</summary>
         public ToolChargeState GetToolCharge(ToolData tool)
         {
-            if (!_state.ToolCharges.TryGetValue(tool.ItemId, out var charge))
+            if (!_state.ToolCharges.TryGetValue(tool.Id, out var charge))
             {
                 charge = new ToolChargeState(tool.MaxCharge);
-                _state.ToolCharges.Add(tool.ItemId, charge);
+                _state.ToolCharges.Add(tool.Id, charge);
                 charge.Bind(NotifyChargeChanged);
             }
             return charge;
@@ -105,7 +105,7 @@ namespace Core.Inventory
         internal void SetEquipment(string slotId, WornEquipmentItem item)
         {
             _inventory.Storage.RememberItem(item);
-            _state.Equipment[slotId] = new InventorySlotState(item.ItemId, 1);
+            _state.Equipment[slotId] = new InventorySlotState(item.Id, 1);
         }
 
         internal void RemoveEquipment(string slotId) => _state.Equipment.Remove(slotId);
