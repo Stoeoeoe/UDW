@@ -4,8 +4,6 @@ using Core.Tile.Editor.Vulcanus;
 using Core.Tile.Vulcanus;
 using NUnit.Framework;
 using UnityEditor;
-using Core.Tile.Editor;
-using Object = UnityEngine.Object;
 
 namespace Core.Routines.Editor
 {
@@ -54,15 +52,10 @@ namespace Core.Routines.Editor
         [Test]
         public void TheProjectMapsAreJoinedByTheirLocationLinks()
         {
-            var world = TestWorld.Create();
-            try
-            {
-                var links = MapLinkGraph.Build(new[] { world });
-                Assert.That(links.LinksFrom("test:map-1").Select(link => link.ToMapId), Is.EquivalentTo(new[] { "test:map-2", "test:indoor" }));
-                Assert.That(links.CanReach("test:indoor", "test:map-2"), Is.True, "Through map-1.");
-                Assert.That(links.LinksFrom("test:indoor").Single().ArrivalAnchorId, Is.Not.Empty);
-            }
-            finally { Object.DestroyImmediate(world); }
+            var links = MapLinkGraph.Build(new[] { AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>("Assets/Tests/Vulcanus/vulcan.project.world.asset") });
+            Assert.That(links.LinksFrom("test:map-1").Select(link => link.ToMapId), Is.EquivalentTo(new[] { "test:map-2", "test:indoor" }));
+            Assert.That(links.CanReach("test:indoor", "test:map-2"), Is.True, "Through map-1.");
+            Assert.That(links.LinksFrom("test:indoor").Single().ArrivalAnchorId, Is.Not.Empty);
         }
     }
 }

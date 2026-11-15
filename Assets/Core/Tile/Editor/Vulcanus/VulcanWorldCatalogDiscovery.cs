@@ -46,8 +46,10 @@ namespace Core.Tile.Editor.Vulcanus
             };
         }
 
+        // The test project's catalog is refreshed too; it only ever lists that project's maps.
         private static VulcanusWorldCatalog[] FindCatalogs() =>
-            CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>().ToArray();
+            CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog))
+                .Concat(CatalogAssetDiscovery.FindTestContent(typeof(VulcanusWorldCatalog))).Cast<VulcanusWorldCatalog>().ToArray();
 
         private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {

@@ -20,9 +20,8 @@ namespace Core.Tile.Editor
         [TestCase("test:map-1")]
         public void EveryBakedBlockedCellIsBlockedByPhysicsAndNoOther(string mapId)
         {
-            var world = TestWorld.Create();
+            var world = AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>("Assets/Tests/Vulcanus/vulcan.project.world.asset");
             var instance = Object.Instantiate(world.MapBindings.Single(binding => binding.MapId == mapId).MapPrefab, Away, Quaternion.identity);
-            Object.DestroyImmediate(world);
             try
             {
                 Physics2D.SyncTransforms();

@@ -24,6 +24,7 @@ namespace Core.Catalogs
         [SerializeField, TableList(IsReadOnly = true, AlwaysExpanded = true)]
         private CatalogEntry[] entries = Array.Empty<CatalogEntry>();
         [NonSerialized] private Dictionary<string, Object> _byId;
+        [NonSerialized] private Object[] _testContent = Array.Empty<Object>();
         /// <summary>Project folder searched recursively by editor discovery, including Assets/.</summary>
         public abstract string Path { get; }
         public abstract Type DefinitionType { get; }
@@ -37,8 +38,7 @@ namespace Core.Catalogs
             if (_byId == null)
             {
                 var index = new Dictionary<string, Object>(IdComparer);
-                foreach (var entry in entries)
-                    if (entry.Enabled && entry.Definition) index.Add(GetId(entry.Definition), entry.Definition);
+                foreach (var enabled in EnabledObjects) index.Add(GetId(enabled), enabled);
                 _byId = index;
             }
             return _byId.TryGetValue(id, out var definition) ? definition : null;
@@ -64,6 +64,20 @@ namespace Core.Catalogs
             return true;
         }
 
+        /// <summary>Enabled definitions, then the test project's while a test scene plays.</summary>
+        protected IEnumerable<Object> EnabledObjects =>
+            entries.Where(entry => entry.Enabled && entry.Definition).Select(entry => entry.Definition).Concat(_testContent);
+
+        /// <summary>
+        /// The editor adds the test project's definitions while a test scene plays, and removes them afterwards.
+        /// They are never saved with the catalog.
+        /// </summary>
+        public void UseTestContent(Object[] definitions)
+        {
+            _testContent = definitions;
+            InvalidateLookup();
+        }
+
         public void InvalidateLookup() => _byId = null;
         protected virtual void OnEnable() => InvalidateLookup();
         protected virtual void OnValidate() => InvalidateLookup();
@@ -75,7 +89,6 @@ namespace Core.Catalogs
         protected abstract string GetDefinitionId(T definition);
         public sealed override string GetId(Object definition) => GetDefinitionId((T)definition);
         public T Get(string id) => FindDefinition(id) as T;
-        public IEnumerable<T> EnabledDefinitions => Entries
-            .Where(entry => entry.Enabled && entry.Definition).Select(entry => (T)entry.Definition);
+        public IEnumerable<T> EnabledDefinitions => EnabledObjects.Cast<T>();
     }
 }

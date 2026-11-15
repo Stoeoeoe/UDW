@@ -6,8 +6,6 @@ using Core.Tile.Vulcanus;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using Core.Tile.Editor;
-using Object = UnityEngine.Object;
 
 namespace Core.Routines.Editor
 {
@@ -148,9 +146,7 @@ namespace Core.Routines.Editor
         [Test]
         public void TheProjectHouseLeadsToMapTwoThroughMapOne()
         {
-            var catalog = TestWorld.Create();
-            var world = WorldNavigation.Build(new[] { catalog });
-            Object.DestroyImmediate(catalog);
+            var world = WorldNavigation.Build(new[] { AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>("Assets/Tests/Vulcanus/vulcan.project.world.asset") });
             var day = DayFrom("{ map: 'test:indoor', anchor: 'anchor-1793894673996' }",
                 Goal("visit", Eight, "{ map: 'test:map-2', anchor: 'anchor-1793894643329' }"));
 

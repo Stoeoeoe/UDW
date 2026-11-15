@@ -15,13 +15,18 @@ namespace Core.Catalogs.Editor
         public static bool IsTestContent(string assetPath) =>
             assetPath.StartsWith(TestFolder + "/", StringComparison.OrdinalIgnoreCase);
 
-        public static Object[] Find(string folder, Type type)
+        public static Object[] Find(string folder, Type type) => Find(folder, type, path => !IsTestContent(path));
+
+        /// <summary>The test project's definitions of a type, for playing a test scene.</summary>
+        public static Object[] FindTestContent(Type type) => Find(TestFolder, type, IsTestContent);
+
+        private static Object[] Find(string folder, Type type, Func<string, bool> include)
         {
             if (!AssetDatabase.IsValidFolder(folder))
                 throw new InvalidOperationException($"Discovery folder does not exist: {folder}");
             var component = typeof(Component).IsAssignableFrom(type);
             return AssetDatabase.FindAssets(component ? "t:Prefab" : "t:" + type.Name, new[] { folder })
-                .Select(AssetDatabase.GUIDToAssetPath).Where(path => !IsTestContent(path)).OrderBy(path => path, StringComparer.Ordinal)
+                .Select(AssetDatabase.GUIDToAssetPath).Where(include).OrderBy(path => path, StringComparer.Ordinal)
                 .Select(path => component
                     ? (Object)AssetDatabase.LoadAssetAtPath<GameObject>(path)?.GetComponent(type)
                     : AssetDatabase.LoadAssetAtPath(path, type)).Where(asset => asset).ToArray();

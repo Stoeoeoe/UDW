@@ -13,7 +13,7 @@ namespace Plants.Editor
     /// <summary>Picking a ripe crop in the real game: the character plays the pickup animation, then the crop is harvested.</summary>
     public sealed class PlantPickingPlayTests
     {
-        private const string FarmScene = "Assets/Scenes/Maps/map-1.unity";
+        private const string FarmScene = "Assets/Tests/Scenes/map-1.unity";
 
         [UnityTest]
         public IEnumerator PickingARipeCropPlaysTheAnimationThenHarvestsIt()

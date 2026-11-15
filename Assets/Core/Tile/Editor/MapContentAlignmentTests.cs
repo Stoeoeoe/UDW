@@ -28,9 +28,8 @@ namespace Core.Tile.Editor
         [SetUp]
         public void SetUp()
         {
-            var world = TestWorld.Create();
+            var world = AssetDatabase.LoadAssetAtPath<VulcanusWorldCatalog>("Assets/Tests/Vulcanus/vulcan.project.world.asset");
             _map = Object.Instantiate(world.MapBindings.Single(binding => binding.MapId == MapId).MapPrefab);
-            Object.DestroyImmediate(world);
             var imported = _map.GetComponentInChildren<VulcanusImportedMap>(true);
             _terrain = imported.TerrainTilemap;
             _height = imported.NavigationCosts.Height;

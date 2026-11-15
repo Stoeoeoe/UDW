@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0e3b987a9736c640a67e9386997e5d5, type: 3}
+  m_Name: vulcan.project.world
+  m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Vulcanus.VulcanusWorldCatalog
+  project: {fileID: -1814933055721424766, guid: a22f29e27c8ac9a41890aaf2082305f1, type: 3}
+  entityPrefabMappings:
+  - entityTypeId: test:bed
+    entityDisplayName: Bed
+    entityDefinition: {fileID: 936352032444259862, guid: 298030b125459ad46a6a2a3061cfd79b, type: 3}
+    prefab: {fileID: 1221448304668643942, guid: 1a76e6e470a1f3640b0923ff5eee760a, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:chest
+    entityDisplayName: Player Chest
+    entityDefinition: {fileID: 936352032444259862, guid: ef89c85f7371a7f46a245841b0ceac92, type: 3}
+    prefab: {fileID: 571777702140267894, guid: 5bb565d4b86d14b4e8cf44c81aaa840c, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:fabia
+    entityDisplayName: Fabia
+    entityDefinition: {fileID: 936352032444259862, guid: 2dec8d8741b4c8c4ca7dc909730126fd, type: 3}
+    prefab: {fileID: 7795654644560807230, guid: ea8560c2474a2d141802a8313452b4f8, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:forage-fig
+    entityDisplayName: Forage Fig
+    entityDefinition: {fileID: 936352032444259862, guid: 45416588e0a3c8d4aad40fffdcdde549, type: 3}
+    prefab: {fileID: 4284314185096655084, guid: c352630354bd59e4fab5ed7d989ec2f4, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:foraging-spot
+    entityDisplayName: Foraging Spot
+    entityDefinition: {fileID: 936352032444259862, guid: e1de3701c6557f54696deb6c5714710c, type: 3}
+    prefab: {fileID: 1517976560175765870, guid: 6e045675a7a2c0443ad3272aa576a643, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:market_stall_bread
+    entityDisplayName: Bread Stall
+    entityDefinition: {fileID: 936352032444259862, guid: 4fcd34af774757745a5eece776e832cf, type: 3}
+    prefab: {fileID: 2430770427396700011, guid: d6a597afe13bba34b9d60621bb425fd2, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:market_stall_cheese
+    entityDisplayName: Cheese Stall
+    entityDefinition: {fileID: 936352032444259862, guid: e133ec7e530ac07479baa685abf82080, type: 3}
+    prefab: {fileID: 2866376277092552917, guid: fc21c60ab3096aa4f813abdfe56bd7f7, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:market_stall_fish
+    entityDisplayName: Fish Stall
+    entityDefinition: {fileID: 936352032444259862, guid: a851208f4b9416a4fba14c5a388b546d, type: 3}
+    prefab: {fileID: 8770731866236333634, guid: 887505b1c26de14419594c6917fd11a6, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: test:torch
+    entityDisplayName: Torch
+    entityDefinition: {fileID: 936352032444259862, guid: 0108eec601cc8df409b121d093db6ee6, type: 3}
+    prefab: {fileID: 5775923001401589703, guid: 9853aa2db08ba664d8684cf8fa37d0ec, type: 3}
+    candidatePrefabPaths: []
+  mapBindings:
+  - mapId: test:indoor
+    mapPrefab: {fileID: -8855744147391826209, guid: fbe6e4590d316184382f831c5311da89, type: 3}
+    locationData: {fileID: 447913706122126786, guid: fbe6e4590d316184382f831c5311da89, type: 3}
+    sourceAssetGuid: fbe6e4590d316184382f831c5311da89
+  - mapId: test:map-1
+    mapPrefab: {fileID: -1433788042044329938, guid: 530f86db6c0c74b4ebbf60195d68d30d, type: 3}
+    locationData: {fileID: 447913706122126786, guid: 530f86db6c0c74b4ebbf60195d68d30d, type: 3}
+    sourceAssetGuid: 530f86db6c0c74b4ebbf60195d68d30d
+  - mapId: test:map-2
+    mapPrefab: {fileID: -5252562787932730757, guid: f61697d85b566694e8583830304224fa, type: 3}
+    locationData: {fileID: 447913706122126786, guid: f61697d85b566694e8583830304224fa, type: 3}
+    sourceAssetGuid: f61697d85b566694e8583830304224fa

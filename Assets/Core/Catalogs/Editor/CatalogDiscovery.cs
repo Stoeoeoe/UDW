@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
@@ -39,8 +40,14 @@ namespace Core.Catalogs.Editor
             Schedule();
             EditorApplication.playModeStateChanged += state =>
             {
+                if (state == PlayModeStateChange.EnteredEditMode)
+                    foreach (var catalog in FindCatalogs()) catalog.UseTestContent(Array.Empty<Object>());
                 if (state != PlayModeStateChange.ExitingEditMode) return;
-                try { RefreshAll(); }
+                try
+                {
+                    RefreshAll();
+                    if (CatalogAssetDiscovery.IsTestContent(SceneManager.GetActiveScene().path)) UseTestContent();
+                }
                 catch (Exception exception) { Debug.LogError(exception.Message); EditorApplication.isPlaying = false; }
             };
         }
@@ -79,6 +86,15 @@ namespace Core.Catalogs.Editor
         {
             try { RefreshAll(); }
             catch (Exception exception) { throw new BuildFailedException(exception.Message); }
+        }
+
+        /// <summary>
+        /// A test scene plays with the test project's content in every catalog. Its definitions were checked at import;
+        /// the reference checks cover game content only, and a broken test reference fails its test.
+        /// </summary>
+        private static void UseTestContent()
+        {
+            foreach (var catalog in FindCatalogs()) catalog.UseTestContent(CatalogAssetDiscovery.FindTestContent(catalog.DefinitionType));
         }
 
         internal static void RefreshAll()
