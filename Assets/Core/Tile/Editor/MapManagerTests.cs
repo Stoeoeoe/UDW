@@ -96,9 +96,9 @@ namespace Core.Tile.Editor
         [TestCase(-1, 0, 0.01f, 0.5f)]
         public async Task AuthoredHoePlowsMapOneSoilEvenWhenItsCharacterOverlapsTheTarget(int dx, int dy, float x, float y)
         {
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/map-1.vmap")
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Tests/Vulcanus/maps/map-1.vmap")
                 .GetComponent<VulcanusImportedMap>();
-            var sourceCell = new Vector3Int(6, 21, 0);
+            var sourceCell = new Vector3Int(14, 5, 0);
             _terrain.SetTile(Vector3Int.zero, source.TerrainTilemap.GetTile(sourceCell));
             _farmland.SetTile(Vector3Int.zero, source.FarmlandTilemap.GetTile(sourceCell));
             // Isolate physical queries from the user's open scene, while using the real map's tile definitions.
@@ -349,10 +349,10 @@ namespace Core.Tile.Editor
         [Test]
         public void IndoorMapWithEmptyTerrainUsesAuthoredBounds()
         {
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vulcan/0204project/maps/indoor.vmap");
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Tests/Vulcanus/maps/indoor.vmap");
             var instance = Game.Own(Game.InjectObject(Object.Instantiate(source)));
             var imported = instance.GetComponent<VulcanusImportedMap>();
-            Assert.That(imported.TerrainTilemap.GetUsedTilesCount(), Is.Zero);
+            imported.TerrainTilemap.ClearAllTiles(); // An interior painted only on its other layers.
             Set(_map, "_currentMap", imported);
             Set(_map, "_terrainTilemap", imported.TerrainTilemap);
             var bounds = _map.CurrentBounds;

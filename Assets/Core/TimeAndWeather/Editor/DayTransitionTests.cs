@@ -423,7 +423,7 @@ namespace Core.TimeAndWeather.Editor
         {
             Game.State.Time.hour = hour;
             Game.State.Time.minute = minute;
-            _routine = (IEnumerator)Call(_overnight, "Run", _character, reason, hour);
+            _routine = (IEnumerator)Call(_overnight, "Run", _character, reason, hour, false);
             // EndDay normally captures bedtime and stores this before starting Unity's scheduler.
             Set(_overnight, "_routine", _routine);
             _steps.Clear();
