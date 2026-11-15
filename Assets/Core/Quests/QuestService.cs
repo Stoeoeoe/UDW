@@ -11,6 +11,23 @@ using VContainer.Unity;
 
 namespace Core.Quests
 {
+    /// <summary>A talk or deliver objective met by talking to its character, from <see cref="QuestService.FindConversation"/>.</summary>
+    public sealed class QuestConversation
+    {
+        public string QuestId { get; }
+        public string StepId { get; }
+        public QuestObjective Objective { get; }
+        /// <summary>The quest dialogue to play; empty for the character's usual one.</summary>
+        public string DialogueId => Objective.DialogueId;
+
+        internal QuestConversation(string questId, string stepId, QuestObjective objective)
+        {
+            QuestId = questId;
+            StepId = stepId;
+            Objective = objective;
+        }
+    }
+
     /// <summary>
     /// Runs quests: starts them, completes objectives and steps, and runs their Lua actions. Progress lives in the save
     /// (<see cref="GameState.Quests"/>) and is recorded before any action runs, so an action may advance the quest further.
@@ -92,6 +109,40 @@ namespace Core.Quests
             Finish(quest, progress, step);
         }
 
+        /// <summary>
+        /// The talk or deliver objective that talking to this character would meet now, if any: deliver only while the
+        /// player carries the items. Its dialogue, when set, plays instead of the character's usual one.
+        /// </summary>
+        public QuestConversation FindConversation(string characterId)
+        {
+            var player = _characters.MainCharacter;
+            foreach (var questId in ActiveQuestIds())
+            {
+                var (quest, progress, step) = CurrentStep(questId);
+                foreach (var objective in step.Objectives)
+                    if (objective.CharacterId == characterId && !progress.CompletedObjectives.Contains(objective.Id) &&
+                        (objective.Kind == QuestObjectiveKind.Talk || objective.Kind == QuestObjectiveKind.Deliver &&
+                            player && player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count))
+                        return new QuestConversation(questId, step.Id, objective);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Meets the objective once its conversation has ended, taking a delivery's items. Nothing happens if the step moved
+        /// on meanwhile, or the player no longer has the items.
+        /// </summary>
+        public void CompleteConversation(QuestConversation conversation)
+        {
+            var progress = _gameState.Quests.Find(conversation.QuestId);
+            if (progress?.Status != QuestStatus.Active || progress.StepId != conversation.StepId) return;
+            var objective = conversation.Objective;
+            if (objective.Kind == QuestObjectiveKind.Deliver &&
+                !_characters.MainCharacter.MainInventory.TryRemove(RequireItem(Require(conversation.QuestId), objective), objective.Count))
+                return;
+            CompleteObjective(conversation.QuestId, objective.Id);
+        }
+
         public void Tick()
         {
             if (!_checkPending) return;
@@ -130,8 +181,7 @@ namespace Core.Quests
         /// <summary>Completes each open objective of the active quests' current steps that is met.</summary>
         private void ForEachOpenObjective(Func<QuestDefinition, QuestObjective, bool> isMet)
         {
-            foreach (var questId in _gameState.Quests.All.Where(pair => pair.Value.Status == QuestStatus.Active)
-                         .Select(pair => pair.Key).ToArray())
+            foreach (var questId in ActiveQuestIds())
             {
                 var (quest, progress, step) = CurrentStep(questId);
                 foreach (var objective in step.Objectives)
@@ -142,6 +192,9 @@ namespace Core.Quests
                 }
             }
         }
+
+        private string[] ActiveQuestIds() =>
+            _gameState.Quests.All.Where(pair => pair.Value.Status == QuestStatus.Active).Select(pair => pair.Key).ToArray();
 
         private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _items.Find(objective.ItemId) ??
             throw new InvalidOperationException($"Quest '{quest.QuestId}' needs the unknown item '{objective.ItemId}'.");

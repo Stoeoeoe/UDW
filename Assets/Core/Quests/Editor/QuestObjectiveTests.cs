@@ -105,6 +105,42 @@ namespace Core.Quests.Editor
             Assert.That(_quests.Find("test:quest").Status, Is.EqualTo(QuestStatus.Completed));
         }
 
+        [Test]
+        public void TalkingToTheCharacterMeetsATalkObjectiveAndPlaysItsQuestDialogue()
+        {
+            Quest("{ id: 'ask', kind: 'talk', character: 'test:fabia', dialogue: 'test:ask_about_wine' }");
+            Assert.That(_quests.FindConversation("test:other"), Is.Null);
+            var conversation = _quests.FindConversation("test:fabia");
+            Assert.That(conversation.DialogueId, Is.EqualTo("test:ask_about_wine"));
+            _quests.CompleteConversation(conversation);
+            Assert.That(OnFirstStep(), Is.False);
+            Assert.That(_quests.FindConversation("test:fabia"), Is.Null, "Fabia is back to their usual dialogue.");
+        }
+
+        [Test]
+        public void DeliveringTakesTheItemsAndNeedsThemAll()
+        {
+            Quest("{ id: 'bring', kind: 'deliver', character: 'test:fabia', item: 'test:wine', count: 2 }");
+            _bag.AddItem(_wine, 1);
+            Assert.That(_quests.FindConversation("test:fabia"), Is.Null, "Too few to deliver.");
+            _bag.AddItem(_wine, 2);
+            _quests.CompleteConversation(_quests.FindConversation("test:fabia"));
+            Assert.That(_bag.Count(_wine), Is.EqualTo(1));
+            Assert.That(OnFirstStep(), Is.False);
+        }
+
+        [Test]
+        public void AConversationThatOutlivedItsStepChangesNothing()
+        {
+            Quest("{ id: 'bring', kind: 'deliver', character: 'test:fabia', item: 'test:wine', count: 1 }");
+            _bag.AddItem(_wine, 1);
+            var conversation = _quests.FindConversation("test:fabia");
+            _quests.CompleteStep("test:quest");
+            _quests.CompleteConversation(conversation);
+            Assert.That(_bag.Count(_wine), Is.EqualTo(1), "Nothing taken.");
+            Assert.That(_quests.Find("test:quest").StepId, Is.EqualTo("second"));
+        }
+
         private LocationData Location(string mapId)
         {
             var location = Game.Asset<LocationData>();

@@ -73,3 +73,9 @@ The game meets have, reach and condition objectives by itself. It checks them on
 depend on changes: the player's bag, a clock step (every ten in-game minutes), any Lua call that writes state (dialogue,
 cutscene and quest actions), entering a location, or a new step beginning. A reach objective with a trigger is met when
 the player walks into that trigger area on the map. Once met, an objective stays done for its step.
+
+Talk and deliver objectives are met by talking to their character. While the current step has one for a character
+(deliver only while the player carries the items), talking to them plays the objective's quest dialogue if it has one,
+otherwise their usual dialogue. The objective is met, and a delivery's items taken, when that conversation reaches its
+end. `ShowVulcanusDialogueInteractable` makes this choice; the dialogue a routine sets is never overwritten, so the
+character goes back to it afterwards.
