@@ -92,6 +92,7 @@ namespace Core
                 level.RegisterLifecycle(container.Resolve<WorldObjectSpawner>());
                 // Routine characters are placed after persistent entities exist; they are never saved.
                 level.RegisterLifecycle(container.Resolve<RoutineNpcService>());
+                level.RegisterLifecycle(container.Resolve<Core.Quests.QuestService>());
                 foreach (var manager in root.GetComponentsInChildren<GameManager>(true))
                     if (manager is ILocationLifecycle lifecycle)
                     {

@@ -45,7 +45,7 @@ namespace Core
             builder.Register<WorldObjectSpawner>(Lifetime.Singleton);
             builder.Register<RoutineNpcService>(Lifetime.Singleton).AsSelf().As<ITickable>();
             builder.Register<ShopService>(Lifetime.Singleton);
-            builder.Register<QuestService>(Lifetime.Singleton);
+            builder.Register<QuestService>(Lifetime.Singleton).AsSelf().As<ITickable>();
             builder.Register<GameStateManager>(Lifetime.Singleton);
             builder.Register<GameSaveService>(Lifetime.Singleton);
 #if UNITY_EDITOR || DEBUG

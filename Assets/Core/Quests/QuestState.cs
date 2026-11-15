@@ -44,6 +44,8 @@ namespace Core.Quests
 
         internal void Add(string questId, QuestProgress progress) => _quests.Add(questId, progress);
 
+        internal IEnumerable<KeyValuePair<string, QuestProgress>> All => _quests;
+
         internal void Validate()
         {
             if (_quests == null) throw new FormatException("The save is missing quest state.");

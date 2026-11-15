@@ -1,25 +1,56 @@
 using System;
 using System.Linq;
+using Core.Events;
 using Core.Game;
+using Core.Inventory;
+using Core.Location;
 using Core.Scripting;
+using Core.Tile.Vulcanus;
+using Core.TimeAndWeather;
+using VContainer.Unity;
 
 namespace Core.Quests
 {
     /// <summary>
     /// Runs quests: starts them, completes objectives and steps, and runs their Lua actions. Progress lives in the save
     /// (<see cref="GameState.Quests"/>) and is recorded before any action runs, so an action may advance the quest further.
+    /// <para>
+    /// The game meets have, reach and condition objectives by itself. It checks them on the frame after something they
+    /// could depend on changes: the bag, the clock's step, a Lua call that writes state (dialogue, cutscene or quest
+    /// actions), entering a location, or a new step beginning. Trigger areas are met when the player walks in.
+    /// </para>
     /// </summary>
-    public sealed class QuestService
+    public sealed class QuestService : ITickable, ILocationLifecycle, IDisposable,
+        IEventListener<InventoryChangedEvent>, IEventListener<GameTimeChangedEvent>, IEventListener<MapTriggerEnteredEvent>
     {
         private readonly QuestCatalog _quests;
+        private readonly ItemCatalog _items;
         private readonly GameState _gameState;
         private readonly LuaRuntime _lua;
+        private readonly CharacterManager _characters;
+        private VulcanusLuaEngine _conditions;
+        private string _mapId;
+        private bool _checkPending;
 
-        public QuestService(QuestCatalog quests, GameState gameState, LuaRuntime lua)
+        public QuestService(QuestCatalog quests, ItemCatalog items, GameState gameState, LuaRuntime lua, CharacterManager characters)
         {
             _quests = quests;
+            _items = items;
             _gameState = gameState;
             _lua = lua;
+            _characters = characters;
+            _lua.StateWritten += RequestCheck;
+            EventBus<InventoryChangedEvent>.Subscribe(this);
+            EventBus<GameTimeChangedEvent>.Subscribe(this);
+            EventBus<MapTriggerEnteredEvent>.Subscribe(this);
+        }
+
+        public void Dispose()
+        {
+            _lua.StateWritten -= RequestCheck;
+            EventBus<InventoryChangedEvent>.Unsubscribe(this);
+            EventBus<GameTimeChangedEvent>.Unsubscribe(this);
+            EventBus<MapTriggerEnteredEvent>.Unsubscribe(this);
         }
 
         public QuestDefinition Require(string questId) =>
@@ -40,6 +71,7 @@ namespace Core.Quests
             {
                 Status = QuestStatus.Active, StepId = quest.Steps[0].Id, StartedAtMinute = _gameState.Time.TotalMinutes
             });
+            RequestCheck();
             Run(quest.OnStart);
         }
 
@@ -60,6 +92,60 @@ namespace Core.Quests
             Finish(quest, progress, step);
         }
 
+        public void Tick()
+        {
+            if (!_checkPending) return;
+            _checkPending = false;
+            var player = _characters.MainCharacter;
+            if (!player) return; // Nothing can be met before the player exists; entering a location checks again.
+            ForEachOpenObjective((quest, objective) => objective.Kind switch
+            {
+                QuestObjectiveKind.Have => player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count,
+                QuestObjectiveKind.Reach => string.IsNullOrEmpty(objective.TriggerId) && objective.MapId == _mapId,
+                QuestObjectiveKind.Condition => (_conditions ??= _lua.CreateEngine()).EvaluateCondition(objective.Condition),
+                _ => false
+            });
+        }
+
+        public void OnEvent(InventoryChangedEvent e)
+        {
+            if (e.InventoryRef == _characters.MainCharacter?.MainInventory) RequestCheck();
+        }
+
+        public void OnEvent(GameTimeChangedEvent e) => RequestCheck();
+
+        public void OnEvent(MapTriggerEnteredEvent e) => ForEachOpenObjective((_, objective) =>
+            objective.Kind == QuestObjectiveKind.Reach && objective.MapId == _mapId && objective.TriggerId == e.TriggerId);
+
+        public void OnLocationEnter(LocationData location)
+        {
+            _mapId = location.id;
+            RequestCheck();
+        }
+
+        public void OnLocationLeave(LocationData location) => _mapId = null;
+
+        private void RequestCheck() => _checkPending = true;
+
+        /// <summary>Completes each open objective of the active quests' current steps that is met.</summary>
+        private void ForEachOpenObjective(Func<QuestDefinition, QuestObjective, bool> isMet)
+        {
+            foreach (var questId in _gameState.Quests.All.Where(pair => pair.Value.Status == QuestStatus.Active)
+                         .Select(pair => pair.Key).ToArray())
+            {
+                var (quest, progress, step) = CurrentStep(questId);
+                foreach (var objective in step.Objectives)
+                {
+                    if (progress.StepId != step.Id || progress.Status != QuestStatus.Active) break; // A finished step checks again next frame.
+                    if (!progress.CompletedObjectives.Contains(objective.Id) && isMet(quest, objective))
+                        CompleteObjective(questId, objective.Id);
+                }
+            }
+        }
+
+        private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _items.Find(objective.ItemId) ??
+            throw new InvalidOperationException($"Quest '{quest.QuestId}' needs the unknown item '{objective.ItemId}'.");
+
         private (QuestDefinition, QuestProgress, QuestStep) CurrentStep(string questId)
         {
             var quest = Require(questId);
@@ -78,6 +164,7 @@ namespace Core.Quests
             var completed = next == quest.Steps.Length;
             progress.StepId = completed ? null : quest.Steps[next].Id;
             if (completed) progress.Status = QuestStatus.Completed;
+            else RequestCheck(); // The new step's objectives may already be met.
             Run(step.OnComplete);
             if (completed) Run(quest.OnComplete);
         }

@@ -1,4 +1,6 @@
 using System;
+using Character;
+using Core.Events;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
@@ -12,6 +14,12 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private string[] tags = Array.Empty<string>();
 
         public string TriggerId => triggerId;
+
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            if (!other.isTrigger && other.GetComponentInParent<MainCharacter>())
+                EventBus<MapTriggerEnteredEvent>.Raise(new MapTriggerEnteredEvent { TriggerId = triggerId });
+        }
         public string Label => label;
         public string TriggerType => triggerType;
         public string Shape => shape;

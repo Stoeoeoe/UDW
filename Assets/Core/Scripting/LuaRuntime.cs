@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Core.Camera;
 using Core.Location;
@@ -15,6 +16,10 @@ namespace Core.Scripting
     {
         private readonly IObjectResolver _container;
         public LuaRuntime(IObjectResolver container) => _container = container;
+
+        /// <summary>Raised after any Lua call that writes state, from dialogues, cutscenes or quest actions.</summary>
+        public event Action StateWritten;
+        internal void NotifyStateWritten() => StateWritten?.Invoke();
         internal LevelManager Level => _container.Resolve<LevelManager>();
         internal MapManager Maps => _container.Resolve<MapManager>();
         internal CharacterManager Characters => _container.Resolve<CharacterManager>();

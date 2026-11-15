@@ -67,5 +67,9 @@ after the last step the quest completes. Progress is recorded before any action 
 quest further. Mistakes fail clearly: starting a quest twice, an unknown quest or objective, or advancing an ended quest.
 
 The `Quests` Lua module reads (`IsActive`, `IsCompleted`, `IsFailed`, `CurrentStep`, `IsOnStep`) and advances
-(`Start`, `CompleteObjective`, `CompleteStep`) quests. For now progress is scripted only; the game checks objectives
-from STO-95 on.
+(`Start`, `CompleteObjective`, `CompleteStep`) quests.
+
+The game meets have, reach and condition objectives by itself. It checks them on the frame after something they could
+depend on changes: the player's bag, a clock step (every ten in-game minutes), any Lua call that writes state (dialogue,
+cutscene and quest actions), entering a location, or a new step beginning. A reach objective with a trigger is met when
+the player walks into that trigger area on the map. Once met, an objective stays done for its step.

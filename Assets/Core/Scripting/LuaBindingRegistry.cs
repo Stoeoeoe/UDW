@@ -382,6 +382,7 @@ namespace Core.Scripting
                 ? FromLua(args[index], parameter.ParameterType, parameter.Name) : parameter.DefaultValue).ToArray();
             beforeInvoke?.Invoke(method, values); // Action sessions bind dynamic inputs before any side effects.
             var result = InvokeReflected(method.Info, method.Api, values);
+            if (method.WritesState) Runtime?.NotifyStateWritten();
             if (typeof(ILuaAction).IsAssignableFrom(method.Info.ReturnType))
                 return awaitAction(result is ILuaResultAction outputAction
                     ? new CheckedResultAction(outputAction, DescribeOutputs(method.Info)) : (ILuaAction)result);
