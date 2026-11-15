@@ -265,9 +265,16 @@ export class FileSystemManager {
     );
   }
 
-  /**
-   * Load all NPC routines from routines/ directory.
-   */
+  /** Load quest sources; localization sidecars are exports, not quest documents. */
+  async loadAllQuests(): Promise<import('../types/quest').Quest[]> {
+    return this.readDirectory<import('../types/quest').Quest>(
+      resourceRegistry.quest.folder,
+      resourceRegistry.quest.extension,
+      true,
+    );
+  }
+
+  /** Load all NPC routines from routines/. */
   async loadAllRoutines(): Promise<import('../types/routine').Routine[]> {
     return this.readDirectory<import('../types/routine').Routine>(
       resourceRegistry.routine.folder,
@@ -312,11 +319,7 @@ export class FileSystemManager {
   /**
    * Save a JSON file (Map, Tileset, or Project)
    */
-  async saveJson(
-    subDir: ResourceFolder,
-    filename: string,
-    data: unknown,
-  ): Promise<void> {
+  async saveJson(subDir: ResourceFolder, filename: string, data: unknown): Promise<void> {
     data = this.normalizeDocument(subDir, filename, data);
     const definition = getResourceDefinition(subDir, filename);
     if (definition && data && typeof data === 'object') {

@@ -1,3 +1,4 @@
+import { QuestEditor } from '../screens/quest/QuestEditor';
 import React from 'react';
 import { CutsceneEditor } from '../screens/cutscene/CutsceneEditor';
 import { EmptyScreen } from '../screens/common/EmptyScreen';
@@ -63,6 +64,8 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
       return <ItemResourceDocument itemId={tab.document.itemId} />;
     case 'shop':
       return <ShopResourceDocument shopId={tab.document.shopId} />;
+    case 'quest':
+      return <QuestEditor questId={tab.document.questId} />;
     case 'routine':
       return <RoutineEditor routineId={tab.document.routineId} />;
     case 'dialogue':

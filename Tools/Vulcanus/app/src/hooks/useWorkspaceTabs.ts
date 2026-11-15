@@ -129,6 +129,9 @@ export function useWorkspaceTabs() {
       markRecentResource(`shop:${doc.shopId}`);
       return;
     }
+    if (doc.kind === 'quest') {
+      markRecentResource(`quest:${doc.questId}`);
+    }
     if (doc.kind === 'routine') {
       markRecentResource(`routine:${doc.routineId}`);
       return;

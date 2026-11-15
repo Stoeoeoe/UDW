@@ -26,12 +26,13 @@ export const DialogueSelect: React.FC<{
   label: string;
   value: string | undefined;
   inherited: string | null;
+  emptyLabel?: string;
   onChange: (id: string | undefined) => void;
   /** Name suggested for a dialogue created here, such as "Fabia – market". */
   newName: string;
   /** Explorer folder for dialogues created here, such as the character's name. */
   newFolder: string;
-}> = ({ label, value, inherited, onChange, newName, newFolder }) => {
+}> = ({ label, value, inherited, onChange, newName, newFolder, emptyLabel }) => {
   const dialogues = useEditorStore((state) => state.dialogues);
   const dialogueTypes = useEditorStore((state) => state.project?.dialogueTypes) ?? [];
   const toast = useToast();
@@ -69,7 +70,9 @@ export const DialogueSelect: React.FC<{
           else onChange(event.target.value || undefined);
         }}
       >
-        <option value="">{inherited ? `keeps ${name(inherited)}` : 'nothing to say'}</option>
+        <option value="">
+          {inherited ? `keeps ${name(inherited)}` : (emptyLabel ?? 'nothing to say')}
+        </option>
         {!known && <option value={value}>{value}</option>}
         {[...dialogues.values()]
           .sort((a, b) => a.name.localeCompare(b.name))

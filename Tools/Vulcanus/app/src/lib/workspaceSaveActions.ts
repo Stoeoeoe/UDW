@@ -55,6 +55,7 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'cutscenes' ||
     tab.document.kind === 'shop' ||
     tab.document.kind === 'routine' ||
+    tab.document.kind === 'quest' ||
     tab.document.kind === 'dialogues'
   );
 }
@@ -83,6 +84,12 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
     // A shop that cannot be written yet is reported, not shown as saved.
     const unit = getSaveUnitStatus(document.saveUnitId);
     if (unit.status === 'error') throw new Error(unit.error ?? 'The shop could not be saved.');
+    return;
+  }
+  if (document.kind === 'quest') {
+    await editor.saveQuest(document.questId);
+    const unit = getSaveUnitStatus(document.saveUnitId);
+    if (unit.status === 'error') throw new Error(unit.error ?? 'The quest could not be saved.');
     return;
   }
   if (document.kind === 'routine') {
@@ -142,6 +149,10 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
     }
     if (saveUnitId.startsWith('shop:')) {
       await editor.saveShop(saveUnitId.slice('shop:'.length));
+      continue;
+    }
+    if (saveUnitId.startsWith('quest:')) {
+      await editor.saveQuest(saveUnitId.slice('quest:'.length));
       continue;
     }
     if (saveUnitId.startsWith('routine:')) {
@@ -237,6 +248,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   }
   if (document.kind === 'shop') {
     useEditorStore.getState().discardShop(document.shopId);
+    return;
+  }
+  if (document.kind === 'quest') {
+    useEditorStore.getState().discardQuest(document.questId);
     return;
   }
   if (document.kind === 'routine') {

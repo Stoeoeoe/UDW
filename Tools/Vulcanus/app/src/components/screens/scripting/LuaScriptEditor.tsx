@@ -382,6 +382,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
   const uri = `inmemory://lua-editor-${instanceId}/${encodeURIComponent(documentId ?? 'script')}.lua`;
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const characters = useEditorStore((s) => s.characters);
+  const quests = useEditorStore((s) => s.quests);
   const storyValues = useEditorStore((s) => s.project?.storyValues);
   const symbols = useMemo(() => bindingSymbols(manifest, scope), [manifest, scope]);
   const unavailable = useMemo(() => unavailableBindings(manifest, scope), [manifest, scope]);
@@ -520,7 +521,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
             symbols,
             withProjectCharacters(manifest?.resources, characters),
             characterReferences,
-            { ...argumentReferences, storyValues },
+            { ...argumentReferences, storyValues, quests },
           );
           const path = textBefore.slice(matches.from);
           const start = model.getPositionAt(matches.from);
@@ -735,6 +736,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     scope,
     unavailable,
     storyValues,
+    quests,
     lspLineOffset,
   ]);
 

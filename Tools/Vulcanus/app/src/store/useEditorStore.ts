@@ -31,6 +31,7 @@ import { createCutsceneSlice, CutsceneSlice } from './slices/cutsceneSlice';
 import { createCharacterSlice, CharacterSlice } from './slices/characterSlice';
 import { createItemSlice, ItemSlice } from './slices/itemSlice';
 import { createShopSlice, ShopSlice } from './slices/shopSlice';
+import { createQuestSlice, QuestSlice } from './slices/questSlice';
 import { createRoutineSlice, RoutineSlice } from './slices/routineSlice';
 import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
 import { createEmotionSlice, EmotionSlice } from './slices/emotionSlice';
@@ -63,6 +64,7 @@ export interface EditorStore
     ItemSlice,
     ShopSlice,
     RoutineSlice,
+    QuestSlice,
     ItemClassSlice,
     EmotionSlice,
     TerrainSlice,
@@ -280,6 +282,11 @@ export function runEditorHistoryCommand(
     else state.redoShop(activeDocument.shopId);
     return true;
   }
+  if (activeDocument?.kind === 'quest') {
+    if (command === 'undo') state.undoQuest(activeDocument.questId);
+    else state.redoQuest(activeDocument.questId);
+    return true;
+  }
   if (activeDocument?.kind === 'routine') {
     if (command === 'undo') state.undoRoutine(activeDocument.routineId);
     else state.redoRoutine(activeDocument.routineId);
@@ -320,6 +327,7 @@ export const useEditorStore = create<EditorStore>()(
           ...createItemSlice(set, get, {} as never),
           ...createShopSlice(set, get, {} as never),
           ...createRoutineSlice(set, get, {} as never),
+          ...createQuestSlice(set, get, {} as never),
           ...createItemClassSlice(set, get, {} as never),
           ...createEmotionSlice(set, get, {} as never),
           ...createTerrainSlice(set, get, {} as never),
@@ -362,6 +370,7 @@ export const useEditorStore = create<EditorStore>()(
             get().resetCutscenes();
             get().resetShops();
             get().resetRoutines();
+            get().resetQuests();
             project = normalizeProject(project);
             withHistorySuppressed(
               () =>
@@ -397,6 +406,7 @@ export const useEditorStore = create<EditorStore>()(
             get().resetCutscenes();
             get().resetShops();
             get().resetRoutines();
+            get().resetQuests();
             for (const timeoutId of pendingTilesetSaves.values()) clearTimeout(timeoutId);
             pendingTilesetSaves.clear();
 

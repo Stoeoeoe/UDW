@@ -152,13 +152,14 @@ export function luaCode(text: string) {
 export function luaCallContext(text: string) {
   const scanned = luaCode(text);
   if (scanned.blocked) return null;
-  const stack: { char: string; name?: string; argument: number; from: number }[] = [];
+  const stack: { char: string; name?: string; argument: number; from: number; start: number }[] =
+    [];
   for (let i = 0; i < scanned.code.length; i++) {
     const char = scanned.code[i];
     if ('([{'.includes(char)) {
       const name =
         char === '(' ? /([\w]+(?:[.:][\w]+)*)\s*$/.exec(scanned.code.slice(0, i))?.[1] : undefined;
-      stack.push({ char, name, argument: 0, from: i + 1 });
+      stack.push({ char, name, argument: 0, from: i + 1, start: i + 1 });
     } else if (')]}'.includes(char)) stack.pop();
     else if (char === ',' && stack.length) {
       stack[stack.length - 1].argument++;
@@ -171,6 +172,7 @@ export function luaCallContext(text: string) {
         name: call.name!,
         argument: call.argument,
         from: call.from,
+        argumentsBefore: text.slice(call.start, call.from),
         direct: stack[stack.length - 1] === call,
         string: scanned.string,
       }
@@ -178,6 +180,7 @@ export function luaCallContext(text: string) {
 }
 
 export interface LuaArgumentReferences {
+  quests?: readonly import('../types/quest').Quest[];
   storyValues?: readonly StoryValueDefinition[];
   anchors?: readonly { id: string; name: string }[];
   dialogues?: readonly { id: string; name: string }[];
@@ -221,8 +224,20 @@ export function bindingCompletions(
         : parameter?.semanticType === 'dialogueRef'
           ? references.dialogues
           : undefined;
+    const quest = call.name.startsWith('Quests.')
+      ? references.quests?.find(
+          (q) => q.id === /^\s*(["'])(.*?)\1\s*,/.exec(call.argumentsBefore)?.[2],
+        )
+      : undefined;
+    const questEntries =
+      call.name.startsWith('Quests.') && call.argument === 0
+        ? references.quests?.map((q) => ({ id: q.id, description: q.title }))
+        : call.name === 'Quests.IsOnStep' && call.argument === 1
+          ? quest?.steps.map((step) => ({ id: step.id, description: step.journal }))
+          : undefined;
     const entries =
-      call.argument === 0 && /^GameState\.Story\.(Get|Set|Has|Remove)$/.test(call.name)
+      questEntries ??
+      (call.argument === 0 && /^GameState\.Story\.(Get|Set|Has|Remove)$/.test(call.name)
         ? (references.storyValues ?? []).map((v) => ({
             id: v.key,
             description: `${v.type}: ${v.description ?? ''}`,
@@ -231,7 +246,7 @@ export function bindingCompletions(
           ? characters.map((c) => ({ id: c.id, description: c.name }))
           : (contextual?.map((entry) => ({ id: entry.id, description: entry.name })) ??
             resources[parameter?.resourceType ?? ''] ??
-            []);
+            []));
     const from = scanned.string?.from ?? text.length - argumentText.length;
     const prefix = text.slice(from).toLowerCase();
     if (entries.length || scanned.string)

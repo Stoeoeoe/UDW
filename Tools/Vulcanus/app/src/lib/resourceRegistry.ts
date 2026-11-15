@@ -35,6 +35,8 @@ export interface ResourceDocuments {
   character: Character;
   item: Item;
   shop: Shop;
+  quest: import('../types/quest').Quest;
+  'quest-i18n': import('../types/quest').QuestI18n;
   routine: Routine;
   entity: EntityType;
   dialogue: DialogueDocument;
@@ -50,6 +52,7 @@ export type ResourceFolder =
   | 'npcs'
   | 'items'
   | 'shops'
+  | 'quests'
   | 'routines'
   | 'entities'
   | 'dialogues'
@@ -361,6 +364,44 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
     schemaFile: 'shop.schema.json',
     idScope: 'resource',
     normalize: (shop, prefix) => ({ ...shop, id: qualifyResourceId(shop.id, prefix) }),
+  },
+  quest: {
+    kind: 'quest',
+    folder: 'quests',
+    extension: '.quest.json',
+    schemaFile: 'quest.schema.json',
+    idScope: 'resource',
+    normalize: (quest, prefix) => ({
+      ...quest,
+      id: qualifyResourceId(quest.id, prefix),
+      giver: resourceReference(quest.giver, prefix),
+      steps: collection(quest.steps, (step) => ({
+        ...localDefinition(step),
+        objectives: collection(step.objectives, (objective) => ({
+          ...localDefinition(objective),
+          ...('character' in objective
+            ? { character: resourceReference(objective.character, prefix) }
+            : {}),
+          ...('item' in objective ? { item: resourceReference(objective.item, prefix) } : {}),
+          ...('dialogue' in objective
+            ? { dialogue: resourceReference(objective.dialogue, prefix) }
+            : {}),
+          ...('map' in objective ? { map: resourceReference(objective.map, prefix) } : {}),
+        })),
+      })),
+    }),
+  },
+  'quest-i18n': {
+    kind: 'quest-i18n',
+    folder: 'quests',
+    extension: '.i18n.json',
+    schemaFile: 'quest-i18n.schema.json',
+    idScope: 'resource',
+    sourceKind: 'quest',
+    normalize: (document, prefix) => ({
+      ...document,
+      questId: qualifyResourceId(document.questId, prefix),
+    }),
   },
   routine: {
     kind: 'routine',

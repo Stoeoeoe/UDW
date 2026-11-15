@@ -137,11 +137,17 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
     const shops = await fileSystem.loadAllShops();
     set((state) => {
       state.shops = castDraft(shops);
-      state.savedShops = castDraft(
-        Object.fromEntries(shops.map((shop) => [shop.id, shop])),
-      );
+      state.savedShops = castDraft(Object.fromEntries(shops.map((shop) => [shop.id, shop])));
       state.shopPast = {};
       state.shopFuture = {};
+    });
+
+    const quests = await fileSystem.loadAllQuests();
+    set((state) => {
+      state.quests = castDraft(quests);
+      state.savedQuests = castDraft(Object.fromEntries(quests.map((quest) => [quest.id, quest])));
+      state.questPast = {};
+      state.questFuture = {};
     });
 
     // 1.84 NPC routines

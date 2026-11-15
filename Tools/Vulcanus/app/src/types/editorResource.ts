@@ -9,6 +9,7 @@ export const editorResourceTypeIds = [
   'item',
   'shop',
   'routine',
+  'quest',
   'dialogue',
   'cutscene',
 ] as const;
@@ -28,7 +29,8 @@ export type EditorResourceCreateFlow =
   | 'location'
   | 'tileset'
   | 'dialogue'
-  | 'routine';
+  | 'routine'
+  | 'quest';
 export type EditorResourceMetadataFlow =
   | 'none'
   | 'location'

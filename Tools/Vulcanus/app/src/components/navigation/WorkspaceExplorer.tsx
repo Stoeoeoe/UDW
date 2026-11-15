@@ -97,6 +97,8 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiPackage;
     case 'cutscene':
       return FiFilm;
+    case 'quests':
+      return FiStar;
     case 'routines':
       return FiClock;
     case 'dialogues':

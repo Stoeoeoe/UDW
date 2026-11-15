@@ -47,6 +47,7 @@ function getDocumentIcon(tab: WorkspaceTab) {
     case 'cutscenes':
     case 'cutscene':
       return FiFilm;
+    case 'quest':
     case 'routine':
       return FiClock;
     case 'dialogues':

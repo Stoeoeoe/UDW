@@ -12,6 +12,7 @@ import { GuidedMapCreationDialog } from '../dialogs/GuidedMapCreationDialog';
 import { CreateTilesetDialog } from '../screens/tileset/CreateTilesetDialog';
 import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
 import { createDialogue } from '../screens/dialogue/createDialogue';
+import { CreateQuestDialog } from '../screens/quest/CreateQuestDialog';
 import { CreateRoutineDialog } from '../screens/routine/CreateRoutineDialog';
 
 export type CreateDialogState = {
@@ -84,6 +85,17 @@ export const WorkspaceCreateDialog: React.FC<{
     );
   }
 
+  if (createFlow === 'quest') {
+    return (
+      <CreateQuestDialog
+        folderPath={state.folderPath}
+        onClose={onClose}
+        onCreated={(id, name) =>
+          onOpenDocument(createEditorResourceDocument({ type: 'quest', id, name }), { pin: true })
+        }
+      />
+    );
+  }
   if (createFlow === 'routine') {
     return (
       <CreateRoutineDialog

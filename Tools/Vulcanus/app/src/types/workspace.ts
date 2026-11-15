@@ -20,6 +20,7 @@ export type WorkspaceScreenKind =
   | 'data';
 
 export type WorkspaceDocument =
+  | { kind: 'quest'; questId: string; label: string; saveUnitId: string }
   | { kind: 'data'; label: string; saveUnitId: 'configuration' }
   | { kind: 'cutscene'; cutsceneId: string; label: string; saveUnitId: string }
   | { kind: 'cutscenes'; label: string; saveUnitId: 'cutscenes' }
@@ -109,7 +110,13 @@ export type WorkspaceDocument =
       saveUnitId: string;
     };
 
-export type WorkspaceConfigTab = 'terrain' | 'metadata' | 'layers' | 'locations' | 'itemclasses' | 'emotions';
+export type WorkspaceConfigTab =
+  | 'terrain'
+  | 'metadata'
+  | 'layers'
+  | 'locations'
+  | 'itemclasses'
+  | 'emotions';
 
 export interface WorkspaceTab {
   id: string;
@@ -188,6 +195,7 @@ export interface WorkspaceProjectSnapshot {
   entityTypes?: EntityType[];
   items?: Item[];
   shops?: Shop[];
+  quests?: import('./quest').Quest[];
   routines?: import('./routine').Routine[];
   dialogues?: DialogueDocument[];
   cutscenes?: import('./cutscene').Cutscene[];

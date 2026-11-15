@@ -164,6 +164,7 @@ describe('buildWorkspaceTree', () => {
       'group:items',
       'group:shops',
       'group:routines',
+      'group:quests',
       'group:dialogues',
       'group:cutscenes',
       'data',

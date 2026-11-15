@@ -204,6 +204,20 @@ export function listShopDescriptors(shops: Shop[]): ResourceDescriptor[] {
   }));
 }
 
+export function listQuestDescriptors(
+  quests: import('../types/quest').Quest[],
+): ResourceDescriptor[] {
+  return quests.map((quest) => ({
+    type: 'quest',
+    kind: 'quest',
+    id: quest.id,
+    name: quest.title,
+    folderPath: normalizeFolderPath(quest.folderPath),
+    document: createEditorResourceDocument({ type: 'quest', id: quest.id, name: quest.title }),
+    saveUnitId: getEditorResourceSaveUnitId('quest', quest.id),
+  }));
+}
+
 export interface AllResourceDescriptors {
   locations: ResourceDescriptor[];
   tilesets: ResourceDescriptor[];
@@ -211,6 +225,7 @@ export interface AllResourceDescriptors {
   entities: ResourceDescriptor[];
   items: ResourceDescriptor[];
   shops: ResourceDescriptor[];
+  quests: ResourceDescriptor[];
   routines: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
   cutscenes: ResourceDescriptor[];
@@ -223,6 +238,7 @@ export function buildAllResourceDescriptors(state: {
   entityTypes: EntityType[];
   items: Item[];
   shops: Shop[];
+  quests?: import('../types/quest').Quest[];
   routines: Routine[];
   dialogues: Map<string, DialogueDocument>;
   cutscenes?: import('../types/cutscene').Cutscene[];
@@ -236,6 +252,7 @@ export function buildAllResourceDescriptors(state: {
     entities: listEntityDescriptors(state.entityTypes),
     items: listItemDescriptors(state.items),
     shops: listShopDescriptors(state.shops),
+    quests: listQuestDescriptors(state.quests ?? []),
     routines: listRoutineDescriptors(state.routines, state.characters),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
     cutscenes: listCutsceneDescriptors(
@@ -266,6 +283,7 @@ export function canCreateResourceKind(
   | 'item'
   | 'shop'
   | 'routine'
+  | 'quest'
   | 'dialogue'
   | 'cutscene' {
   return (
@@ -276,6 +294,7 @@ export function canCreateResourceKind(
     kind === 'item' ||
     kind === 'shop' ||
     kind === 'routine' ||
+    kind === 'quest' ||
     kind === 'dialogue' ||
     kind === 'cutscene'
   );
@@ -303,6 +322,9 @@ export async function setResourceFolderPath(
       break;
     case 'shop':
       await store.updateShop(id, { folderPath: normalizedFolderPath });
+      break;
+    case 'quest':
+      store.updateQuest(id, { folderPath: normalizedFolderPath });
       break;
     case 'routine':
       store.updateRoutine(id, { folderPath: normalizedFolderPath });
@@ -365,6 +387,8 @@ function listDescriptorsForKind(
       return listItemDescriptors(state.items);
     case 'shop':
       return listShopDescriptors(state.shops);
+    case 'quest':
+      return listQuestDescriptors(state.quests);
     case 'routine':
       return listRoutineDescriptors(state.routines, state.characters);
     case 'dialogue':

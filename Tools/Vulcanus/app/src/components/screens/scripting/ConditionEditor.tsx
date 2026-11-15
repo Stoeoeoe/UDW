@@ -135,6 +135,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const [showAdvancedStdlib, setShowAdvancedStdlib] = useState(false);
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const characters = useEditorStore((s) => s.characters);
+  const quests = useEditorStore((s) => s.quests);
   const storyValues = useEditorStore((s) => s.project?.storyValues);
   const storyIssues = useMemo(
     () => storyValueDiagnostics(value, storyValues ?? []),
@@ -171,7 +172,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         symbols,
         withProjectCharacters(manifest?.resources, characters),
         [],
-        { storyValues },
+        { storyValues, quests },
       );
       const q = text.slice(matches.from);
       if (!q && !context.explicit && !matches.string && !matches.argument && !matches.member)
@@ -295,7 +296,7 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         }),
       ),
     ];
-  }, [allCompletions, symbols, manifest, characters, unavailable, storyValues]);
+  }, [allCompletions, symbols, manifest, characters, unavailable, storyValues, quests]);
 
   return (
     <Box>

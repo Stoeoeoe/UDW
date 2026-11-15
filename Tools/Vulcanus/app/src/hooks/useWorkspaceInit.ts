@@ -40,6 +40,7 @@ export function useWorkspaceInit() {
   const characters = useEditorStore((state) => state.characters);
   const items = useEditorStore((state) => state.items);
   const shops = useEditorStore((state) => state.shops);
+  const quests = useEditorStore((state) => state.quests);
   const routines = useEditorStore((state) => state.routines);
   const dialogues = useEditorStore((state) => state.dialogues);
   const cutscenes = useEditorStore((s) => s.cutscenes);
@@ -67,6 +68,7 @@ export function useWorkspaceInit() {
         entityTypes,
         items,
         shops,
+        quests,
         routines,
         dialogues: Array.from(dialogues.values()),
         cutscenes,
@@ -80,6 +82,7 @@ export function useWorkspaceInit() {
       entityTypes,
       items,
       shops,
+      quests,
       routines,
       dialogues,
       cutscenes,
@@ -126,6 +129,7 @@ export function useWorkspaceInit() {
       entityTypes,
       items,
       shops,
+      quests,
       routines,
       dialogues: Array.from(dialogues.values()),
       cutscenes,
@@ -165,6 +169,7 @@ export function useWorkspaceInit() {
     entityTypes,
     items,
     shops,
+    quests,
     routines,
     dialogues,
     cutscenes,
@@ -188,6 +193,7 @@ export function useWorkspaceInit() {
         entityTypes,
         items,
         shops,
+        quests,
         routines,
         dialogues: Array.from(dialogues.values()),
         cutscenes,
@@ -212,6 +218,7 @@ export function useWorkspaceInit() {
     entityTypes,
     items,
     shops,
+    quests,
     routines,
     dialogues,
     cutscenes,
