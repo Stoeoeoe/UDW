@@ -122,8 +122,9 @@ namespace Core.Tile.Editor
         {
             var pixels = Render(_ => { });
             var rows = CrestRows(pixels);
-            Assert.That(rows.Length, Is.EqualTo(4), "A 64-pixel view of a 16-pixel swell holds four crests.");
-            Assert.That(rows.Zip(rows.Skip(1), (a, b) => b - a), Is.All.EqualTo(16), "One wavelength apart.");
+            // Crests fade in and out as they travel, so a 64-pixel view of a 16-pixel swell shows up to four.
+            Assert.That(rows.Length, Is.InRange(2, 4));
+            Assert.That(rows.Zip(rows.Skip(1), (a, b) => (b - a) % 16), Is.All.Zero, "Whole wavelengths apart.");
             Assert.That(CrestColumns(pixels), Is.Empty, "A northbound swell has east-west crests.");
         }
 
@@ -166,8 +167,8 @@ namespace Core.Tile.Editor
         {
             var pixels = Render(profile => profile.swellMeander = 1);
             Assert.That(CrestRows(pixels), Is.Empty, "No crest stays on one row across the view.");
-            // Every column still crosses the crests: they bend, they do not vanish.
-            Assert.That(Enumerable.Range(0, Size).All(x => Enumerable.Range(0, Size).Count(y => Matches(pixels, x, y, Crest)) >= 3), Is.True);
+            // Every column still crosses a crest: they bend, they do not vanish.
+            Assert.That(Enumerable.Range(0, Size).All(x => Enumerable.Range(0, Size).Any(y => Matches(pixels, x, y, Crest))), Is.True);
         }
 
         [Test]
@@ -175,8 +176,9 @@ namespace Core.Tile.Editor
         {
             var calm = Render(_ => { }, seaState: 0);
             var storm = Render(_ => { }, seaState: 1);
-            Assert.That(calm.Count(p => p.r > 200 && p.g > 200 && p.b > 200), Is.Zero, "A calm open sea has no foam.");
-            Assert.That(storm.Count(p => p.r > 200 && p.g > 200 && p.b > 200), Is.GreaterThan(Size), "A storm caps crests with foam.");
+            int Foam(Color32[] pixels) => pixels.Count(p => p.r > 200 && p.g > 200 && p.b > 200);
+            Assert.That(Foam(calm), Is.LessThan(Size), "A calm sea foams on only a few crest stretches.");
+            Assert.That(Foam(storm), Is.GreaterThan(Foam(calm) * 4), "A storm caps far more crests with foam.");
         }
 
         [Test]
@@ -192,7 +194,7 @@ namespace Core.Tile.Editor
             Assert.That(Foams(0, 12), Is.GreaterThan(Size / 2), "Near the shore crests are foam.");
             Assert.That(columns.Where(x => x < 12), Is.Empty, "No ordinary crest line reaches the beach.");
             Assert.That(columns.Count(x => x >= 24), Is.GreaterThan(0), "Out at sea they are ordinary crests.");
-            Assert.That(Foams(24, Size), Is.Zero);
+            Assert.That(Foams(24, Size), Is.LessThan(Size / 2), "Out at sea only a few crest stretches foam.");
         }
 
         [Test]

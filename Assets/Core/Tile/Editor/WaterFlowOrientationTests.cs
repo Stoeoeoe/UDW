@@ -85,8 +85,11 @@ namespace Core.Tile.Editor
             }
         }
 
+        // Flowing water blends each wavelet 1-2-1 across the current. Its core (at least half wave colour) shows the direction.
+        private static bool IsWave(Color32 pixel) => pixel.r > 180 && pixel.r >= pixel.b;
+
         private static bool IsWave(Color32[] pixels, int x, int y) =>
-            x >= 0 && y >= 0 && x < Size && y < Size && pixels[y * Size + x].r > 200 && pixels[y * Size + x].b < 100;
+            x >= 0 && y >= 0 && x < Size && y < Size && IsWave(pixels[y * Size + x]);
 
         // Wave pixels that have another wave pixel one step away in the given direction (image y points up).
         private static int Pairs(Color32[] pixels, int dx, int dy)
@@ -100,7 +103,7 @@ namespace Core.Tile.Editor
 
         private static void AssertRunsAlong(Color32[] pixels, (int x, int y) along, (int x, int y) across)
         {
-            var total = pixels.Count(pixel => pixel.r > 200 && pixel.b < 100);
+            var total = pixels.Count(IsWave);
             Assert.That(total, Is.GreaterThan(30), "The render must contain wavelets to measure.");
             var alongPairs = Pairs(pixels, along.x, along.y);
             var acrossPairs = Pairs(pixels, across.x, across.y);

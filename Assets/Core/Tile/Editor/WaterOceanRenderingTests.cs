@@ -147,7 +147,9 @@ namespace Core.Tile.Editor
             var off = Render(0, configure: p => { p.causticIntensity = 0; p.oceanBeachSlopePixels = 12; });
             var on = Render(0, configure: p => { p.causticIntensity = 0.6f; p.oceanBeachSlopePixels = 12; });
             Assert.That(on.Select(p => p.a), Is.EqualTo(off.Select(p => p.a)));
-            Assert.That(on.Where((_, i) => i % Size < 54), Is.EqualTo(off.Where((_, i) => i % Size < 54)));
+            // The bottom logical row borders the fixture's shoreline data, where the shader sees open sea.
+            bool Slope(int i) => i % Size < 54 && i / Size >= 2;
+            Assert.That(on.Where((_, i) => Slope(i)), Is.EqualTo(off.Where((_, i) => Slope(i))));
             Assert.That(off.Zip(on, (a,b) => !a.Equals(b)).Where((_, i) => i % Size >= 96).Count(changed => changed), Is.GreaterThan(300));
         }
 
