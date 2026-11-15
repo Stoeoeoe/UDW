@@ -11,14 +11,19 @@ namespace Core.Tile.Editor.Vulcanus
     /// <summary>
     /// After a .vmap is imported, ensures a corresponding scene exists containing the map
     /// prefab and is registered in Build Settings. The scene is created exactly once and never
-    /// touched again — the map prefab is the authoritative source of content.
+    /// touched again — the map prefab is the authoritative source of content. Test maps get
+    /// their scenes in the test folder, for play tests, and stay out of Build Settings.
     /// </summary>
     internal class VulcanusMapScenePostprocessor : AssetPostprocessor
     {
         private const string SceneOutputFolder = "Assets/Scenes/Maps";
+        internal const string TestSceneFolder = CatalogAssetDiscovery.TestFolder + "/Scenes";
 
         internal static string GetScenePath(string mapAssetPath) =>
-            $"{SceneOutputFolder}/{Path.GetFileNameWithoutExtension(mapAssetPath)}.unity";
+            $"{SceneFolder(mapAssetPath)}/{Path.GetFileNameWithoutExtension(mapAssetPath)}.unity";
+
+        private static string SceneFolder(string mapAssetPath) =>
+            CatalogAssetDiscovery.IsTestContent(mapAssetPath) ? TestSceneFolder : SceneOutputFolder;
 
         static void OnPostprocessAllAssets(
             string[] importedAssets,
@@ -26,9 +31,8 @@ namespace Core.Tile.Editor.Vulcanus
             string[] movedAssets,
             string[] movedFromAssetPaths)
         {
-            // Test maps never become game scenes.
             var mapAssets = importedAssets
-                .Where(p => p.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase) && !CatalogAssetDiscovery.IsTestContent(p))
+                .Where(p => p.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
             if (mapAssets.Length == 0)
@@ -43,17 +47,19 @@ namespace Core.Tile.Editor.Vulcanus
                     continue;
 
                 var scenePath = GetScenePath(mapAssetPath);
+                // Test maps never become game scenes.
+                var inBuild = !CatalogAssetDiscovery.IsTestContent(mapAssetPath);
 
                 // Never touch an existing scene.
                 if (File.Exists(Path.GetFullPath(scenePath)))
                 {
                     // Repair registration without rewriting authored scene contents.
-                    scenesAdded |= EnsureInBuildSettings(scenePath);
+                    if (inBuild) scenesAdded |= EnsureInBuildSettings(scenePath);
                     continue;
                 }
 
-                if (!AssetDatabase.IsValidFolder(SceneOutputFolder))
-                    CreateFolderRecursive(SceneOutputFolder);
+                if (!AssetDatabase.IsValidFolder(SceneFolder(mapAssetPath)))
+                    CreateFolderRecursive(SceneFolder(mapAssetPath));
 
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
 
@@ -68,7 +74,7 @@ namespace Core.Tile.Editor.Vulcanus
                 finally { EditorSceneManager.CloseScene(scene, true); }
 
                 AssetDatabase.ImportAsset(scenePath);
-                scenesAdded |= EnsureInBuildSettings(scenePath);
+                if (inBuild) scenesAdded |= EnsureInBuildSettings(scenePath);
 
                 Debug.Log($"[VulcanusMapScenePostprocessor] Created scene '{scenePath}' for map '{mapAssetPath}'.");
             }
