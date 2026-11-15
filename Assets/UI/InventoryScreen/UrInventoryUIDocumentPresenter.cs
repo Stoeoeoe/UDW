@@ -7,10 +7,12 @@ using Core.Events;
 using Core.Inventory;
 using Core.Items;
 using Core.Location;
+using Core.Quests;
 using Input;
 using Interaction.Tools;
 using Items;
 using Plants;
+using UI.Journal;
 using UI.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -23,6 +25,7 @@ namespace UI.InventoryScreen
     {
         [Inject] private UrGUIManager _urGUIManager;
         [Inject] private LevelManager _level;
+        [Inject] private QuestService _quests;
 
         [Inject] private InputManager _inputManager;
         [Inject] private ItemManager _itemManager;
@@ -35,7 +38,6 @@ namespace UI.InventoryScreen
         [SerializeField] private MenuPageDefinition[] menuPages =
         {
             new() { Id = "world", Title = "World", Placeholder = "The world map is not available yet." },
-            new() { Id = "journal", Title = "Journal", Placeholder = "Your journal is not available yet." },
             new() { Id = "skills", Title = "Skills", Placeholder = "Your skills are not available yet." },
             new() { Id = "relationships", Title = "Relationships", Placeholder = "Relationships are not available yet." }
         };
@@ -73,6 +75,8 @@ namespace UI.InventoryScreen
                 () => { PlayUISound(UISoundCue.Click); RefreshAllSlots(); }, CloseInventory);
             Menu.RegisterPage("bag", "Bag", root.Q("bagPage"));
             Menu.RegisterPage("equipment", "Equipment", root.Q("equipmentPage"));
+            var journal = new JournalPage(root.Q("journalPage"), _quests);
+            Menu.RegisterPage("journal", "Journal", root.Q("journalPage"), shown: journal.Show);
             if (menuPages != null) foreach (var page in menuPages) if (page != null) Menu.RegisterPage(page);
             RegisterSettingsPage(root.Q("settingsPage"));
             _overlay = Menu.Overlay; _grid = root.Q("slotGrid");

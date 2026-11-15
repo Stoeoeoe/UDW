@@ -94,6 +94,29 @@ namespace Core.Quests.Editor
         }
 
         [Test]
+        public void EachStartStepAndCompletionIsAnnouncedForNotices()
+        {
+            var changes = new System.Collections.Generic.List<QuestChange>();
+            var listener = new Listener(e => changes.Add(e.Change));
+            Core.Events.EventBus<QuestChangedEvent>.Subscribe(listener);
+            try
+            {
+                _quests.Start("test:quest");
+                _quests.CompleteStep("test:quest");
+                _quests.CompleteStep("test:quest");
+            }
+            finally { Core.Events.EventBus<QuestChangedEvent>.Unsubscribe(listener); }
+            Assert.That(changes, Is.EqualTo(new[] { QuestChange.Started, QuestChange.StepFinished, QuestChange.Completed }));
+        }
+
+        private sealed class Listener : Core.Events.IEventListener<QuestChangedEvent>
+        {
+            private readonly Action<QuestChangedEvent> _received;
+            public Listener(Action<QuestChangedEvent> received) => _received = received;
+            public void OnEvent(QuestChangedEvent e) => _received(e);
+        }
+
+        [Test]
         public void ProgressIsSavedAndLoaded()
         {
             _quests.Start("test:quest");

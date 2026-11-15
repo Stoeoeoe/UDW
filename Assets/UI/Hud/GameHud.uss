@@ -12,3 +12,20 @@
     right: 16px;
     width: 140px;
 }
+
+.quest-notice {
+    position: absolute;
+    top: 16px;
+    left: 25%;
+    right: 25%;
+    padding: 8px 12px;
+    background-color: rgba(32, 30, 24, 0.82);
+    border-width: 1px;
+    border-color: rgba(238, 226, 193, 0.16);
+    border-radius: 6px;
+    color: rgb(238, 226, 193);
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    display: none;
+}

@@ -1,0 +1,38 @@
+.journal-page {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.journal-list {
+    width: 36%;
+    padding-right: 16px;
+    border-right-width: 1px;
+    border-color: rgba(238, 226, 193, 0.16);
+}
+
+.journal-details {
+    flex-grow: 1;
+    padding-left: 20px;
+}
+
+.journal-entry {
+    -unity-text-align: middle-left;
+}
+
+.journal-entry-selected {
+    border-left-width: 3px;
+    border-color: rgb(238, 226, 193);
+}
+
+.journal-section {
+    margin-top: 12px;
+}
+
+.journal-line {
+    white-space: normal;
+    margin: 2px 0;
+}
+
+.journal-done {
+    opacity: 0.6;
+}

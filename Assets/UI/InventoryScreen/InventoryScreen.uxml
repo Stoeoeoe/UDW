@@ -3,6 +3,7 @@
     <ui:Template name="MenuShell" src="../Shared/GameMenuShell.uxml" />
     <ui:Template name="Bag" src="BagPage.uxml" />
     <ui:Template name="Equipment" src="EquipmentPage.uxml" />
+    <ui:Template name="Journal" src="../Journal/JournalPage.uxml" />
     <ui:Template name="Settings" src="../Shared/SettingsPage.uxml" />
     <ui:Template name="GameHud" src="../Hud/GameHud.uxml" />
     <ui:Instance template="GameHud" class="game-hud-host" picking-mode="Ignore" />
@@ -10,6 +11,7 @@
     <ui:VisualElement name="pageStaging" class="inventory-hidden">
         <ui:Instance template="Bag" name="bagPage" />
         <ui:Instance template="Equipment" name="equipmentPage" />
+        <ui:Instance template="Journal" name="journalPage" />
         <ui:Instance template="Settings" name="settingsPage" />
     </ui:VisualElement>
         <ui:VisualElement name="heldCursor" class="held-cursor" picking-mode="Ignore">

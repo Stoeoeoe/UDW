@@ -2131,6 +2131,7 @@ GameObject:
   - component: {fileID: 2617813395228831673}
   - component: {fileID: 979660742405634151}
   - component: {fileID: 8182699520042792453}
+  - component: {fileID: 2204457955985606839}
   m_Layer: 0
   m_Name: SystemRoot
   m_TagString: Untagged
@@ -2252,6 +2253,9 @@ MonoBehaviour:
     - {fileID: 11400000, guid: fc8d7b249a3c8d549b6384f5290f309b, type: 2}
     - {fileID: 11400000, guid: 07264c67d41f08b4195017adda640402, type: 2}
     - {fileID: 11400000, guid: 7ab970def97610b42a5d1fa584afb583, type: 2}
+  routines:
+    pauseAfterTalkingSeconds: 3
+    maxDelayMinutes: 20
 --- !u!114 &7446204801965182001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2312,10 +2316,6 @@ MonoBehaviour:
     Title: World
     Layout: {fileID: 0}
     Placeholder: The world map is not available yet.
-  - Id: journal
-    Title: Journal
-    Layout: {fileID: 0}
-    Placeholder: Your journal is not available yet.
   - Id: skills
     Title: Skills
     Layout: {fileID: 0}
@@ -2374,6 +2374,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 267f1d60a18b2ea4eab2e27bbcfcf4ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Music.MusicDirector
+--- !u!114 &2204457955985606839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893779559843713635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af1656e495098ad47bccdd9b68078239, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Hud.QuestNoticePresenter
+  secondsShown: 3
 --- !u!1 &1124810803398170432
 GameObject:
   m_ObjectHideFlags: 0

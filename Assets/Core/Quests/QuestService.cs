@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Core.Events;
 using Core.Game;
@@ -80,6 +81,14 @@ namespace Core.Quests
             return _gameState.Quests.Find(questId);
         }
 
+        /// <summary>Every started quest, in the order they began, for the journal.</summary>
+        public IEnumerable<(QuestDefinition Quest, QuestProgress Progress)> Started =>
+            _gameState.Quests.All.Select(pair => (Require(pair.Key), pair.Value));
+
+        /// <summary>Have and deliver: how many of the item the player carries, up to the objective's count.</summary>
+        public int Carried(QuestDefinition quest, QuestObjective objective) =>
+            Math.Min(_characters.MainCharacter.MainInventory.Count(RequireItem(quest, objective)), objective.Count);
+
         public void Start(string questId)
         {
             var quest = Require(questId);
@@ -89,6 +98,7 @@ namespace Core.Quests
                 Status = QuestStatus.Active, StepId = quest.Steps[0].Id, StartedAtMinute = _gameState.Time.TotalMinutes
             });
             RequestCheck();
+            QuestChangedEvent.Trigger(quest, QuestChange.Started);
             Run(quest.OnStart);
         }
 
@@ -193,6 +203,7 @@ namespace Core.Quests
         {
             progress.Status = QuestStatus.Failed;
             progress.CompletedObjectives.Clear();
+            QuestChangedEvent.Trigger(quest, QuestChange.Failed);
             Run(quest.OnFail);
         }
 
@@ -236,6 +247,7 @@ namespace Core.Quests
             progress.StepId = completed ? null : quest.Steps[next].Id;
             if (completed) progress.Status = QuestStatus.Completed;
             else RequestCheck(); // The new step's objectives may already be met.
+            QuestChangedEvent.Trigger(quest, completed ? QuestChange.Completed : QuestChange.StepFinished);
             Run(step.OnComplete);
             if (completed) Run(quest.OnComplete);
         }

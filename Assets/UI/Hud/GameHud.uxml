@@ -6,4 +6,5 @@
         <ui:Instance template="Clock" picking-mode="Ignore" />
         <ui:Instance template="Stamina" picking-mode="Ignore" />
     </ui:VisualElement>
+    <ui:Label name="questNotice" class="quest-notice" picking-mode="Ignore" />
 </ui:UXML>

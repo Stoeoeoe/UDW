@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="../InventoryScreen/InventoryScreen.uss" />
+    <ui:Style src="JournalPage.uss" />
+    <ui:VisualElement class="journal-page">
+        <ui:ScrollView name="journalList" class="journal-list" />
+        <ui:ScrollView name="journalDetails" class="journal-details" />
+    </ui:VisualElement>
+</ui:UXML>
