@@ -21,11 +21,12 @@ import { QuestGraphCanvas } from './QuestGraphCanvas';
 import {
   graphFromQuest,
   editQuestGraph,
+  objectivePin,
   removeQuestNode,
   questActionResources,
   questStepLabels,
 } from '../../../lib/questGraph';
-import type { QuestGraphNode } from '../../../types/questGraph';
+import type { QuestGraph, QuestGraphNode } from '../../../types/questGraph';
 import { InspectorShell } from '../../common/InspectorShell';
 import { ResizableEditorLayout } from '../common/ResizableEditorLayout';
 import { FiSettings } from 'react-icons/fi';
@@ -408,13 +409,43 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
       editorGraph: next,
     });
   };
-  const patchObjective = (objectiveIndex: number, objective: QuestObjective) =>
-    patchStep({
-      objectives: step.objectives.map((entry, i) => (i === objectiveIndex ? objective : entry)),
+  /** An objective's branch wire leaves the pin named after its ID, so it follows renames and goes with removal. */
+  const withObjectiveWires = (
+    change: (edge: QuestGraph['edges'][number]) => QuestGraph['edges'][number] | null,
+  ) => {
+    const stepNode = graph.nodes.find((n) => n.kind === 'step' && n.stepId === step.id);
+    return {
+      ...graph,
+      edges: graph.edges.flatMap((e) =>
+        e.source === stepNode?.id && e.sourcePin !== 'next' ? (change(e) ?? []) : [e],
+      ),
+    };
+  };
+  const patchObjective = (objectiveIndex: number, objective: QuestObjective) => {
+    const previous = step.objectives[objectiveIndex];
+    const objectives = step.objectives.map((entry, i) =>
+      i === objectiveIndex ? objective : entry,
+    );
+    if (previous.id === objective.id) return patchStep({ objectives });
+    patch({
+      steps: quest.steps.map((s, i) => (i === selected ? { ...s, objectives } : s)),
+      editorGraph: withObjectiveWires((e) =>
+        e.sourcePin === objectivePin(previous.id)
+          ? { ...e, sourcePin: objectivePin(objective.id) }
+          : e,
+      ),
     });
+  };
   const removeSelected = () => {
     if (o && grouped) {
-      patchStep({ objectives: step.objectives.filter((_, i) => i !== index) });
+      patch({
+        steps: quest.steps.map((s, i) =>
+          i === selected
+            ? { ...s, objectives: step.objectives.filter((_, oi) => oi !== index) }
+            : s,
+        ),
+        editorGraph: withObjectiveWires((e) => (e.sourcePin === objectivePin(o.id) ? null : e)),
+      });
       setSelection({ step: selected });
     } else {
       const removing = node ?? graph.nodes.find((n) => n.stepId === step?.id);
@@ -441,13 +472,19 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
               : node
                 ? node.kind === 'lua'
                   ? 'Execute Lua Script'
-                  : node.kind === 'action'
-                    ? 'Action'
-                    : node.kind === 'exit'
-                      ? 'Complete quest'
-                      : node.kind === 'failure'
-                        ? 'On failure'
-                        : 'Begin'
+                  : node.kind === 'branch'
+                    ? 'If / Else'
+                    : node.kind === 'function'
+                      ? 'Read-only function'
+                      : node.kind === 'expression'
+                        ? 'Read-only Lua expression'
+                        : node.kind === 'action'
+                          ? 'Action'
+                          : node.kind === 'exit'
+                            ? 'Complete quest'
+                            : node.kind === 'failure'
+                              ? 'On failure'
+                              : 'Begin'
                 : 'Step'
       }
       subtitle={o?.id ?? step?.id ?? node?.action?.method}
@@ -527,11 +564,13 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             <Text fontSize="sm" color="editorMutedText">
               {node.kind === 'action'
                 ? 'Edit the action parameters directly on the node. Its result is currently discarded, as in a Lua statement.'
-                : node.kind === 'exit'
-                  ? 'The quest becomes completed when the previous step finishes. Connect quest completion actions to this output.'
-                  : node.kind === 'failure'
-                    ? 'Actions connected here run when a step deadline or fail condition fails the quest.'
-                    : 'Actions before the first quest step run when the quest starts.'}
+                : node.kind === 'branch' || node.kind === 'function' || node.kind === 'expression'
+                  ? 'Edit the values directly on the node, or wire a read-only node into an input. A Branch continues to True when its condition holds when the step completes.'
+                  : node.kind === 'exit'
+                    ? 'The quest becomes completed when the previous step finishes. Connect quest completion actions to this output.'
+                    : node.kind === 'failure'
+                      ? 'Actions connected here run when a step deadline or fail condition fails the quest.'
+                      : 'Actions before the first quest step run when the quest starts.'}
             </Text>
             {node.kind === 'entry' && (
               <StartSection

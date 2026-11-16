@@ -84,6 +84,13 @@ namespace Core.Quests
         [field: SerializeField] public string Trigger { get; private set; }
         /// <summary>Condition: the read-only Lua expression.</summary>
         [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
+        /// <summary>
+        /// A step ID, or <see cref="QuestStep.End"/>; empty for none. Meeting this objective completes the step at once and
+        /// continues there, instead of waiting for the objectives without a next.
+        /// </summary>
+        [field: SerializeField] public string Next { get; private set; }
+
+        public bool Branches => !string.IsNullOrEmpty(Next);
     }
 
     /// <summary>When a step must be done: days after it begins, at a time of day or the end of that day.</summary>
@@ -96,10 +103,23 @@ namespace Core.Quests
         public int At { get; private set; } = -1;
     }
 
+    /// <summary>Where a step continues if a condition holds when it completes.</summary>
+    [Serializable, ImportedData]
+    public sealed class QuestBranch
+    {
+        /// <summary>Read-only Lua expression.</summary>
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
+        /// <summary>A step ID, or <see cref="QuestStep.End"/>.</summary>
+        [field: SerializeField] public string Next { get; private set; }
+    }
+
     /// <summary>A step of a quest: journal text, the objectives that complete it, and optionally a deadline.</summary>
     [Serializable, ImportedData]
     public sealed class QuestStep
     {
+        /// <summary>The <see cref="Next"/> that completes the quest. Not usable as a step ID.</summary>
+        public const string End = "end";
+
         [field: SerializeField] public string Id { get; private set; }
         /// <summary>Journal text in the source language; <see cref="QuestDefinition.TranslatedJournal"/> gives what the player reads.</summary>
         [field: SerializeField] public string Journal { get; private set; }
@@ -110,6 +130,16 @@ namespace Core.Quests
         [field: SerializeField, Validation.LuaExpression] public string FailWhen { get; private set; }
         /// <summary>Lua actions run when the step completes; empty for none.</summary>
         [field: SerializeField, Validation.LuaChunk] public string OnComplete { get; private set; }
+        /// <summary>
+        /// Where the quest continues when the step completes without a branching objective: a step ID or
+        /// <see cref="End"/>. Empty for the following step in the list, or the end after the last.
+        /// </summary>
+        [field: SerializeField] public string Next { get; private set; }
+        /// <summary>
+        /// Checked in order when the step completes without a branching objective; the first condition that holds
+        /// decides where the quest continues, before <see cref="Next"/>.
+        /// </summary>
+        [field: SerializeField, Validation.Nested] public QuestBranch[] NextIf { get; private set; } = Array.Empty<QuestBranch>();
 
         public bool HasDeadline => Deadline.Days >= 0;
         /// <summary>Days after the step begins; 0 is the same day.</summary>
@@ -164,6 +194,25 @@ namespace Core.Quests
         public Message[] Messages { get; private set; } = Array.Empty<Message>();
 
         [NonSerialized] private Dictionary<string, string> _textByKey;
+
+        /// <summary>
+        /// Where the quest continues after the step when no objective branches: the first <see cref="QuestStep.NextIf"/>
+        /// whose condition holds, else the step's next, else the following step. A step ID, or <see cref="QuestStep.End"/>.
+        /// </summary>
+        public string NextStepId(QuestStep step, Func<string, bool> holds)
+        {
+            foreach (var branch in step.NextIf)
+                if (holds(branch.Condition)) return branch.Next;
+            return DefaultNextStepId(step);
+        }
+
+        /// <summary>The step's next, or the following step; every possible continuation is a path of the quest.</summary>
+        public string DefaultNextStepId(QuestStep step)
+        {
+            if (!string.IsNullOrEmpty(step.Next)) return step.Next;
+            var index = Array.IndexOf(Steps, step) + 1;
+            return index == Steps.Length ? QuestStep.End : Steps[index].Id;
+        }
 
         /// <summary>The title as the player reads it.</summary>
         public string TranslatedTitle => Translate($"quest.{Id}.title", Title);

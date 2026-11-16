@@ -15,7 +15,17 @@
         "properties": {
           "id": { "type": "string", "minLength": 1 },
           "kind": {
-            "enum": ["entry", "exit", "failure", "step", "action", "lua"]
+            "enum": [
+              "entry",
+              "exit",
+              "failure",
+              "step",
+              "action",
+              "lua",
+              "branch",
+              "function",
+              "expression"
+            ]
           },
           "position": {
             "type": "object",
@@ -29,6 +39,22 @@
           "stepId": { "type": "string" },
           "group": { "type": "boolean" },
           "code": { "type": "string" },
+          "method": { "type": "string", "minLength": 1 },
+          "arguments": { "type": "object" },
+          "expression": { "type": "string" },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "type"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "type": { "enum": ["string", "number", "boolean", "position", "table", "storyValue"] },
+                "nullable": { "type": "boolean" }
+              }
+            }
+          },
           "comment": { "type": "string" },
           "action": {
             "type": "object",
@@ -45,24 +71,36 @@
     "edges": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "source",
-          "target",
-          "sourcePin",
-          "targetPin",
-          "kind"
-        ],
-        "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "source": { "type": "string" },
-          "target": { "type": "string" },
-          "sourcePin": { "const": "next" },
-          "targetPin": { "const": "in" },
-          "kind": { "const": "execution" }
-        }
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Execution order: from a step, objective, Branch output or script to what runs next.",
+            "additionalProperties": false,
+            "required": ["id", "source", "target", "sourcePin", "targetPin", "kind"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "sourcePin": { "type": "string", "pattern": "^(next|then|else|objective:.+)$" },
+              "targetPin": { "const": "in" },
+              "kind": { "const": "execution" }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A value from a read-only node's output to an input of an action, function or Branch.",
+            "additionalProperties": false,
+            "required": ["id", "source", "target", "sourcePin", "targetPin", "kind"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "sourcePin": { "type": "string", "minLength": 1 },
+              "targetPin": { "type": "string", "minLength": 1 },
+              "kind": { "const": "data" }
+            }
+          }
+        ]
       }
     }
   }

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "quest.schema.json",
   "title": "Quest",
-  "description": "A story quest (*.quest.json): steps run in order, each with objectives the game checks. Texts are in the source language; their message keys are derived from the IDs (quest.<quest>.title, .description, .<step>.journal, .<step>.<objective>.text), and Vulcanus writes the texts to the sibling <name>.i18n.json.",
+  "description": "A story quest (*.quest.json): steps run in order unless a step or objective names its next step, each with objectives the game checks. Texts are in the source language; their message keys are derived from the IDs (quest.<quest>.title, .description, .<step>.journal, .<step>.<objective>.text), and Vulcanus writes the texts to the sibling <name>.i18n.json.",
   "type": "object",
   "required": [
     "formatVersion",
@@ -73,7 +73,7 @@
     "steps": {
       "type": "array",
       "minItems": 1,
-      "description": "Steps run in this order; the next begins when all objectives of the current one are met.",
+      "description": "Steps run in this order unless a step or objective has a next; the next begins when the current one completes.",
       "items": {
         "$ref": "#/definitions/step"
       }
@@ -214,6 +214,11 @@
         }
       ]
     },
+    "next": {
+      "type": "string",
+      "pattern": "^(end|[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)$",
+      "description": "A step ID, or \"end\" to complete the quest."
+    },
     "count": {
       "type": "integer",
       "minimum": 1
@@ -237,7 +242,7 @@
         "objectives": {
           "type": "array",
           "minItems": 1,
-          "description": "The step completes when all of them are met.",
+          "description": "The step completes when all objectives without a next are met, or as soon as one with a next is met.",
           "items": {
             "$ref": "#/definitions/objective"
           }
@@ -266,6 +271,30 @@
           "$ref": "#/definitions/condition",
           "description": "The quest fails while this holds during the step."
         },
+        "next": {
+          "$ref": "#/definitions/next",
+          "description": "Where the quest continues when the step completes without a branching objective. Omit for the following step in the list, or the end after the last."
+        },
+        "nextIf": {
+          "type": "array",
+          "description": "Checked in order when the step completes without a branching objective; the first condition that holds decides where the quest continues, before next.",
+          "items": {
+            "type": "object",
+            "required": [
+              "condition",
+              "next"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "condition": {
+                "$ref": "#/definitions/condition"
+              },
+              "next": {
+                "$ref": "#/definitions/next"
+              }
+            }
+          }
+        },
         "onComplete": {
           "$ref": "#/definitions/lua",
           "description": "Lua actions run when the step is completed."
@@ -293,6 +322,10 @@
             },
             "text": {
               "$ref": "#/definitions/text"
+            },
+            "next": {
+              "$ref": "#/definitions/next",
+              "description": "Meeting this objective completes the step and continues here, instead of waiting for the others."
             },
             "character": {
               "$ref": "#/definitions/resourceId"
@@ -323,6 +356,10 @@
             },
             "text": {
               "$ref": "#/definitions/text"
+            },
+            "next": {
+              "$ref": "#/definitions/next",
+              "description": "Meeting this objective completes the step and continues here, instead of waiting for the others."
             },
             "character": {
               "$ref": "#/definitions/resourceId"
@@ -359,6 +396,10 @@
             "text": {
               "$ref": "#/definitions/text"
             },
+            "next": {
+              "$ref": "#/definitions/next",
+              "description": "Meeting this objective completes the step and continues here, instead of waiting for the others."
+            },
             "item": {
               "$ref": "#/definitions/resourceId"
             },
@@ -386,6 +427,10 @@
             },
             "text": {
               "$ref": "#/definitions/text"
+            },
+            "next": {
+              "$ref": "#/definitions/next",
+              "description": "Meeting this objective completes the step and continues here, instead of waiting for the others."
             },
             "map": {
               "$ref": "#/definitions/resourceId"
@@ -416,6 +461,10 @@
             },
             "text": {
               "$ref": "#/definitions/text"
+            },
+            "next": {
+              "$ref": "#/definitions/next",
+              "description": "Meeting this objective completes the step and continues here, instead of waiting for the others."
             },
             "condition": {
               "$ref": "#/definitions/condition"

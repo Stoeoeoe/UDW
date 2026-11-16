@@ -1284,6 +1284,23 @@
           ]
         },
         {
+          "name": "GoToStep",
+          "parameters": [
+            {
+              "name": "questId",
+              "type": "string"
+            },
+            {
+              "name": "stepId",
+              "type": "string"
+            }
+          ],
+          "returnType": "nil",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": []
+        },
+        {
           "name": "IsActive",
           "parameters": [
             {

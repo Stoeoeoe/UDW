@@ -33,5 +33,9 @@ namespace Core.Scripting
 
         [LuaCall(writesState: true), Preserve]
         public void CompleteStep(string questId) => _quests.CompleteStep(questId);
+
+        /// <summary>Completes the current step and continues at the named step; "end" completes the quest.</summary>
+        [LuaCall(writesState: true), Preserve]
+        public void GoToStep(string questId, string stepId) => _quests.GoToStep(questId, stepId);
     }
 }

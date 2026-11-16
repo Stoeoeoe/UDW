@@ -239,6 +239,70 @@ describe('quest editor', () => {
     expect(useEditorStore.getState().quests[0].onComplete).toBe('Inventory.Give("base:fig", 1)');
     expect(useEditorStore.getState().quests[0].steps[0].onComplete).toBeUndefined();
   });
+  it('adds an If / Else after a step and wires a read-only expression into its condition', () => {
+    show();
+    addQuestNode('If / Else');
+    const graphOf = () => useEditorStore.getState().quests[0].editorGraph!;
+    const branch = graphOf().nodes.find((n) => n.kind === 'branch')!;
+    expect(branch.arguments).toEqual({ condition: false });
+    expect(graphOf().edges.find((e) => e.target === branch.id)!.source).toBe('step-node-0');
+    expect(graphOf().edges.find((e) => e.source === branch.id)!.sourcePin).toBe('then');
+
+    // Dragging from the condition pin offers a read-only expression of the pin's type.
+    act(() => {
+      graph.props.onConnectStart(
+        {},
+        { nodeId: branch.id, handleId: 'data:condition', handleType: 'target' },
+      );
+      graph.props.onConnectEnd({ clientX: 450, clientY: 250 }, { isValid: false, toNode: null });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Read-only Lua expression/ }));
+    const expression = graphOf().nodes.find((n) => n.kind === 'expression')!;
+    expect(expression.outputs).toEqual([{ name: 'value', type: 'boolean' }]);
+    expect(graphOf().edges.find((e) => e.kind === 'data' && e.target === branch.id)).toMatchObject({
+      source: expression.id,
+      sourcePin: 'value',
+      targetPin: 'condition',
+    });
+
+    // A value wire replaces the one already on that input.
+    act(() =>
+      graph.props.onConnect({
+        source: expression.id,
+        sourceHandle: 'data:value',
+        target: branch.id,
+        targetHandle: 'data:condition',
+      }),
+    );
+    expect(graphOf().edges.filter((e) => e.kind === 'data')).toHaveLength(1);
+  });
+  it('keeps an objective branch wire through a rename and drops it when the objective is removed', () => {
+    show();
+    const quest = () => useEditorStore.getState().quests[0];
+    act(() =>
+      graph.props.onConnect({
+        source: 'step-node-0',
+        sourceHandle: 'exec:objective:ask',
+        target: 'complete',
+        targetHandle: 'exec:in',
+      }),
+    );
+    expect(quest().steps[0].objectives[0].next).toBe('end');
+
+    fireEvent.click(screen.getByLabelText('Select objective ask'));
+    fireEvent.change(screen.getByLabelText('Objective ID'), { target: { value: 'ask2' } });
+    expect(quest().editorGraph!.edges.some((e) => e.sourcePin === 'objective:ask2')).toBe(true);
+    expect(quest().steps[0].objectives[0].next).toBe('end');
+
+    fireEvent.change(screen.getByLabelText('Add objective to talk'), {
+      target: { value: 'condition' },
+    });
+    fireEvent.click(screen.getByLabelText('Remove objective ask2'));
+    expect(quest().editorGraph!.edges.some((e) => e.sourcePin.startsWith('objective:'))).toBe(
+      false,
+    );
+    expect(quest().steps[0].objectives.map((o) => o.id)).toEqual(['objective-1']);
+  });
   it('deletes a typed single-objective node as a step rather than leaving an empty step', () => {
     show();
     fireEvent.click(screen.getByLabelText('Select objective ask'));

@@ -5,12 +5,12 @@ import { LOCAL_ID_PATTERN, RESOURCE_ID_PATTERN } from './resourceIds';
 import { validateLuaChunk } from './luaRunner';
 import { bindingDiagnostics, CONDITION_SCOPE, SCRIPT_SCOPE } from './luaBindings';
 import type { ScriptingManifest, ScriptingResources } from './scriptingManifest';
-import { compileQuestGraph, questGraphSchema } from './questGraph';
+import { compileQuestGraph, questEnd, questGraphSchema } from './questGraph';
 
 const text = z.string().regex(/\S/);
 const local = z.string().regex(LOCAL_ID_PATTERN);
 const resource = z.string().regex(RESOURCE_ID_PATTERN);
-const base = { id: local, text };
+const base = { id: local, text, next: local.optional() };
 const objective = z.discriminatedUnion('kind', [
   z.strictObject({
     ...base,
@@ -82,6 +82,8 @@ export const questSchema = z.strictObject({
           .optional(),
         failWhen: text.optional(),
         onComplete: text.optional(),
+        next: local.optional(),
+        nextIf: z.array(z.strictObject({ condition: text, next: local })).optional(),
       }),
     )
     .min(1),
@@ -152,11 +154,21 @@ export function validateQuest(
     quest.steps.map((step) => step.id),
     'Steps',
   );
+  if (quest.steps.some((step) => step.id === questEnd))
+    errors.push(`A step cannot be called ${questEnd}; it names the end of the quest.`);
   quest.steps.forEach((step) => {
     unique(
       step.objectives.map((o) => o.id),
       step.id,
     );
+    step.nextIf?.forEach((b, i) => lua(b.condition, `${step.id} branch ${i + 1}`, true));
+    for (const next of [
+      step.next,
+      ...step.objectives.map((o) => o.next),
+      ...(step.nextIf ?? []).map((b) => b.next),
+    ])
+      if (next && next !== questEnd && !quest.steps.some((s) => s.id === next))
+        errors.push(`${step.id}: unknown step ${next}.`);
     lua(step.failWhen, `${step.id} fail condition`, true);
     lua(step.onComplete, `${step.id} onComplete`);
     step.objectives.forEach((o) => {

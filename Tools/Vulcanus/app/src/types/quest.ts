@@ -1,6 +1,8 @@
 export interface QuestObjectiveBase {
   id: string;
   text: string;
+  /** Meeting this objective completes the step at once and continues at this step ID, or `end`. */
+  next?: string;
 }
 export type QuestObjective = QuestObjectiveBase &
   (
@@ -17,6 +19,10 @@ export interface QuestStep {
   deadline?: { days: number; at?: string };
   failWhen?: string;
   onComplete?: string;
+  /** Where the quest continues when no branching objective completes the step: a step ID or `end`. */
+  next?: string;
+  /** Checked in order when the step completes without a branching objective; the first that holds decides. */
+  nextIf?: { condition: string; next: string }[];
 }
 export type QuestSeason = 'spring' | 'summer' | 'autumn' | 'winter';
 /** A moment at which a quest is considered for starting by itself. */

@@ -131,21 +131,33 @@ namespace Core.Quests
             Run(quest.OnStart);
         }
 
-        /// <summary>Marks an objective of the current step done; the step completes once all of them are.</summary>
+        /// <summary>
+        /// Marks an objective of the current step done. An objective with a next completes the step at once and continues
+        /// there; otherwise the step completes once all objectives without a next are done.
+        /// </summary>
         public void CompleteObjective(string questId, string objectiveId)
         {
             var (quest, progress, step) = CurrentStep(questId);
-            if (step.Objectives.All(objective => objective.Id != objectiveId))
-                throw new InvalidOperationException($"Quest '{questId}' step '{step.Id}' has no objective '{objectiveId}'.");
+            var objective = step.Objectives.FirstOrDefault(candidate => candidate.Id == objectiveId)
+                ?? throw new InvalidOperationException($"Quest '{questId}' step '{step.Id}' has no objective '{objectiveId}'.");
             progress.CompletedObjectives.Add(objectiveId);
-            if (step.Objectives.All(objective => progress.CompletedObjectives.Contains(objective.Id))) Finish(quest, progress, step);
+            if (objective.Branches) Finish(quest, progress, step, objective.Next);
+            else if (step.Objectives.Where(candidate => !candidate.Branches).All(candidate => progress.CompletedObjectives.Contains(candidate.Id)))
+                Finish(quest, progress, step, quest.NextStepId(step, Conditions.EvaluateCondition));
         }
 
-        /// <summary>Completes the current step, whatever its objectives.</summary>
+        /// <summary>Completes the current step, whatever its objectives, and continues to the step's next.</summary>
         public void CompleteStep(string questId)
         {
             var (quest, progress, step) = CurrentStep(questId);
-            Finish(quest, progress, step);
+            Finish(quest, progress, step, quest.NextStepId(step, Conditions.EvaluateCondition));
+        }
+
+        /// <summary>Completes the current step and continues at the named step, or <see cref="QuestStep.End"/> to complete the quest.</summary>
+        public void GoToStep(string questId, string stepId)
+        {
+            var (quest, progress, step) = CurrentStep(questId);
+            Finish(quest, progress, step, stepId);
         }
 
         /// <summary>Whether an active quest's current step has an open talk or deliver objective for this character.</summary>
@@ -312,13 +324,15 @@ namespace Core.Quests
             return (quest, progress, step);
         }
 
-        private void Finish(QuestDefinition quest, QuestProgress progress, QuestStep step)
+        /// <summary>Finishes the step and continues at <paramref name="nextStepId"/>: a step ID, or <see cref="QuestStep.End"/>.</summary>
+        private void Finish(QuestDefinition quest, QuestProgress progress, QuestStep step, string nextStepId)
         {
+            var completed = nextStepId == QuestStep.End;
+            if (!completed && quest.Steps.All(candidate => candidate.Id != nextStepId))
+                throw new InvalidOperationException($"Quest '{quest.Id}' has no step '{nextStepId}' to continue to.");
             progress.FinishedSteps.Add(new FinishedQuestStep { StepId = step.Id, AtMinute = _gameState.Time.TotalMinutes });
             progress.CompletedObjectives.Clear();
-            var next = Array.IndexOf(quest.Steps, step) + 1;
-            var completed = next == quest.Steps.Length;
-            progress.StepId = completed ? null : quest.Steps[next].Id;
+            progress.StepId = completed ? null : nextStepId;
             if (completed) progress.Status = QuestStatus.Completed;
             else RequestCheck(); // The new step's objectives may already be met.
             QuestChangedEvent.Trigger(quest, completed ? QuestChange.Completed : QuestChange.StepFinished);

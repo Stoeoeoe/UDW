@@ -9,6 +9,27 @@ export interface GraphTemplate {
   category: string;
   node: Omit<CutsceneGraphNode, 'id' | 'position'>;
 }
+/** The value a new node starts with for each parameter. */
+export function defaultArguments(action: CutsceneAction) {
+  return Object.fromEntries(
+    action.parameters.map((p) => [
+      p.name,
+      p.defaultValue ??
+        (p.nullable
+          ? null
+          : p.type === 'boolean'
+            ? false
+            : canonicalVariableType(p.type) === 'number'
+              ? 0
+              : p.type === 'position'
+                ? { x: 0, y: 0 }
+                : p.type === 'path'
+                  ? []
+                  : ''),
+    ]),
+  ) as Record<string, CutsceneData>;
+}
+
 export function graphTemplates(
   scene: Cutscene,
   actions: CutsceneAction[],
@@ -16,24 +37,6 @@ export function graphTemplates(
 ): GraphTemplate[] {
   const runtimePhase =
     phase === 'onStart' ? 'setup' : phase === 'completion' ? 'completion' : 'sequence';
-  const defaults = (action: CutsceneAction) =>
-    Object.fromEntries(
-      action.parameters.map((p) => [
-        p.name,
-        p.defaultValue ??
-          (p.nullable
-            ? null
-            : p.type === 'boolean'
-              ? false
-              : canonicalVariableType(p.type) === 'number'
-                ? 0
-                : p.type === 'position'
-                  ? { x: 0, y: 0 }
-                  : p.type === 'path'
-                    ? []
-                    : ''),
-      ]),
-    ) as Record<string, CutsceneData>;
   const templates: GraphTemplate[] = actions
     .filter((a) => a.id.startsWith('pure:') || (a.phases ?? ['sequence']).includes(runtimePhase))
     .map((action) => ({
@@ -41,8 +44,11 @@ export function graphTemplates(
       label: action.displayName,
       category: action.category,
       node: action.id.startsWith('pure:')
-        ? { kind: 'function', method: action.id.slice(5), arguments: defaults(action) }
-        : { kind: 'action', step: { id: '', action: action.id, arguments: defaults(action) } },
+        ? { kind: 'function', method: action.id.slice(5), arguments: defaultArguments(action) }
+        : {
+            kind: 'action',
+            step: { id: '', action: action.id, arguments: defaultArguments(action) },
+          },
     }));
   templates.push(
     ...(scene.variables ?? []).map((variable) => ({

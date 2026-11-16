@@ -25,8 +25,9 @@ Linear STO-89.
 
 ## Contents
 
-- **Steps** run in order. Each has journal text, one or more objectives, and optionally a deadline (`days` after
-  the step begins, `at` a time of day or the end of the day), a fail condition and Lua actions on completion.
+- **Steps** run in order unless they branch (below). Each has journal text, one or more objectives, and optionally a
+  deadline (`days` after the step begins, `at` a time of day or the end of the day), a fail condition, Lua actions on
+  completion and a `next`.
 - **Objectives**, by `kind`:
   - `talk`: talk to a character, optionally playing a quest dialogue instead of the character's usual one;
   - `deliver`: hand a character `count` of an item;
@@ -35,6 +36,33 @@ Linear STO-89.
   - `condition`: a read-only Lua expression holds.
 - **Actions** (`onStart`, `onComplete`, `onFail`, and each step's `onComplete`) are Lua statements, like dialogue
   action nodes.
+
+## Branching
+
+A step can continue somewhere other than the following step in the list:
+
+- An objective with a `next` (a step ID, or `end` to complete the quest) is an alternative way out. Meeting it
+  completes the step at once and continues there, whatever else is open. Objectives without a `next` still all have to
+  be met; when they are, the step continues to its own `next`.
+- A step's `next` (a step ID or `end`) says where it goes when it completes without a branching objective, including
+  through `Quests.CompleteStep`. Without one it continues to the following step in the list, and after the last the
+  quest completes. Existing quests therefore work unchanged.
+- A step's `nextIf` is a list of `{ condition, next }`, checked in order when the step completes without a branching
+  objective. The first condition (a read-only Lua expression) that holds decides; if none does, the step's `next`
+  applies. Use it where the story state decides rather than the player's last action, such as a flag set in dialogue.
+- `Quests.GoToStep(quest, step)` completes the current step and continues at any step, or at `end`. Dialogue,
+  cutscenes and other quests use it to choose a path.
+
+```json
+{ "id": "choose", "journal": "Help the baker or the miller.",
+  "objectives": [
+    { "id": "baker", "kind": "talk", "character": "base:baker", "text": "Help the baker", "next": "bakery" },
+    { "id": "miller", "kind": "talk", "character": "base:miller", "text": "Help the miller", "next": "mill" } ] }
+```
+
+The journal lists the steps finished, in the order the player took them, so it shows the path taken and nothing of the
+others. The saved state is unchanged: the current step and the finished steps. `end` can't be a step ID. Progress is
+recorded before the step's actions run, as for any step.
 
 ## Graph authoring in Vulcanus
 
@@ -63,9 +91,26 @@ authoring does not change that inventory behavior.
 the quest source. At save, Vulcanus validates and compiles it into the existing
 `steps` and Lua fields that Unity imports. Unity checks the extended source schema
 and imports those compiled fields; no quest save format changes are needed. Existing
-quests open as graphs without rewriting their content until edited. Disconnected
-nodes, cycles, branches, multiple predecessors and missing steps block saving.
-Quest branching and parallel execution are not supported in this version.
+quests open as graphs without rewriting their content until edited. Each
+objective of a step node has its own output; wiring it to a step or to Complete quest makes it a branching objective
+(`next`). The step's own output, which also carries its actions, becomes the step's `next` where it doesn't lead to the
+following step in the list. Steps and Complete quest can have several incoming wires, so branches can join. The steps are
+listed along the main path first, then the branches. An If / Else node, like the cutscene editor's, has a boolean
+`condition` input and True and False outputs; it follows a step's own output and compiles to that step's `nextIf`.
+The condition is a switch typed on the node, or a value wired in from a read-only node: a call such as
+`GameState.Story.Has` (the read-only, single-result calls from the bindings, with the same parameter pickers as
+actions) or a read-only Lua expression. Value wires can also feed an action's parameters and other read-only nodes'
+inputs, and compile into one Lua expression, so `GameState.Story.Has("met_baker")` is built, never run, by the
+editor.
+
+An If / Else has two uses, by where it sits. Between steps it picks the next step: True goes to a step or Complete quest,
+False to a step, Complete quest or another If / Else (the next condition in the list), and both must be wired.
+After Complete quest or On failure it runs different actions: each output leads into actions, scripts or further
+If / Else nodes, either may stay empty, and it compiles to a Lua `if … then … else … end` in the quest's
+`onComplete` or `onFail`. For example, after completion check `Divinity.Favour("base:ceres") > 500` and give a bigger
+reward. Actions on a branching objective's way aren't possible, because
+actions belong to the step and run however it ends. Disconnected nodes, loops, a script or action with several
+predecessors, an output with several wires and missing steps block saving. Parallel steps are not supported.
 
 ## Texts
 
@@ -85,7 +130,9 @@ to the quest's own. Renaming a step or objective drops its translations.
 ## Rules checked
 
 - At import: the schema (shape, required fields per objective kind, ranges) and Lua that parses. The definition adds
-  only what the schema can't express: unique step IDs and objective IDs within a step (`Validation.Unique`).
+  only what the schema can't express: unique step IDs and objective IDs within a step (`Validation.Unique`), and in
+  `QuestValidator` that no step is called `end`, every `next` names a step in the quest, and the authored steps never
+  loop. Steps reached only through `Quests.GoToStep` are fine.
 - When catalogs refresh: the giver, characters, dialogues, items and deities a quest names exist
   (`Validation.Reference`, checked by `ReferenceValidation`), and `QuestCatalogValidation` checks the maps and triggers.
 
@@ -112,12 +159,12 @@ later: a new `QuestStartKind`, the event that raises it, and its filters.
 
 `QuestService` starts quests, completes objectives and steps, and runs their actions. Progress is saved in the
 `quests` section of the save (`QuestState`): status, current step, start time, finished steps with their times, and
-the current step's completed objectives. A step finishes once all its objectives are done, or when completed outright;
-after the last step the quest completes. Progress is recorded before any action runs, so an action may advance the
+the current step's completed objectives. A step finishes once all its objectives without a `next` are done, as soon as one with a `next` is met, or when
+completed outright; it then continues as described under Branching, and the quest completes at `end`. Progress is recorded before any action runs, so an action may advance the
 quest further. Mistakes fail clearly: starting a quest twice, an unknown quest or objective, or advancing an ended quest.
 
 The `Quests` Lua module reads (`IsActive`, `IsCompleted`, `IsFailed`, `CurrentStep`, `IsOnStep`) and advances
-(`Start`, `CompleteObjective`, `CompleteStep`) quests.
+(`Start`, `CompleteObjective`, `CompleteStep`, `GoToStep`) quests.
 
 The game meets have, reach and condition objectives by itself. It checks them on the frame after something they could
 depend on changes: the player's bag, a clock step (every ten in-game minutes), any Lua call that writes state (dialogue,

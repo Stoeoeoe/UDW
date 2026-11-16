@@ -38,15 +38,16 @@ export const CutsceneGraphNode = React.memo(
       characterReferences,
       argumentReferences,
       executionOnly,
+      luaContext,
     } = useContext(GraphEditingContext);
     const scriptScope = useMemo(
       () => ({
         mode: 'script' as const,
-        context: 'cutscene',
+        context: luaContext ?? 'cutscene',
         phase,
         cutsceneVariables: scene.variables,
       }),
-      [phase, scene.variables],
+      [phase, scene.variables, luaContext],
     );
     const expressionScope = useMemo(
       () => ({ ...scriptScope, mode: 'condition' as const }),
