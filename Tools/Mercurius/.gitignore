@@ -1,0 +1,10 @@
+node_modules/
+.npm-cache/
+.scaffold/
+out/
+dist/
+.cache/
+*.tsbuildinfo
+*.log
+.DS_Store
+.env

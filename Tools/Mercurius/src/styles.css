@@ -1,0 +1,36 @@
+@layer theme, base, mantine, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import '@mantine/core/styles.layer.css';
+@import 'tailwindcss/utilities.css' layer(utilities);
+@source '../episodes';
+
+@theme inline {
+  --color-canvas: var(--mercurius-canvas);
+  --color-surface: var(--mercurius-surface);
+  --color-raised: var(--mercurius-raised);
+  --color-ink: var(--mercurius-ink);
+  --color-muted: var(--mercurius-muted);
+  --color-accent: var(--mercurius-accent);
+  --color-signal: var(--mercurius-signal);
+  --color-border: var(--mercurius-border);
+  --font-sans: var(--mercurius-sans);
+  --font-mono: var(--mercurius-mono);
+  --spacing-safe: var(--mercurius-space-safe);
+}
+
+@layer components {
+  .eyebrow {
+    font-family: var(--mercurius-mono);
+    font-size: 22px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mercurius-accent);
+  }
+  .panel {
+    background: var(--mercurius-surface);
+    border: 1px solid var(--mercurius-border);
+    border-radius: 24px;
+    overflow: hidden;
+  }
+}

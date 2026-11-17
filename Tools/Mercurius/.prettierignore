@@ -1,0 +1,7 @@
+node_modules
+.npm-cache
+.scaffold
+out
+dist
+package-lock.json
+public/shared/fonts
