@@ -1,6 +1,8 @@
 import { makeRect } from '@remotion/shapes';
+import { useContext } from 'react';
 import { useCurrentFrame, useVideoConfig } from 'remotion';
 import { entrance } from '../theme/motion';
+import { directions, PresentationDirection } from '../theme/directions';
 import { tokens } from '../theme/tokens';
 
 export type Point = { x: number; y: number };
@@ -30,45 +32,50 @@ export const Node = ({
 }: {
   bounds: DiagramNode;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   start?: number;
   active?: boolean;
 }) => {
   const frame = useCurrentFrame();
+  const direction = useContext(PresentationDirection);
   const { fps } = useVideoConfig();
   const rect = makeRect({
     width: bounds.width,
     height: bounds.height,
-    cornerRadius: 18,
+    cornerRadius: Math.min(18, directions[direction].radius),
   });
   return (
     <g transform={`translate(${bounds.x} ${bounds.y})`}>
       <g style={entrance(frame, fps, start)}>
         <path
           d={rect.path}
-          fill={tokens.color.surface}
-          stroke={active ? tokens.color.accent : tokens.color.border}
+          fill={active ? 'var(--mercurius-accent)' : 'var(--mercurius-surface)'}
+          stroke={
+            active ? 'var(--mercurius-accent)' : 'var(--mercurius-border)'
+          }
           strokeWidth={2}
         />
         <text
           x={bounds.width / 2}
-          y={bounds.height / 2 - 4}
+          y={bounds.height / 2 + (subtitle ? -4 : 16)}
           textAnchor="middle"
-          fill={tokens.color.ink}
-          fontSize={27}
-          fontWeight={700}
+          fill={active ? 'var(--mercurius-canvas)' : 'var(--mercurius-ink)'}
+          fontSize={bounds.width < 300 ? tokens.type.body : 56}
+          fontWeight={400}
         >
           {title}
         </text>
-        <text
-          x={bounds.width / 2}
-          y={bounds.height / 2 + 30}
-          textAnchor="middle"
-          fill={tokens.color.muted}
-          fontSize={19}
-        >
-          {subtitle}
-        </text>
+        {subtitle ? (
+          <text
+            x={bounds.width / 2}
+            y={bounds.height / 2 + 42}
+            textAnchor="middle"
+            fill={active ? 'var(--mercurius-canvas)' : 'var(--mercurius-muted)'}
+            fontSize={tokens.type.label}
+          >
+            {subtitle}
+          </text>
+        ) : null}
       </g>
     </g>
   );

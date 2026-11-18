@@ -14,10 +14,10 @@ export const Episode = () => (
       <TransitionSeries.Sequence
         durationInFrames={timeline.scenes.title.durationInFrames}
       >
-        <AbsoluteFill className="bg-canvas p-safe">
+        <AbsoluteFill className="bg-canvas video-safe">
           <TitleCard
             title="Make the dependency visible."
-            subtitle="A small code example. One relationship. A visible cost."
+            subtitle="How Delivery receives its Inventory."
             kicker="Roemer / Component study 001"
           />
         </AbsoluteFill>
@@ -29,7 +29,7 @@ export const Episode = () => (
       <TransitionSeries.Sequence
         durationInFrames={timeline.scenes.explanation.durationInFrames}
       >
-        <AbsoluteFill className="bg-canvas p-safe">
+        <AbsoluteFill className="bg-canvas video-safe">
           <DependencyScene />
         </AbsoluteFill>
       </TransitionSeries.Sequence>
@@ -40,14 +40,13 @@ export const Episode = () => (
       <TransitionSeries.Sequence
         durationInFrames={timeline.scenes.proof.durationInFrames}
       >
-        <AbsoluteFill className="bg-canvas p-safe">
+        <AbsoluteFill className="bg-canvas video-safe">
           <ProofScene />
         </AbsoluteFill>
       </TransitionSeries.Sequence>
     </TransitionSeries>
-    <div className="absolute bottom-7 left-safe right-safe flex justify-between font-mono text-lg text-muted">
-      <span>MERCURIUS / VISUAL STUDY</span>
-      <span>ROEMER · DEVLOG FOUNDATION</span>
+    <div className="absolute top-20 left-safe right-safe font-mono text-2xl text-muted">
+      <span>MERCURIUS / ROEMER</span>
     </div>
   </Presentation>
 );

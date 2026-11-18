@@ -1,4 +1,14 @@
-# Foundation verification
+# Verification history
+
+## Portrait playground
+
+The current workspace targets 1080×1920 portrait video. The initial landscape checks below are historical and describe the first commit, not the current render dimensions or palette.
+
+- Type checking, lint, workflow tests, episode validation, and the Vite production build passed after the portrait/font changes.
+- Browser checks covered all nine studies in Terracotta and Paper & ink. No diagram text extended beyond its SVG viewport, both code variants highlighted successfully, and all three requested local fonts loaded.
+- The browser playground uses the same StudyScene components registered under Studio's Playground folder. Its interface guides are a preview-only house overlay.
+
+## Initial landscape foundation
 
 Verified on 17 November 2026 with Windows, Node 24.14.0, npm 11.9.0, and Remotion 4.0.544.
 

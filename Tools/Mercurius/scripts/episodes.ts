@@ -154,10 +154,10 @@ export async function scaffoldEpisode(rawId: string, root = projectRoot) {
   const files: Record<string, string> = {
     'brief.md': `# ${id}\n\nAudience: TODO\n\nCentral question: TODO\n\nLearning outcome: TODO\n\nDemonstration: TODO\n\nTradeoffs: TODO\n\nUnverified claims: TODO — human review required.\n`,
     'script.md': `# Narration and visual directions\n\n## opening / frames 0–179\n\nNarration: TODO\n\nVisual: TitleCard in Episode.tsx. Replace with reviewed explanation.\n`,
-    'episode.ts': `import type { EpisodeMetadata } from '../../src/shared/episode';\n\nexport const episode = {\n  id: '${id}',\n  title: '${id}',\n  width: 1920,\n  height: 1080,\n  fps: 30,\n  durationInFrames: 180,\n  assets: [],\n} satisfies EpisodeMetadata;\n`,
+    'episode.ts': `import type { EpisodeMetadata } from '../../src/shared/episode';\n\nexport const episode = {\n  id: '${id}',\n  title: '${id}',\n  width: 1080,\n  height: 1920,\n  fps: 30,\n  durationInFrames: 180,\n  assets: [],\n} satisfies EpisodeMetadata;\n`,
     'timeline.ts': `import type { EpisodeTimeline } from '../../src/shared/episode';\n\nexport const timeline = {\n  scenes: { opening: { from: 0, durationInFrames: 180 } },\n  cues: { title: 0 },\n} satisfies EpisodeTimeline;\n`,
     'Episode.tsx': `import { Sequence } from 'remotion';\nimport { Presentation } from '../../src/shared/theme/Presentation';\nimport { Opening } from './scenes/Opening';\nimport { timeline } from './timeline';\n\nexport const Episode = () => <Presentation>\n  <Sequence from={timeline.scenes.opening.from} durationInFrames={timeline.scenes.opening.durationInFrames}>\n    <Opening />\n  </Sequence>\n</Presentation>;\n`,
-    'scenes/Opening.tsx': `import { AbsoluteFill } from 'remotion';\nimport { TitleCard } from '../../../src/shared/components/TitleCard';\n\nexport const Opening = () => <AbsoluteFill className="p-safe">\n  <TitleCard title="${id}" subtitle="Replace with a reviewed technical explanation." />\n</AbsoluteFill>;\n`,
+    'scenes/Opening.tsx': `import { AbsoluteFill } from 'remotion';\nimport { TitleCard } from '../../../src/shared/components/TitleCard';\n\nexport const Opening = () => <AbsoluteFill className="video-safe">\n  <TitleCard title="${id}" subtitle="Replace with a reviewed technical explanation." />\n</AbsoluteFill>;\n`,
     'snippets/.gitkeep': '',
   };
   await mkdir(dirname(folder), { recursive: true });

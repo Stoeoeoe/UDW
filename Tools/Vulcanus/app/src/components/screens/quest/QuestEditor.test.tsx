@@ -198,9 +198,11 @@ describe('quest editor', () => {
   });
   it('uses shared resource and numeric fields for reward actions and saves compiled Lua', async () => {
     show();
-    addQuestNode('Give');
-    fireEvent.change(screen.getByLabelText('Give itemId'), { target: { value: 'base:fig' } });
-    fireEvent.change(screen.getByLabelText('Give count'), { target: { value: '5' } });
+    addQuestNode('Inventory: give');
+    fireEvent.change(screen.getByLabelText('Inventory: give itemId'), {
+      target: { value: 'base:fig' },
+    });
+    fireEvent.change(screen.getByLabelText('Inventory: give count'), { target: { value: '5' } });
     await act(async () => useEditorStore.getState().saveQuest('base:festival'));
     const saved = vi
       .mocked(fileSystem.saveJson)
@@ -233,9 +235,11 @@ describe('quest editor', () => {
         graph.props.nodes.find((n: any) => n.id === 'complete'),
       ),
     );
-    addQuestNode('Give', 'complete');
-    fireEvent.change(screen.getByLabelText('Give itemId'), { target: { value: 'base:fig' } });
-    fireEvent.change(screen.getByLabelText('Give count'), { target: { value: '1' } });
+    addQuestNode('Inventory: give', 'complete');
+    fireEvent.change(screen.getByLabelText('Inventory: give itemId'), {
+      target: { value: 'base:fig' },
+    });
+    fireEvent.change(screen.getByLabelText('Inventory: give count'), { target: { value: '1' } });
     expect(useEditorStore.getState().quests[0].onComplete).toBe('Inventory.Give("base:fig", 1)');
     expect(useEditorStore.getState().quests[0].steps[0].onComplete).toBeUndefined();
   });

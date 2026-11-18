@@ -2,18 +2,28 @@ import { MantineProvider } from '@mantine/core';
 import { loadFont } from '@remotion/fonts';
 import type { CSSProperties, ReactNode } from 'react';
 import { AbsoluteFill, cancelRender, staticFile } from 'remotion';
-import { theme } from './mantine-theme';
-import { fontAssets, tokens } from './tokens';
+import { makeTheme } from './mantine-theme';
+import { fontFaces, tokens } from './tokens';
+import {
+  directions,
+  PresentationDirection,
+  type DirectionId,
+} from './directions';
+import { videoFormat } from './format';
 
-for (const [index, url] of fontAssets.entries()) {
+for (const { asset, family } of fontFaces) {
   loadFont({
-    family: index === 2 ? tokens.font.mono : tokens.font.sans,
-    url: staticFile(url),
-    weight: index === 1 ? '700' : '400',
+    family,
+    url: staticFile(asset),
+    weight: '400',
   }).catch(cancelRender);
 }
 
 const variables = Object.fromEntries([
+  ...Object.entries(videoFormat.safe).map(([key, value]) => [
+    `--mercurius-safe-${key}`,
+    `${value}px`,
+  ]),
   ...Object.entries(tokens.color).map(([key, value]) => [
     `--mercurius-${key}`,
     value,
@@ -28,13 +38,39 @@ const variables = Object.fromEntries([
   ]),
 ]);
 
-export const Presentation = ({ children }: { children: ReactNode }) => (
-  <MantineProvider theme={theme} forceColorScheme="dark">
-    <AbsoluteFill
-      className="bg-canvas text-ink font-sans"
-      style={{ ...variables, fontSize: tokens.type.body } as CSSProperties}
+export const Presentation = ({
+  children,
+  direction = 'terracotta',
+}: {
+  children: ReactNode;
+  direction?: DirectionId;
+}) => (
+  <PresentationDirection.Provider value={direction}>
+    <MantineProvider
+      theme={makeTheme(directions[direction].color.accent)}
+      forceColorScheme={directions[direction].scheme}
+      getRootElement={() => undefined}
+      cssVariablesSelector={`.mercurius-${direction}`}
     >
-      {children}
-    </AbsoluteFill>
-  </MantineProvider>
+      <AbsoluteFill
+        className={`mercurius-${direction} bg-canvas text-ink font-sans`}
+        data-mantine-color-scheme={directions[direction].scheme}
+        style={
+          {
+            ...variables,
+            ...Object.fromEntries(
+              Object.entries(directions[direction].color).map(
+                ([key, value]) => [`--mercurius-${key}`, value],
+              ),
+            ),
+            '--mercurius-radius': `${directions[direction].radius}px`,
+            '--mercurius-tracking': directions[direction].tracking,
+            fontSize: tokens.type.body,
+          } as CSSProperties
+        }
+      >
+        {children}
+      </AbsoluteFill>
+    </MantineProvider>
+  </PresentationDirection.Provider>
 );

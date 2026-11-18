@@ -10,4 +10,5 @@ Read README.md and docs/visual-language.md, docs/motion.md, and docs/teaching.md
 - Validate before rendering. Run typecheck, lint, format:check, test, and validate after changes. Inspect relevant rendered frames and a clip when changing visual behavior.
 - Keep all Remotion packages on the same exact release and Mantine packages aligned. Use npm and commit package-lock.json.
 - Import the composition as Episode.tsx explicitly: extensionless Episode resolves to episode.ts on Windows.
+- Current target: 1080×1920 vertical shorts. Recompose for the narrow frame, keep key content inside video-safe, and inspect at phone size. Cinzel is for sparse uppercase headings; regular text uses Gideon Roman, code uses Noto Sans Mono. Avoid slogans and generic explanatory filler in the playground.
 - Use apply_patch for source/text edits. Asset tools and Prettier may generate their normal outputs.

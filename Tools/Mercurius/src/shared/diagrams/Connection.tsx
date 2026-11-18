@@ -1,8 +1,8 @@
 import { evolvePath } from '@remotion/paths';
 import { useCurrentFrame } from 'remotion';
 import { motion, progress } from '../theme/motion';
-import { tokens } from '../theme/tokens';
 import type { Point } from './Node';
+import { tokens } from '../theme/tokens';
 
 export const Connection = ({
   from,
@@ -25,24 +25,24 @@ export const Connection = ({
       <path
         d={path}
         fill="none"
-        stroke={tokens.color.accent}
-        strokeWidth={3}
+        stroke="var(--mercurius-accent)"
+        strokeWidth={6}
         {...evolvePath(value, path)}
       />
       <path
         d="M -12 -7 L 0 0 L -12 7"
         fill="none"
-        stroke={tokens.color.accent}
-        strokeWidth={3}
+        stroke="var(--mercurius-accent)"
+        strokeWidth={6}
         transform={`translate(${to.x} ${to.y}) rotate(${angle})`}
         opacity={value === 1 ? 1 : 0}
       />
       <text
-        x={(from.x + to.x) / 2}
+        x={(from.x + to.x) / 2 + (from.x === to.x ? 28 : 0)}
         y={(from.y + to.y) / 2 - 18}
-        textAnchor="middle"
-        fontSize={18}
-        fill={tokens.color.muted}
+        textAnchor={from.x === to.x ? 'start' : 'middle'}
+        fontSize={tokens.type.label}
+        fill="var(--mercurius-muted)"
         opacity={value}
       >
         {label}

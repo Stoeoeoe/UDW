@@ -351,6 +351,14 @@ describe('quest graph compilation', () => {
         ]);
       });
 
+      it('names actions and functions alike, as Module: method', () => {
+        expect(questFunctions(bindings).map((f) => f.displayName)).toEqual([
+          'Game state story: has',
+          'Game state story: count',
+        ]);
+        expect(questActions(manifest).map((a) => a.displayName)).toEqual(['Inventory: give']);
+      });
+
       it('compiles a function node wired into a Branch as its condition', () => {
         const compiled = compileQuestGraph(withCondition(), bindings);
         expect(compiled.steps[0].nextIf).toEqual([

@@ -170,6 +170,25 @@ describe('computeBlockedGrid', () => {
     ]);
   });
 
+  it.each([
+    [0, 0, 4, 16, true],
+    [12, 0, 4, 16, true],
+    [0, 0, 16, 4, true],
+    [0, 12, 16, 4, true],
+    [0, 0, 4, 4, true],
+    [0, 0, 3, 16, false],
+    [13, 0, 3, 16, false],
+  ] as const)(
+    'blocks footprint contact but leaves gaps free: rectangle (%s, %s, %s, %s)',
+    (x, y, w, h, expected) => {
+      const map = makeMap(
+        ['.'],
+        [{ id: 'rect', shape: 'rectangle', position: [x, y], size: [w, h] }],
+      );
+      expect(computeBlockedGrid(map, tilesets, TILE)[0][0]).toBe(expected);
+    },
+  );
+
   it('ignores hidden layers', () => {
     const map = makeMap(['#']);
     map.layers[0].visible = false;

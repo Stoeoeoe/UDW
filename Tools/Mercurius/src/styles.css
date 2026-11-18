@@ -12,17 +12,20 @@
   --color-ink: var(--mercurius-ink);
   --color-muted: var(--mercurius-muted);
   --color-accent: var(--mercurius-accent);
+  --color-secondary: var(--mercurius-secondary);
+  --color-highlight: var(--mercurius-highlight);
   --color-signal: var(--mercurius-signal);
   --color-border: var(--mercurius-border);
   --font-sans: var(--mercurius-sans);
+  --font-display: var(--mercurius-display);
   --font-mono: var(--mercurius-mono);
   --spacing-safe: var(--mercurius-space-safe);
 }
 
 @layer components {
   .eyebrow {
-    font-family: var(--mercurius-mono);
-    font-size: 22px;
+    font-family: var(--mercurius-display);
+    font-size: 32px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--mercurius-accent);
@@ -30,7 +33,11 @@
   .panel {
     background: var(--mercurius-surface);
     border: 1px solid var(--mercurius-border);
-    border-radius: 24px;
+    border-radius: var(--mercurius-radius);
     overflow: hidden;
+  }
+  .video-safe {
+    padding: var(--mercurius-safe-top) var(--mercurius-safe-right)
+      var(--mercurius-safe-bottom) var(--mercurius-safe-left);
   }
 }

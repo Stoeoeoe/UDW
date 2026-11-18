@@ -60,6 +60,10 @@ export function computeBlockedGrid(
           if (!tileRef) continue;
           const [tilesetId, index] = splitTileRef(tileRef);
           const tile = tilesets.get(tilesetId)?.tiles[parseInt(index, 10)];
+          if (tile?.collision?.type === 'full') {
+            blocked[y][x] = true;
+            continue;
+          }
           for (const polygon of tilePolygons(tile?.collision, [x, y], tileSize))
             blockUnder(polygon);
         }
@@ -179,7 +183,7 @@ function markWater(
 
 /** Whether a polygon and an axis-aligned box share any area or edge. */
 export function polygonOverlapsBox(polygon: Point[], [min, max]: [Point, Point]): boolean {
-  const inBox = ([x, y]: Point) => x > min[0] && x < max[0] && y > min[1] && y < max[1];
+  const inBox = ([x, y]: Point) => x >= min[0] && x <= max[0] && y >= min[1] && y <= max[1];
   if (polygon.some(inBox)) return true;
   const corners: Point[] = [min, [max[0], min[1]], max, [min[0], max[1]]];
   if (corners.some((corner) => pointInPolygon(corner, polygon))) return true;
@@ -209,7 +213,18 @@ function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
   const d2 = cross(c, d, b);
   const d3 = cross(a, b, c);
   const d4 = cross(a, b, d);
-  return d1 * d2 < 0 && d3 * d4 < 0;
+  const onSegment = ([ax, ay]: Point, [bx, by]: Point, [px, py]: Point) =>
+    px >= Math.min(ax, bx) &&
+    px <= Math.max(ax, bx) &&
+    py >= Math.min(ay, by) &&
+    py <= Math.max(ay, by);
+  return (
+    (d1 * d2 < 0 && d3 * d4 < 0) ||
+    (d1 === 0 && onSegment(c, d, a)) ||
+    (d2 === 0 && onSegment(c, d, b)) ||
+    (d3 === 0 && onSegment(a, b, c)) ||
+    (d4 === 0 && onSegment(a, b, d))
+  );
 }
 
 const DIRECTIONS: Point[] = [

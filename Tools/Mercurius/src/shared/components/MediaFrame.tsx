@@ -34,7 +34,7 @@ export const MediaFrame = ({
     </div>
     <figcaption
       className="border-t border-border px-8 py-5 font-mono text-muted"
-      style={{ fontSize: 20 }}
+      style={{ fontSize: 30 }}
     >
       {caption}
     </figcaption>

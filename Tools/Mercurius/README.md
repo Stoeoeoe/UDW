@@ -2,7 +2,13 @@
 
 A small, local production workspace for Roemer technical devlogs. Based on the official `create-video@4.0.544 --blank` scaffold, with custom React/TypeScript scenes. Mercurius is the working folder name; the visual language is provisional.
 
-The included **demo** is a silent 24-second component study at **1920×1080, 30 FPS**. It presents illustrative C# code, a dependency diagram, and the cost of explicit setup. It does not describe implemented Roemer code. **Showcase** exposes the same reusable components, emphasis changes, diagram reveals, and Mantine/Tailwind styling checks.
+The current target is **vertical short-form video: 1080×1920, 9:16, 30 FPS**. The demo and component studies use portrait layouts with space reserved for captions and interface overlays. They contain illustrative examples, not claims about implemented Roemer code.
+
+## Design playground
+
+Run `npm run playground` and open **http://127.0.0.1:3109**. Browse seven diagrams plus type/colour and code studies, play/scrub their motion, compare Terracotta with Paper & ink, and copy a study/frame reference for feedback. Safe-area guides are optional and use house review margins rather than platform guarantees. See [docs/playground.md](docs/playground.md).
+
+The playground uses the actual shared Remotion components and the same renderable StudyScene as Studio's Playground folder. It is a small preview app in this package, not an episode editor. `npm run playground:build` builds it to ignored dist/playground/.
 
 ## Install
 
@@ -22,7 +28,9 @@ Git LFS rules apply to footage and narration under public/. Install Git LFS befo
 ## Commands
 
 ```sh
-npm run studio                       # Remotion Studio, no separate app
+npm run playground                   # Local design studies, port 3109
+npm run playground:build             # Build the browser playground
+npm run studio                       # Remotion Studio and renderable studies
 npm run compositions                 # List registered compositions
 npm run typecheck
 npm run lint

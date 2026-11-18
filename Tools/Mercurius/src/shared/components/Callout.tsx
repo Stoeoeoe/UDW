@@ -17,11 +17,14 @@ export const Callout = ({
   return (
     <Paper
       className="flex items-center gap-6 border border-border bg-raised p-8 text-ink"
-      style={entrance(frame, fps, start)}
+      style={{
+        ...entrance(frame, fps, start),
+        borderRadius: 'var(--mercurius-radius)',
+      }}
     >
       <Lightbulb
         size={36}
-        color={tokens.color.accent}
+        color="var(--mercurius-accent)"
         style={{ flexShrink: 0 }}
       />
       <div style={{ fontSize: tokens.type.body, lineHeight: 1.45 }}>

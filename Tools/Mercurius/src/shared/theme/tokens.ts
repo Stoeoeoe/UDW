@@ -1,22 +1,34 @@
 export const tokens = {
   color: {
-    canvas: '#10191c',
-    surface: '#1a272b',
-    raised: '#23353a',
-    ink: '#f0eee4',
-    muted: '#a5b6b9',
-    accent: '#b9e38c',
-    signal: '#efb779',
-    border: '#3b5055',
+    canvas: '#171C24',
+    surface: '#232B36',
+    raised: '#3B2D2A',
+    ink: '#F3EBDD',
+    muted: '#A6ADB8',
+    accent: '#E69373',
+    secondary: '#76B8AE',
+    signal: '#E69373',
+    highlight: '#D9BC77',
+    border: '#64574D',
   },
-  font: { sans: 'Inter', mono: 'JetBrains Mono' },
-  space: { xs: 8, sm: 16, md: 24, lg: 40, xl: 64, safe: 96 },
-  type: { label: 22, body: 30, code: 26, heading: 60, title: 112 },
+  font: { sans: 'Gideon Roman', display: 'Cinzel', mono: 'Noto Sans Mono' },
+  space: { xs: 8, sm: 16, md: 24, lg: 40, xl: 64, safe: 72 },
+  type: { label: 32, body: 44, code: 36, heading: 72, title: 88 },
   radius: 24,
 } as const;
 
-export const fontAssets = [
-  'shared/fonts/inter-latin-400-normal.woff2',
-  'shared/fonts/inter-latin-700-normal.woff2',
-  'shared/fonts/jetbrains-mono-latin-400-normal.woff2',
+export const fontFaces = [
+  {
+    asset: 'shared/fonts/cinzel-latin-400-normal.woff2',
+    family: tokens.font.display,
+  },
+  {
+    asset: 'shared/fonts/gideon-roman-latin-400-normal.woff2',
+    family: tokens.font.sans,
+  },
+  {
+    asset: 'shared/fonts/noto-sans-mono-latin-400-normal.woff2',
+    family: tokens.font.mono,
+  },
 ];
+export const fontAssets = fontFaces.map(({ asset }) => asset);

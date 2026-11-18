@@ -22,7 +22,7 @@ import { GiPerson } from 'react-icons/gi';
 import { EmotionSelect } from '../../common/EmotionSelect';
 import { PortraitField, portraitFolder, usePickPortrait } from './PortraitField';
 import { ManifestResourceSelect } from '../../common/ManifestResourceSelect';
-import { DEFAULT_WALK_SPEED, type Character } from '../../../types/schema';
+import { DEFAULT_SOCIAL_STANDING, DEFAULT_WALK_SPEED, type Character } from '../../../types/schema';
 
 export const CharacterEditor: React.FC = () => {
   const characters = useEditorStore((state) => state.characters);
@@ -142,6 +142,11 @@ const CharacterDetail: React.FC<{
           onUpdate={(updates) => onUpdate(character.id, updates)}
         />
 
+        <SocialStandingSection
+          character={character}
+          onUpdate={(updates) => onUpdate(character.id, updates)}
+        />
+
         <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
           {({ isDirty, values }) => (
             <EditorFormSave
@@ -219,6 +224,39 @@ const PortraitsSection: React.FC<{
     </VStack>
   );
 };
+
+const SocialStandingSection: React.FC<{
+  character: Character;
+  onUpdate: (updates: Partial<Character>) => void;
+}> = ({ character, onUpdate }) => (
+  <VStack align="stretch" spacing={2}>
+    <FieldLabel>Starting social standing</FieldLabel>
+    <HStack spacing={2}>
+      <Box w="110px">
+        <CompactNumberInput
+          min={0}
+          max={100}
+          step={5}
+          value={character.startingSocialStanding ?? ''}
+          inputProps={{
+            'aria-label': 'Starting social standing',
+            placeholder: String(DEFAULT_SOCIAL_STANDING),
+          }}
+          onChange={(_, standing) =>
+            onUpdate({
+              startingSocialStanding: Number.isFinite(standing)
+                ? Math.min(100, Math.max(0, Math.round(standing)))
+                : undefined,
+            })
+          }
+        />
+      </Box>
+      <Text fontSize="xs" color="editorMutedText">
+        0 to 100 in a new game. Empty uses {DEFAULT_SOCIAL_STANDING}.
+      </Text>
+    </HStack>
+  </VStack>
+);
 
 const MovementSection: React.FC<{
   character: Character;

@@ -479,10 +479,14 @@ export interface Character extends NamedEditorResource {
   typewriterSound?: string; // Typewriter sound id played while this character speaks
   emotionTypewriterSounds?: Record<string, string>; // Typewriter sound id per emotion id
   walkSpeed?: number; // Tiles per second; absent = DEFAULT_WALK_SPEED, as in Unity
+  startingSocialStanding?: number; // 0-100 in a new game; absent = DEFAULT_SOCIAL_STANDING, as in Unity
 }
 
 /** The walk speed Unity uses when a character leaves it out (tiles per second). */
 export const DEFAULT_WALK_SPEED = 4;
+
+/** The starting social standing Unity uses when a character leaves it out (0 is lowest, 100 highest). */
+export const DEFAULT_SOCIAL_STANDING = 50;
 
 // Emotions: a project-wide list picked from dropdowns, e.g. for character portraits
 export interface Emotion {

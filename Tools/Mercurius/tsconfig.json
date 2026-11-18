@@ -16,5 +16,11 @@
     "allowImportingTsExtensions": true,
     "types": ["node", "react", "react-dom"]
   },
-  "include": ["src", "episodes", "scripts", "remotion.config.ts"]
+  "include": [
+    "src",
+    "episodes",
+    "scripts",
+    "remotion.config.ts",
+    "vite.config.ts"
+  ]
 }

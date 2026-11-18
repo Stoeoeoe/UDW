@@ -7,4 +7,4 @@
 - Tradeoff: explicit wiring adds setup work; visibility alone does not prove correctness.
 - Unverified claims: none about Roemer implementation. This is invented sample code, not an extract from the game. It does not demonstrate a complete dependency injection system.
 
-24 seconds, 1920×1080, 30 FPS. Silent visual integration study, with no narration track. The script below is a human-review draft for future narration; it is not synthesized automatically.
+24 seconds, 1080×1920, 30 FPS. Silent portrait integration study, with no narration track. The script is a human-review draft for future narration; it is not synthesized automatically. Code is a constructor excerpt.

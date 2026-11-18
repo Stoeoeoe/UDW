@@ -128,8 +128,7 @@ export function questActions(manifest: ScriptingManifest | null): ScriptingActio
       return [
         {
           id: path,
-          displayName:
-            method.action?.displayName ?? method.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
+          displayName: method.action?.displayName ?? readableCall(module.path, method.name),
           category: method.action?.category ?? module.path,
           description:
             method.action?.description ??
@@ -147,6 +146,18 @@ export function questActions(manifest: ScriptingManifest | null): ScriptingActio
 
 /** The output pin of an objective whose wire is that objective's `next`. */
 export const objectivePin = (objectiveId: string) => `objective:${objectiveId}`;
+
+/** "SocialStanding", "HasMoreThan" becomes "Social standing: Has more than", the same for actions and functions. */
+function readableCall(modulePath: string, method: string) {
+  const words = (name: string) => {
+    const spaced = name
+      .replace(/\./g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .toLowerCase();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  };
+  return `${words(modulePath)}: ${words(method).toLowerCase()}`;
+}
 
 /** Read-only calls that return one value: the same isolated API quest conditions use. */
 export function questFunctions(manifest: ScriptingManifest | null): ScriptingAction[] {
@@ -168,7 +179,7 @@ export function questFunctions(manifest: ScriptingManifest | null): ScriptingAct
       return [
         {
           id: `pure:${path}`,
-          displayName: path,
+          displayName: method.action?.displayName ?? readableCall(module.path, method.name),
           category: method.action?.category ?? module.path,
           description: 'Read-only Lua function',
           contexts: ['quest'],

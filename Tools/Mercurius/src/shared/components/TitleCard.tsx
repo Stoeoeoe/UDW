@@ -22,9 +22,9 @@ export const TitleCard = ({
         style={{
           ...entrance(frame, fps, motion.staggerFrames),
           fontSize: tokens.type.title,
-          fontWeight: 700,
+          fontWeight: 400,
           lineHeight: 1.04,
-          letterSpacing: '-0.055em',
+          letterSpacing: 'var(--mercurius-tracking)',
           maxWidth: 1500,
         }}
       >
@@ -34,7 +34,7 @@ export const TitleCard = ({
         className="text-muted"
         style={{
           ...entrance(frame, fps, motion.staggerFrames * 2),
-          fontSize: 36,
+          fontSize: tokens.type.body,
           maxWidth: 1100,
         }}
       >

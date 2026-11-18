@@ -1,21 +1,17 @@
-# Visual language, v0
+# Visual language
 
-The demo should read as a technical notebook: dark slate surfaces, warm light text, a green dependency signal, and sparse amber accents. The colours are provisional. Edit src/shared/theme/tokens.ts to change semantic canvas, surface, raised, ink, muted, accent, signal, and border values centrally. SVG components consume those tokens; CSS variables expose the same values to Tailwind, and mantine-theme.ts derives its theme from them. The local demonstration SVG is a static illustration, with its own recorded palette; regenerate it deliberately if the illustration needs restyling.
+The current direction uses limestone paper and dark ink with terracotta, teal supporting information, and restrained gold values. Paper & ink is the playground default; Terracotta remains as a dark comparison. Purple has been removed following visual review. Both palettes use identical geometry and typography.
 
-Use Inter regular/bold for explanations and JetBrains Mono regular for code and labels. Both are bundled WOFF2 fonts, loaded through @remotion/fonts before a frame is ready. At 1080p, the baseline is 112 px titles, 60 px headings, 30 px prose, 26 px code, and 22 px labels. Keep code examples short enough to read without scaling the whole composition down. Aim for one idea per scene. Use line emphasis to direct attention; dim other lines only after the viewer has seen the complete snippet.
+RomanOrnament supplies original repeating meander, laurel, and wave bands inspired by the user's reference board. Decoration frames the top/bottom and stays outside the content rectangle. Do not replace this with generic circles or diagonal stripes, and do not fill the diagram's working area with a decorative pattern.
 
-Safe margins are 96 px. Spacing steps are 8, 16, 24, 40, and 64 px. Use SplitScreen for comparisons, labelled Node objects with explicit anchors for diagrams, and MediaFrame for screenshots or footage. Callout carries one short consequence, not a paragraph. Node labels remain readable at their native SVG size.
+Gideon Roman regular carries headings and body text. Cinzel is reserved for occasional uppercase chapter labels and the Roemer wordmark. Noto Sans Mono carries code, IDs, and production controls. All three are bundled locally as WOFF2 with their OFL notices. Do not synthesize bold Gideon Roman; contrast comes from scale, colour, and composition.
 
-## Mantine + Tailwind
+Main video: 1080×1920 at 30 FPS. The video-safe class applies the house margins from theme/format.ts: top 160, right 168, bottom 340, left 72. These reserve space for caption and interface review, not guaranteed app safe areas. Diagrams flow vertically; comparisons stack. Check phone-size legibility and the optional overlay in the playground.
 
-Presentation provides a shared MantineProvider with forceColorScheme="dark". There are no system preference or persisted theme decisions in a render. Mantine provides Paper, Badge, Button and suitable future presentation primitives; it does not replace Remotion Studio.
+Regular text is 44 px, code 36 px, labels 32 px. Study titles use 120 px Gideon Roman. Active nodes become solid terracotta; supporting results use teal. Borders and arrows must remain visible at phone size. Code highlighting derives from the selected palette, including terracotta keywords, teal names, and gold constants. Avoid dense snippets and generic explanatory slogans.
 
-styles.css declares layer order before imports:
+Palettes live in theme/tokens.ts and directions.ts. Presentation scopes CSS variables and Mantine variables to each scene so side-by-side palettes stay independent. Shared SVG components use the same variables; Shiki uses the same colour values. Existing static SVG media retains its own recorded artwork palette.
 
-```css
-@layer theme, base, mantine, components, utilities;
-```
+## CSS integration
 
-Tailwind's theme and reset enter their first two layers, Mantine's styles.layer.css enters mantine, our panel/eyebrow rules enter components, and Tailwind utilities enter utilities. Import only the layered Mantine stylesheet. This allows utilities to override normal Mantine classes, while Mantine restores component styling after the reset. A component's inline style still wins over normal utilities: avoid conflicting inline visual values when a utility override is intended.
-
-Showcase's bottom Badge and Button deliberately override Mantine backgrounds, colours, and borders using utilities. Inspect these together with Callout's Paper after CSS changes. Do not introduce CSS motion, hover-dependent state, or animated Mantine transitions in rendered scenes.
+Layer order is theme, base, mantine, components, utilities. Tailwind reset precedes Mantine's layered styles; utilities can intentionally override component classes. Import only styles.layer.css from Mantine. Presentation supplies an explicit colour scheme and scoped theme. Mantine supplies appropriate primitives, while Tailwind handles layouts and utility styles. Rendered motion comes from Remotion frames, never CSS animations or transitions.
