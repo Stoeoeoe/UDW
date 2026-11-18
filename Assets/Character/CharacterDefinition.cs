@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Common;
+using Core.SocialStanding;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -24,6 +25,8 @@ namespace Character
         public EmotionPortrait[] Portraits { get; private set; } = Array.Empty<EmotionPortrait>();
         /// <summary>Walking speed in tiles per second, before boons and other modifiers.</summary>
         [field: SerializeField] public float WalkSpeed { get; private set; } = DefaultWalkSpeed;
+        /// <summary>How much this character thinks of the player in a new game, from 0 to 100.</summary>
+        [field: SerializeField] public int StartingSocialStanding { get; private set; } = SocialStandingService.DefaultStanding;
 
         /// <summary>Walk speed when the Vulcanus character leaves it out; Vulcanus documents the same value.</summary>
         public const float DefaultWalkSpeed = 4f;
@@ -64,6 +67,8 @@ namespace Character
     {
         protected override void CollectConfigurationErrors(CharacterDefinition asset, List<ConfigurationError> errors)
         {
+            if (asset.StartingSocialStanding < SocialStandingService.Min || asset.StartingSocialStanding > SocialStandingService.Max)
+                Report(errors, asset, "StartingSocialStanding", $"Starting social standing must be from {SocialStandingService.Min} to {SocialStandingService.Max}.");
             if (!ConfigurationRules.IsFinite(asset.WalkSpeed) || asset.WalkSpeed <= 0f)
                 Report(errors, asset, "WalkSpeed", "Walk speed must be a positive number of tiles per second.");
             if (!string.IsNullOrEmpty(asset.TypewriterSound) && !DefinitionIdRules.IsLowercaseNamespaced(asset.TypewriterSound))

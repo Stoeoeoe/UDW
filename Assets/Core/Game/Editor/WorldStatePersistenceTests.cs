@@ -435,7 +435,8 @@ namespace Core.Game.Editor
             var facade = typeof(GameState);
             foreach (var property in typeof(GameState).GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                var field = typeof(GameSaveData).GetField(property.Name.ToLowerInvariant(), BindingFlags.Public | BindingFlags.Instance);
+                // A section's name may be camel case on the save (socialStanding) and Pascal case on GameState (SocialStanding).
+                var field = typeof(GameSaveData).GetField(property.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
                 Assert.That(field, Is.Not.Null, $"GameState.{property.Name} has no persisted section.");
                 Assert.That(field.FieldType, Is.EqualTo(property.PropertyType));
             }
@@ -444,8 +445,7 @@ namespace Core.Game.Editor
                 if (field.Name == nameof(GameSaveData.schemaVersion) || field.Name == nameof(GameSaveData.worldBaselineVersion) ||
                     field.Name == nameof(GameSaveData.saveName))
                     continue;
-                var name = char.ToUpperInvariant(field.Name[0]) + field.Name.Substring(1);
-                Assert.That(facade.GetProperty(name, BindingFlags.Public | BindingFlags.Instance), Is.Not.Null,
+                Assert.That(facade.GetProperty(field.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase), Is.Not.Null,
                     $"Save section '{field.Name}' is not exposed through GameState.");
             }
 

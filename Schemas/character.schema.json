@@ -46,6 +46,12 @@
       "exclusiveMinimum": 0,
       "description": "Walking speed in tiles per second, before boons and other modifiers. Absent = 4. NPC routines use it to time each walk."
     },
+    "startingSocialStanding": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How much this character thinks of the player in a new game, from 0 (lowest) to 100. Absent = 50."
+    },
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'NPCs/Villagers'). Empty string or absent = root."

@@ -10,6 +10,7 @@ using Core.Game;
 using Core.Items;
 using Core.Location;
 using Core.Quests;
+using Core.SocialStanding;
 using Core.Scripting;
 using Core.Shops;
 using Core.Routines;
@@ -51,6 +52,7 @@ namespace Core
             builder.Register<RoutineNpcService>(Lifetime.Singleton).AsSelf().As<ITickable>();
             builder.Register<ShopService>(Lifetime.Singleton);
             builder.Register<QuestService>(Lifetime.Singleton).AsSelf().As<ITickable>();
+            builder.Register<SocialStandingService>(Lifetime.Singleton);
             builder.Register<GameStateManager>(Lifetime.Singleton);
             builder.Register<GameSaveService>(Lifetime.Singleton);
 #if UNITY_EDITOR || DEBUG

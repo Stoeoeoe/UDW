@@ -4,6 +4,7 @@ using Character;
 using Core.Divinity;
 using Core.Inventory;
 using Core.Quests;
+using Core.SocialStanding;
 using Core.TimeAndWeather;
 using Sirenix.Serialization;
 using UnityEngine;
@@ -28,6 +29,7 @@ namespace Core.Game
         public PlayerState Player => Data.player;
         public StoryState Story => Data.story;
         public QuestState Quests => Data.quests;
+        public SocialStandingState SocialStanding => Data.socialStanding;
         public GameTimeState Time => Data.time;
         public SessionState Session => Data.session;
         /// <summary>This playthrough's random seed (<see cref="GameSaveData.seed"/>).</summary>

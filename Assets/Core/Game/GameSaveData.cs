@@ -4,6 +4,7 @@ using Character;
 using Core.Inventory;
 using Core.Items;
 using Core.Quests;
+using Core.SocialStanding;
 using Core.TimeAndWeather;
 
 namespace Core.Game
@@ -27,6 +28,8 @@ namespace Core.Game
         public StoryState story = new();
         /// <summary>Started quests.</summary>
         public QuestState quests = new();
+        /// <summary>How the player stands with characters and villages, for those that have changed.</summary>
+        public SocialStandingState socialStanding = new();
         public GameTimeState time = new();
         public WorldState world = new();
         public SessionState session = new();
@@ -39,7 +42,7 @@ namespace Core.Game
             if (worldBaselineVersion < 1)
                 throw new FormatException("The save is missing its world baseline version.");
             if (player?.Skills?.GetLevels() == null || player.Favour?.Scores == null || player.Wallet == null || player.Inventory?.ToolCharges == null || player.Health == null || player.Stamina == null || player.Boosts?.Active == null ||
-                story == null || quests == null || time == null || world?.GetLocations() == null || session == null)
+                story == null || quests == null || socialStanding == null || time == null || world?.GetLocations() == null || session == null)
                 throw new FormatException("The save is missing a required state section.");
             session.Validate();
             if (saveName != null && string.IsNullOrWhiteSpace(saveName))
@@ -95,6 +98,7 @@ namespace Core.Game
 
             story.Validate();
             quests.Validate();
+            socialStanding.Validate();
 
             foreach (var location in world.GetLocations())
             {

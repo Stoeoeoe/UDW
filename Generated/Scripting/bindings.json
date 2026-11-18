@@ -1414,6 +1414,122 @@
       ]
     },
     {
+      "path": "SocialStanding",
+      "methods": [
+        {
+          "name": "Decrease",
+          "parameters": [
+            {
+              "name": "subjectId",
+              "type": "string"
+            },
+            {
+              "name": "amount",
+              "type": "number"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "Get",
+          "parameters": [
+            {
+              "name": "subjectId",
+              "type": "string"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "HasLessThan",
+          "parameters": [
+            {
+              "name": "subjectId",
+              "type": "string"
+            },
+            {
+              "name": "standing",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "HasMoreThan",
+          "parameters": [
+            {
+              "name": "subjectId",
+              "type": "string"
+            },
+            {
+              "name": "standing",
+              "type": "number"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "Increase",
+          "parameters": [
+            {
+              "name": "subjectId",
+              "type": "string"
+            },
+            {
+              "name": "amount",
+              "type": "number"
+            }
+          ],
+          "returnType": "integer",
+          "returnNullable": false,
+          "writesState": true,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "number",
+              "nullable": false
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "Time",
       "methods": [
         {
