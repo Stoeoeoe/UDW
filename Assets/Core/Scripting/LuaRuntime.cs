@@ -26,6 +26,11 @@ namespace Core.Scripting
 
         internal T Inject<T>(T api) where T : class { _container.Inject(api); return api; }
 
+        private VulcanusLuaEngine _conditions;
+
+        /// <summary>One engine for read-only conditions that many callers evaluate, so they share its compiled expressions.</summary>
+        public VulcanusLuaEngine Conditions => _conditions ??= CreateEngine();
+
         public VulcanusLuaEngine CreateEngine(CutsceneVariables variables = null) => new(
             new LuaBindingRegistry(VulcanusLuaEngine.DefaultModules.Select(module => Inject(module.Create())).ToArray()) { Runtime = this }, variables);
 

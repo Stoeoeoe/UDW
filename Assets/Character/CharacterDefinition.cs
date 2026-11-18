@@ -27,9 +27,23 @@ namespace Character
         [field: SerializeField] public float WalkSpeed { get; private set; } = DefaultWalkSpeed;
         /// <summary>How much this character thinks of the player in a new game, from 0 to 100.</summary>
         [field: SerializeField] public int StartingSocialStanding { get; private set; } = SocialStandingService.DefaultStanding;
+        /// <summary>
+        /// What talking to the character starts when no quest and no routine sets a dialogue: the first entry whose
+        /// condition holds. With no match the character cannot be talked to.
+        /// </summary>
+        [field: SerializeField, Validation.Nested] public CharacterDialogue[] Dialogues { get; private set; } = Array.Empty<CharacterDialogue>();
 
         /// <summary>Walk speed when the Vulcanus character leaves it out; Vulcanus documents the same value.</summary>
         public const float DefaultWalkSpeed = 4f;
+
+        /// <summary>The ID of the first <see cref="Dialogues"/> entry whose condition holds, or null if none does.</summary>
+        /// <param name="holds">Evaluates a read-only Lua condition against the current game state.</param>
+        public string DialogueFor(Func<string, bool> holds)
+        {
+            foreach (var entry in Dialogues)
+                if (string.IsNullOrWhiteSpace(entry.Condition) || holds(entry.Condition)) return entry.Dialogue;
+            return null;
+        }
 
         /// <summary>The portrait for a line with this emotion, else the default portrait; null when the character has none.</summary>
         public Texture2D PortraitFor(string emotionId)
@@ -45,6 +59,16 @@ namespace Character
             if (match != null) return match.soundId;
             return string.IsNullOrEmpty(TypewriterSound) ? null : TypewriterSound;
         }
+    }
+
+    /// <summary>A dialogue the character says while its condition holds.</summary>
+    [Serializable, ImportedData]
+    public sealed class CharacterDialogue
+    {
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true)]
+        public string Dialogue { get; private set; }
+        /// <summary>Read-only Lua expression; empty means always.</summary>
+        [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }
     }
 
     /// <summary>A portrait that replaces the character's default for lines with one emotion.</summary>

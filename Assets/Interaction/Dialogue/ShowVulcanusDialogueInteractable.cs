@@ -1,6 +1,7 @@
 using Character;
 using Core.Dialogue.Vulcanus;
 using Core.Quests;
+using Core.Scripting;
 using Interaction.Dialog;
 using UI.Shared;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace Interaction.Dialogue
         [SerializeField] private DialogueOptions options = new();
         [Inject] private VulcanusDialogueRunner _dialogue;
         [Inject] private QuestService _quests;
+        [Inject] private LuaRuntime _lua;
         [Inject] private QuestSettings _questSettings;
         private SpriteRenderer _questMark;
         private VulcanusDialogueExecutionContext _conversation;
@@ -30,13 +32,18 @@ namespace Interaction.Dialogue
         public override bool CanInteract => !Busy && !string.IsNullOrWhiteSpace(DialogueToPlay(out _)) && base.CanInteract;
 
         /// <summary>
-        /// What talking now plays: the dialogue of a quest objective for this character first, otherwise the one its
-        /// routine set. The routine's choice is never overwritten, so the character returns to it afterwards.
+        /// What talking now plays: the dialogue of a quest objective for this character first, then the one its routine
+        /// set, otherwise the character's own (the first <see cref="CharacterDefinition.Dialogues"/> entry whose condition
+        /// holds). The routine's choice is never overwritten, so the character returns to it afterwards.
         /// </summary>
         private string DialogueToPlay(out QuestConversation quest)
         {
             quest = Character ? _quests.FindConversation(Character.CharacterId) : null;
-            return string.IsNullOrEmpty(quest?.DialogueId) ? dialogueId : quest.DialogueId;
+            if (!string.IsNullOrEmpty(quest?.DialogueId)) return quest.DialogueId;
+            if (!string.IsNullOrEmpty(dialogueId)) return dialogueId;
+            return Character && Character.Definition
+                ? Character.Definition.DialogueFor(_lua.Conditions.EvaluateCondition)
+                : null;
         }
 
         /// <summary>

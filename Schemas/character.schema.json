@@ -52,6 +52,27 @@
       "maximum": 100,
       "description": "How much this character thinks of the player in a new game, from 0 (lowest) to 100. Absent = 50."
     },
+    "dialogues": {
+      "type": "array",
+      "description": "What talking to the character starts when no quest and no routine sets a dialogue. The first entry whose condition is true wins; an entry without a condition always matches. With no match the character cannot be talked to.",
+      "items": {
+        "type": "object",
+        "required": ["dialogue"],
+        "additionalProperties": false,
+        "properties": {
+          "dialogue": {
+            "type": "string",
+            "description": "ID of a dialogue, for example base:fabia_greeting.",
+            "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+          },
+          "condition": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Read-only Lua expression, checked when the player starts talking (for example SocialStanding.HasMoreThan('base:fabia', 70)). Omit for always true."
+          }
+        }
+      }
+    },
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'NPCs/Villagers'). Empty string or absent = root."
