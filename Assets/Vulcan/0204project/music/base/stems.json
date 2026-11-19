@@ -1,0 +1,173 @@
+{
+  "0ac1244fe799ad4c8794320706d1d6aea796123050a383ba48941d66b0438c3c": {
+    "file": "Assets/Content/Music/base/_stems/contrabass-8--contra-bass--0ac1244fe799.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "contrabass-8"
+      }
+    ]
+  },
+  "0cde869f3a7cc1875f6985c6d05c2b8a3cfeb173075b6a00c38e37c54ac0daa9": {
+    "file": "Assets/Content/Music/base/_stems/percussion-9--standard--0cde869f3a7c.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "percussion-9"
+      }
+    ]
+  },
+  "10564496078b79d30a07a49acb9fc0b050a223b7994478c6c479cb3556afcdc4": {
+    "file": "Assets/Content/Music/base/_stems/pan-flute-1--viola--10564496078b.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "pan-flute-1"
+      }
+    ]
+  },
+  "11b5dde30f2c5945f265919f0fab600d77c802d4b5237021ab4f9c128f96dff1": {
+    "file": "Assets/Content/Music/base/_stems/celesta-moonlight-6--celeste--11b5dde30f2c.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "celesta-moonlight-6"
+      }
+    ]
+  },
+  "2e04e086f1217dee73ef78216392b81af78d868580355fcfed6cce1d7a8e30f0": {
+    "file": "Assets/Content/Music/base/_stems/harp-lyre-3--french-horns--2e04e086f121.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "harp-lyre-3"
+      }
+    ]
+  },
+  "41fc66b1b443a2260744ced6291f97c71d2a49e60032331b0749d2e2d5c8fad5": {
+    "file": "Assets/Content/Music/base/_stems/flute-2--flute--41fc66b1b443.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "flute-2"
+      }
+    ]
+  },
+  "5215b9e3d2e9ca0dbe5e21706d3d7a14fe496196f19cdd5b6dc7d1b10cdc940e": {
+    "file": "Assets/Content/Music/base/_stems/hunting-horn-5--french-horns--5215b9e3d2e9.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "hunting-horn-5"
+      }
+    ]
+  },
+  "5467f001448251e3dc46174a4c9a96a443f88b5e3df5f63f84422dded8623059": {
+    "file": "Assets/Content/Music/base/_stems/heroic-theme--trumpet-french-horn-strings-choir-aahs-contrabass-gm-gs-drum-set--5467f0014482.ogg",
+    "uses": [
+      {
+        "cue": "base:heroic-theme",
+        "stem": "heroic-theme"
+      }
+    ]
+  },
+  "5b277513c720fdc6ef82133251253e4fafaaec05a19b69e878252aa99c0a596e": {
+    "file": "Assets/Content/Music/base/_stems/flute-2--cello--5b277513c720.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "flute-2"
+      }
+    ]
+  },
+  "5b332827a9e147e1395adeaf237063b7a9132d3c96492bc8c6461828837b9f2a": {
+    "file": "Assets/Content/Music/base/_stems/hunting-horn-5--french-horns--5b332827a9e1.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "hunting-horn-5"
+      }
+    ]
+  },
+  "70f22821fdb32aa01e0398002b709dd70fe15b1ff8910d76cff86c5e56075568": {
+    "file": "Assets/Content/Music/base/_stems/harp-lyre-3--harp--70f22821fdb3.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "harp-lyre-3"
+      }
+    ]
+  },
+  "8dc9b620d5ee464fa9f1fac6b3e54787ec0ed9b1f07e490b570cdce19b042380": {
+    "file": "Assets/Content/Music/base/_stems/slow-strings-7--slow-strings--8dc9b620d5ee.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "slow-strings-7"
+      }
+    ]
+  },
+  "9eb259cae6ee6719fcb8fe3683e51e368ee0f9c09e65d4f2bbaa816529474c12": {
+    "file": "Assets/Content/Music/base/_stems/slow-strings-7--slow-strings--9eb259cae6ee.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "slow-strings-7"
+      }
+    ]
+  },
+  "b2593ab275129060f4f315ca40f34de3b91c49348d457b1fecff3f62f1d5d194": {
+    "file": "Assets/Content/Music/base/_stems/voice-oohs-4--voice-oohs--b2593ab27512.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "voice-oohs-4"
+      }
+    ]
+  },
+  "b712bd17e4a8ec81eb229dddb352866f80f6a12078646c5d999af65cfe852fa7": {
+    "file": "Assets/Content/Music/base/_stems/voice-oohs-4--voice-oohs--b712bd17e4a8.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "voice-oohs-4"
+      }
+    ]
+  },
+  "be322007c3d1149395a546878fa72e617d7b70dff17df4b617760a46fa9d048e": {
+    "file": "Assets/Content/Music/base/_stems/percussion-9--standard--be322007c3d1.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "percussion-9"
+      }
+    ]
+  },
+  "dae55b7a997b93486559125f152454b4071cdd5acc5694870fedd4a0592a3a5c": {
+    "file": "Assets/Content/Music/base/_stems/contrabass-8--contra-bass--dae55b7a997b.ogg",
+    "uses": [
+      {
+        "cue": "base:interior",
+        "stem": "contrabass-8"
+      }
+    ]
+  },
+  "dd2f06d3f340150777c3bf5c80cbc50ce8db8a288232d5727917bbac41c3b961": {
+    "file": "Assets/Content/Music/base/_stems/pan-flute-1--pan-flute--dd2f06d3f340.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "pan-flute-1"
+      }
+    ]
+  },
+  "e9d4e5a88f1246ef81601d846c1462e7ce90c974e28f405dba4e9a261df5dfc4": {
+    "file": "Assets/Content/Music/base/_stems/celesta-moonlight-6--celeste--e9d4e5a88f12.ogg",
+    "uses": [
+      {
+        "cue": "base:diana-shrine",
+        "stem": "celesta-moonlight-6"
+      }
+    ]
+  }
+}

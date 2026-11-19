@@ -1,5 +1,6 @@
 import { useEditorStore } from '../store/useEditorStore';
 import { ResourceKind, WorkspaceDocument } from '../types/workspace';
+import type { MusicCueSummary } from './musicApi';
 import { EditorResourceDescriptor } from '../types/editorResource';
 import { createEditorResourceDocument, getEditorResourceSaveUnitId } from './editorResourceTypes';
 import {
@@ -204,6 +205,18 @@ export function listShopDescriptors(shops: Shop[]): ResourceDescriptor[] {
   }));
 }
 
+export function listMusicDescriptors(cues: MusicCueSummary[]): ResourceDescriptor[] {
+  return cues.map((cue) => ({
+    type: 'music',
+    kind: 'music',
+    id: cue.id,
+    name: cue.name,
+    folderPath: '',
+    document: createEditorResourceDocument({ type: 'music', id: cue.id, name: cue.name }),
+    saveUnitId: getEditorResourceSaveUnitId('music', cue.id),
+  }));
+}
+
 export function listQuestDescriptors(
   quests: import('../types/quest').Quest[],
 ): ResourceDescriptor[] {
@@ -229,6 +242,7 @@ export interface AllResourceDescriptors {
   routines: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
   cutscenes: ResourceDescriptor[];
+  music: ResourceDescriptor[];
 }
 
 export function buildAllResourceDescriptors(state: {
@@ -244,6 +258,7 @@ export function buildAllResourceDescriptors(state: {
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
   cutsceneFolders?: Record<string, string>;
+  musicCues?: MusicCueSummary[];
 }): AllResourceDescriptors {
   return {
     locations: listLocationDescriptors(state.maps),
@@ -260,6 +275,7 @@ export function buildAllResourceDescriptors(state: {
       state.cutsceneLabels,
       state.cutsceneFolders,
     ),
+    music: listMusicDescriptors(state.musicCues ?? []),
   };
 }
 
@@ -285,7 +301,8 @@ export function canCreateResourceKind(
   | 'routine'
   | 'quest'
   | 'dialogue'
-  | 'cutscene' {
+  | 'cutscene'
+  | 'music' {
   return (
     kind === 'location' ||
     kind === 'tileset' ||
@@ -296,7 +313,8 @@ export function canCreateResourceKind(
     kind === 'routine' ||
     kind === 'quest' ||
     kind === 'dialogue' ||
-    kind === 'cutscene'
+    kind === 'cutscene' ||
+    kind === 'music'
   );
 }
 
@@ -393,5 +411,7 @@ function listDescriptorsForKind(
       return listRoutineDescriptors(state.routines, state.characters);
     case 'dialogue':
       return listDialogueDescriptors(Array.from(state.dialogues.values()));
+    case 'music':
+      return [];
   }
 }

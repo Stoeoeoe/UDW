@@ -12,6 +12,7 @@ export const editorResourceTypeIds = [
   'quest',
   'dialogue',
   'cutscene',
+  'music',
 ] as const;
 
 export type EditorResourceTypeId = (typeof editorResourceTypeIds)[number];
@@ -30,7 +31,8 @@ export type EditorResourceCreateFlow =
   | 'tileset'
   | 'dialogue'
   | 'routine'
-  | 'quest';
+  | 'quest'
+  | 'music';
 export type EditorResourceMetadataFlow =
   | 'none'
   | 'location'

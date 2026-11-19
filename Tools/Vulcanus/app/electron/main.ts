@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { setupIpcHandlers } from './ipcHandlers';
 import { setupLuaLSHandlers } from './luaLanguageServer';
+import { setupMusicHandlers } from './musicHandlers';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
@@ -131,6 +132,7 @@ function createWindow() {
   // Initialize IPC Handlers
   setupIpcHandlers(win);
   setupLuaLSHandlers(win);
+  setupMusicHandlers(win);
   setupApplicationMenu();
   win.setMenuBarVisibility(false);
 

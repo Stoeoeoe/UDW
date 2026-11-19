@@ -1,0 +1,19 @@
+{
+  "cueId": "base:diana-shrine",
+  "theme": "base:diana-shrine",
+  "soundFont": "../../../../../../Tools/Apollo/soundfonts/Jnsgm2.sf2",
+  "sampleRate": 48000,
+  "gain": 0.2,
+  "loop": { "startBar": 1, "endBar": 41, "tail": "wrap", "fadeOutSeconds": 0.75 },
+  "stems": [
+    { "id": "pan-flute-1", "name": "Pan Flute", "tracks": [1], "instruments": [{ "channel": 0, "preset": "Pan Flute" }] },
+    { "id": "flute-2", "name": "Flute", "tracks": [2], "instruments": [{ "channel": 1, "preset": "Flute" }] },
+    { "id": "harp-lyre-3", "name": "Harp", "tracks": [3], "instruments": [{ "channel": 2, "preset": "Harp" }] },
+    { "id": "voice-oohs-4", "name": "Voice Oohs", "tracks": [4], "instruments": [{ "channel": 3, "preset": "Voice Oohs" }] },
+    { "id": "hunting-horn-5", "name": "Horn", "tracks": [5], "instruments": [{ "channel": 4, "preset": "French Horns" }] },
+    { "id": "celesta-moonlight-6", "name": "Celeste", "tracks": [6], "instruments": [{ "channel": 5, "preset": "Celeste" }] },
+    { "id": "slow-strings-7", "name": "Slow Strings", "tracks": [7], "instruments": [{ "channel": 6, "preset": "Slow Strings" }] },
+    { "id": "contrabass-8", "name": "Bass", "tracks": [8], "instruments": [{ "channel": 7, "preset": "Contra Bass" }] },
+    { "id": "percussion-9", "name": "Percussion", "tracks": [9], "instruments": [{ "channel": 9, "preset": "Standard" }] }
+  ]
+}

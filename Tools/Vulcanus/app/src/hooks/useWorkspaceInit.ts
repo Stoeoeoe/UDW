@@ -1,5 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../store/useEditorStore';
+import { useMusicStore } from '../store/useMusicStore';
 import { getDocumentSaveUnitId, useWorkspaceStore } from '../store/useWorkspaceStore';
 import {
   buildWorkspaceTree,
@@ -46,6 +47,7 @@ export function useWorkspaceInit() {
   const cutscenes = useEditorStore((s) => s.cutscenes);
   const cutsceneLabels = useEditorStore((s) => s.cutsceneLabels);
   const cutsceneFolders = useEditorStore((s) => s.cutsceneFolders);
+  const musicCues = useMusicStore((s) => s.cues);
 
   const tabs = useWorkspaceStore((state) => state.tabs);
   const activeTabId = useWorkspaceStore((state) => state.activeTabId);
@@ -74,6 +76,7 @@ export function useWorkspaceInit() {
         cutscenes,
         cutsceneLabels,
         cutsceneFolders,
+        musicCues,
       }),
     [
       maps,
@@ -88,6 +91,7 @@ export function useWorkspaceInit() {
       cutscenes,
       cutsceneLabels,
       cutsceneFolders,
+      musicCues,
     ],
   );
 
@@ -98,6 +102,17 @@ export function useWorkspaceInit() {
     () => tabs.find((tab) => tab.id === activeTabId) ?? null,
     [activeTabId, tabs],
   );
+
+  React.useEffect(() => {
+    if (!projectPath) {
+      useMusicStore.getState().clear();
+      return;
+    }
+    void useMusicStore
+      .getState()
+      .refresh(projectPath)
+      .catch((error) => console.error('Could not list music cues:', error));
+  }, [projectPath]);
 
   React.useEffect(() => {
     collectDefaultExpandedNodeIds(treeNodes).forEach((nodeId) => setExpanded(nodeId, true));
@@ -135,6 +150,7 @@ export function useWorkspaceInit() {
       cutscenes,
       cutsceneLabels,
       cutsceneFolders,
+      musicCues,
     };
     const restored = restoreWorkspaceSession(projectPath, snapshot);
     restoreNavigation(restoreWorkspaceNavigation(projectPath));
@@ -175,6 +191,7 @@ export function useWorkspaceInit() {
     cutscenes,
     cutsceneLabels,
     cutsceneFolders,
+    musicCues,
     treeNodes,
     openDocument,
     activateTab,
@@ -199,6 +216,7 @@ export function useWorkspaceInit() {
         cutscenes,
         cutsceneLabels,
         cutsceneFolders,
+        musicCues,
       });
       if (!document) return;
       const tab = openDocument(document);
@@ -224,6 +242,7 @@ export function useWorkspaceInit() {
     cutscenes,
     cutsceneLabels,
     cutsceneFolders,
+    musicCues,
     openDocument,
     activateTab,
   ]);

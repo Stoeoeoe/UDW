@@ -119,6 +119,10 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'cutscene');
       params.set('id', document.cutsceneId);
       break;
+    case 'music':
+      params.set('doc', 'music');
+      params.set('id', document.cueId);
+      break;
     case 'dialogue':
       params.set('doc', 'dialogue');
       params.set('id', document.dialogueId);
@@ -234,6 +238,14 @@ export function documentFromHash(
     const shop = snapshot.shops?.find((entry) => entry.id === params.get('id'));
     return shop
       ? createEditorResourceDocument({ type: 'shop', id: shop.id, name: shop.name })
+      : null;
+  }
+
+  if (doc === 'music') {
+    // The cue list loads separately from the project, so trust well-formed IDs here.
+    const cueId = params.get('id');
+    return cueId?.includes(':')
+      ? createEditorResourceDocument({ type: 'music', id: cueId, name: cueId })
       : null;
   }
 

@@ -167,6 +167,7 @@ describe('buildWorkspaceTree', () => {
       'group:quests',
       'group:dialogues',
       'group:cutscenes',
+      'group:music',
       'data',
       'scripting',
       'settings',

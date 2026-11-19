@@ -3,6 +3,7 @@ import {
   FiClock,
   FiCode,
   FiDatabase,
+  FiMusic,
   FiFilm,
   FiGrid,
   FiMap,
@@ -43,6 +44,7 @@ export const documentPresentation: Record<
   configuration: { layout: 'utility', icon: FiSliders },
   data: { layout: 'utility', icon: FiDatabase },
   scripting: { layout: 'utility', icon: FiCode },
+  music: { layout: 'form', icon: FiMusic },
 };
 
 /** Read live names so renaming a resource does not leave the document header stale. */

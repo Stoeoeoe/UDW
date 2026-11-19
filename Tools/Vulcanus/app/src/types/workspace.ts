@@ -9,6 +9,7 @@ import {
 } from './schema';
 import { ToolType } from './editor';
 import { EditorResourceTypeId } from './editorResource';
+import type { MusicCueSummary } from '../lib/musicApi';
 
 export type WorkspaceScreenKind =
   | 'cutscenes'
@@ -73,6 +74,7 @@ export type WorkspaceDocument =
       label: string;
       saveUnitId: 'configuration';
     }
+  | { kind: 'music'; cueId: string; label: string; saveUnitId: string }
   | {
       kind: 'character';
       characterId: string;
@@ -201,4 +203,5 @@ export interface WorkspaceProjectSnapshot {
   cutscenes?: import('./cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
   cutsceneFolders?: Record<string, string>;
+  musicCues?: MusicCueSummary[];
 }

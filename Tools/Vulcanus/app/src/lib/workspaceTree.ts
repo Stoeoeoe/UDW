@@ -8,6 +8,7 @@ import {
   DialogueDocument,
 } from '../types/schema';
 import { ResourceKind, WorkspaceTreeNode } from '../types/workspace';
+import type { MusicCueSummary } from './musicApi';
 import {
   listLocationDescriptors,
   listTilesetDescriptors,
@@ -18,6 +19,7 @@ import {
   listRoutineDescriptors,
   listQuestDescriptors,
   listDialogueDescriptors,
+  listMusicDescriptors,
   listCutsceneDescriptors,
   ResourceDescriptor,
 } from './resourceAdapters';
@@ -38,6 +40,7 @@ export interface WorkspaceTreeInput {
   cutscenes?: import('../types/cutscene').Cutscene[];
   cutsceneLabels?: Record<string, string>;
   cutsceneFolders?: Record<string, string>;
+  musicCues?: MusicCueSummary[];
 }
 
 // ─── Tree builder ─────────────────────────────────────────────────────────────
@@ -129,6 +132,13 @@ export function buildWorkspaceTree(input: WorkspaceTreeInput): WorkspaceTreeNode
       'cutscene',
       listCutsceneDescriptors(input.cutscenes ?? [], input.cutsceneLabels, input.cutsceneFolders),
       'cutscene',
+    ),
+    buildResourceSection(
+      'music',
+      'Music',
+      'music',
+      listMusicDescriptors(input.musicCues ?? []),
+      'music',
     ),
     {
       id: 'data',
@@ -287,6 +297,8 @@ function getResourceGroupIdSuffix(resourceKind: ResourceKind): string {
       return 'cutscenes';
     case 'dialogue':
       return 'dialogues';
+    case 'music':
+      return 'music';
   }
 }
 

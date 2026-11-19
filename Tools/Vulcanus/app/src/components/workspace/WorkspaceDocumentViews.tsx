@@ -22,6 +22,7 @@ import {
 } from '../screens';
 import { ConfigurationEditor } from '../screens/settings/ConfigurationEditor';
 import { DataEditor } from '../screens/data/DataEditor';
+import { MusicEditor } from '../screens/music/MusicEditor';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useWorkspaceStore } from '../../store/useWorkspaceStore';
 import { WorkspaceTab } from '../../types/workspace';
@@ -90,6 +91,8 @@ const WorkspaceDocumentContent: React.FC<{ tab: WorkspaceTab }> = ({ tab }) => {
       return <DialogueEditor />;
     case 'scripting':
       return <ScriptingApiBrowser />;
+    case 'music':
+      return <MusicEditor cueId={tab.document.cueId} />;
     case 'data':
       return <DataEditor />;
     case 'character':

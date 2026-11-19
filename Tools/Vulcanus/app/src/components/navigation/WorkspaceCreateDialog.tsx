@@ -14,6 +14,7 @@ import { CreateDialogueDialog } from '../screens/dialogue/CreateDialogueDialog';
 import { createDialogue } from '../screens/dialogue/createDialogue';
 import { CreateQuestDialog } from '../screens/quest/CreateQuestDialog';
 import { CreateRoutineDialog } from '../screens/routine/CreateRoutineDialog';
+import { ImportCueDialog } from '../screens/music/ImportCueDialog';
 
 export type CreateDialogState = {
   kind: NonNullable<WorkspaceTreeNode['resourceKind']>;
@@ -104,6 +105,22 @@ export const WorkspaceCreateDialog: React.FC<{
         onCreated={(id, name) =>
           onOpenDocument(createEditorResourceDocument({ type: 'routine', id, name }), { pin: true })
         }
+      />
+    );
+  }
+
+  if (createFlow === 'music') {
+    return (
+      <ImportCueDialog
+        isOpen
+        onClose={onClose}
+        onImported={(cueId) => {
+          onOpenDocument(
+            createEditorResourceDocument({ type: 'music', id: cueId, name: cueId }),
+            { pin: true },
+          );
+          onClose();
+        }}
       />
     );
   }

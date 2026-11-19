@@ -1,31 +1,16 @@
 # CLI operations
 
-Project tooling for authoring, inspecting and testing the game. Apollo runs from
-its folder without an open Editor. Run Unity commands from the project root with
+Project tooling for authoring, inspecting and testing the game. Run Unity commands from the project root with
 the Unity Editor open and the `unity` CLI available.
 
 ## Music content (Apollo)
 
-From `Apollo`, import a MIDI and SoundFont with a stable namespaced cue ID:
-
-```powershell
-npm.cmd run apollo -- import C:/Music/score.mid --soundfont C:/Music/font.sf2 --id mymod:score
-npm.cmd run apollo -- render mymod:score
-```
-
-Rendering also needs FFmpeg with libvorbis. Add it to PATH or set
-`APOLLO_FFMPEG` to the executable. On this workstation, for example:
-
-```powershell
-$env:APOLLO_FFMPEG = 'C:/Program Files/ShareX/ffmpeg.exe'
-```
-
-The first command discovers tracks/instruments and proposes musical loop bounds.
-Edit `Apollo/mymod/score/config.json` to select named SoundFont presets, group tracks,
-or adjust the loop/fade. Renders replace the fixed Unity output under
+Music is authored in the Vulcanus Music editor: **New > Music** imports a MIDI and SoundFont
+with a stable namespaced cue ID and proposes musical loop bounds. Select named SoundFont presets,
+adjust the loop/fade, preview the mix and press **Render**. Renders replace the fixed Unity output under
 `Assets/Content/Music/mymod/score`, preserving existing Unity GUIDs. Unity imports
 `cue.apollocue` automatically. In Vulcanus map metadata assign `musicCue` and
-`musicPreset` to choose where the cue plays. See [Apollo](../Apollo/README.md).
+`musicPreset` to choose where the cue plays. See [Apollo](../Tools/Apollo/README.md).
 
 ## Weather
 

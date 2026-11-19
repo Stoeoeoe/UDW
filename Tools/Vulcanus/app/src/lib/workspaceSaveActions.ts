@@ -20,6 +20,7 @@ import { Map as GameMap, Project, Tileset } from '../types/schema';
 type WorkspaceSaveOverride = {
   saveTab?: (tab: WorkspaceTab) => Promise<void>;
   saveAll?: () => Promise<void>;
+  discardTab?: (tab: WorkspaceTab) => Promise<void>;
 };
 
 const workspaceSaveOverrides = new Map<WorkspaceDocument['kind'], WorkspaceSaveOverride>();
@@ -238,6 +239,12 @@ function normalizeTileset(rawTileset: Tileset): Tileset {
 
 export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Promise<void> {
   if (!tab) return;
+
+  const override = workspaceSaveOverrides.get(tab.document.kind);
+  if (override?.discardTab) {
+    await override.discardTab(tab);
+    return;
+  }
 
   const { document } = tab;
   if (document.kind === 'cutscene') {

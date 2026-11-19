@@ -1,6 +1,7 @@
 import { resourceFileKey, resourceRegistry } from './resourceRegistry';
 import { fileSystem } from '../lib/fileSystem';
 import { useEditorStore } from '../store/useEditorStore';
+import { useMusicStore } from '../store/useMusicStore';
 import { WorkspaceDocument } from '../types/workspace';
 import {
   EditorResourceDescriptor,
@@ -309,6 +310,36 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     getFolderPath: (resourceId) =>
       useEditorStore.getState().shops.find((shop) => shop.id === resourceId)?.folderPath ?? '',
   },
+  // Cues are Apollo files read through Electron, not editor-store documents, so there is no
+  // documentDefinition. Rename sets a display name; the cue ID is permanent.
+  music: {
+    id: 'music',
+    label: 'Music',
+    collectionLabel: 'Music',
+    editorIcon: 'music',
+    createFlow: 'music',
+    metadataFlow: 'none',
+    saveUnitPrefix: 'music:',
+    accentColor: 'red.300',
+    tint: 'rgba(252,129,129,0.12)',
+    hoverTint: 'rgba(252,129,129,0.18)',
+    rowGradient: 'linear(to-r, rgba(252,129,129,0.16), rgba(252,129,129,0.03) 72%, transparent)',
+    headerGradient:
+      'linear(to-r, rgba(252,129,129,0.12), rgba(252,129,129,0.035) 68%, transparent)',
+    canCreate: true,
+    canRename: true,
+    canEditMetadata: false,
+    canDelete: true,
+    canRevealInFileExplorer: false,
+    renameResource: async (cueId, name) => {
+      const projectPath = useEditorStore.getState().projectPath;
+      if (projectPath) await useMusicStore.getState().rename(projectPath, cueId, name);
+    },
+    deleteResource: async (cueId) => {
+      const projectPath = useEditorStore.getState().projectPath;
+      if (projectPath) await useMusicStore.getState().remove(projectPath, cueId);
+    },
+  },
   quest: {
     id: 'quest',
     documentDefinition: resourceRegistry.quest,
@@ -538,6 +569,8 @@ export function getEditorResourceDocumentId(
       return document.itemId;
     case 'shop':
       return document.shopId;
+    case 'music':
+      return document.cueId;
     case 'quest':
       return document.questId;
     case 'routine':
@@ -667,6 +700,8 @@ export function createEditorResourceDocument(
         label: resource.name,
         saveUnitId,
       };
+    case 'music':
+      return { kind: 'music', cueId: resource.id, label: resource.name, saveUnitId };
     case 'quest':
       return { kind: 'quest', questId: resource.id, label: resource.name, saveUnitId };
     case 'routine':
@@ -697,6 +732,7 @@ export function getEditorResourceTypeFromDocument(
     case 'quest':
     case 'dialogue':
     case 'cutscene':
+    case 'music':
       return document.kind;
     default:
       return null;

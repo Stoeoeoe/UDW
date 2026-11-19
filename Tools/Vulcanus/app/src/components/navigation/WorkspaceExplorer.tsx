@@ -25,6 +25,7 @@ import {
   FiBox,
   FiFilm,
   FiCode,
+  FiMusic,
   FiDatabase,
   FiChevronDown,
   FiChevronRight,
@@ -105,6 +106,8 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiMessageSquare;
     case 'scripting':
       return FiCode;
+    case 'music':
+      return FiMusic;
     case 'data':
       return FiDatabase;
     case 'settings':
