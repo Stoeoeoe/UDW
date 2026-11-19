@@ -1,0 +1,20 @@
+{
+  "dialogueId": "base:fabia_friendly",
+  "dialogueName": "Fabia — Friendly",
+  "generatedAt": "2026-11-19T22:00:00.000Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:fabia_friendly.01",
+      "text": "There you are! My favourite customer.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_friendly.02",
+      "text": "Take what you like. For you, the prices are... flexible.",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../../../../Schemas/dialogue-i18n.schema.json"
+}

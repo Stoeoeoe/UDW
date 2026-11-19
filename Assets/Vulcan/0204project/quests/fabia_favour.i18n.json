@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../Schemas/quest-i18n.schema.json",
+  "questId": "base:fabia_favour",
+  "messages": [
+    {
+      "msgKey": "quest.base:fabia_favour.title",
+      "text": "Fabia's Favour"
+    },
+    {
+      "msgKey": "quest.base:fabia_favour.description",
+      "text": "Fabia lost her seedlings to the frost and needs help replanting."
+    },
+    {
+      "msgKey": "quest.base:fabia_favour.ask.journal",
+      "text": "Fabia's seedlings were lost to the frost. Hear what she needs."
+    },
+    {
+      "msgKey": "quest.base:fabia_favour.ask.talk.text",
+      "text": "Talk to Fabia"
+    },
+    {
+      "msgKey": "quest.base:fabia_favour.bring.journal",
+      "text": "Bring Fabia three broad bean seeds."
+    },
+    {
+      "msgKey": "quest.base:fabia_favour.bring.seeds.text",
+      "text": "Bring Fabia 3 broad bean seeds"
+    }
+  ]
+}

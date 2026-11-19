@@ -1,0 +1,20 @@
+{
+  "dialogueId": "base:fabia_favour_thanks",
+  "dialogueName": "Fabia — Favour thanks",
+  "generatedAt": "2026-11-19T22:00:00.000Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:fabia_favour_thanks.01",
+      "text": "Three bean seeds! You're a lifesaver.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_favour_thanks.02",
+      "text": "Here, for your trouble. And I won't forget this.",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../../../../Schemas/dialogue-i18n.schema.json"
+}

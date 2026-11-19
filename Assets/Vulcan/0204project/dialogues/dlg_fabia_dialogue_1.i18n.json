@@ -1,0 +1,14 @@
+{
+  "dialogueId": "base:dlg_fabia_dialogue_1",
+  "dialogueName": "Fabia – dialogue 1",
+  "generatedAt": "2026-11-19T21:25:30.055Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:dlg_fabia_dialogue_1.01",
+      "text": "",
+      "nodeId": "step_1",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../../../../Schemas/dialogue-i18n.schema.json"
+}

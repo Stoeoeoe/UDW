@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../../Schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "base:fabia_friendly",
+  "name": "Fabia — Friendly",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "fabia"
+  ],
+  "createdAt": "2026-11-19T22:00:00.000Z",
+  "updatedAt": "2026-11-19T22:00:00.000Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:very_happy",
+      "text": "There you are! My favourite customer.",
+      "msgKey": "dlg.base:fabia_friendly.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:flirty",
+      "text": "Take what you like. For you, the prices are... flexible.",
+      "msgKey": "dlg.base:fabia_friendly.02",
+      "next": null
+    }
+  ],
+  "folderPath": "Fabia"
+}

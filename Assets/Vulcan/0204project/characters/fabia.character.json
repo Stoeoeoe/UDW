@@ -20,5 +20,18 @@
     "base:happy": "base:fabia_happy",
     "base:angry": "base:fabia_angry"
   },
-  "walkSpeed": 4
+  "walkSpeed": 4,
+  "dialogues": [
+    {
+      "dialogue": "base:fabia_wary",
+      "condition": "SocialStanding.HasLessThan('base:fabia', 30)"
+    },
+    {
+      "dialogue": "base:fabia_friendly",
+      "condition": "SocialStanding.HasMoreThan('base:fabia', 70)"
+    },
+    {
+      "dialogue": "base:fabia_greeting"
+    }
+  ]
 }

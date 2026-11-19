@@ -1,0 +1,20 @@
+{
+  "dialogueId": "base:fabia_wary",
+  "dialogueName": "Fabia — Wary",
+  "generatedAt": "2026-11-19T22:00:00.000Z",
+  "messages": [
+    {
+      "msgKey": "dlg.base:fabia_wary.01",
+      "text": "Oh. It's you.",
+      "nodeId": "line-1",
+      "sourceType": "line"
+    },
+    {
+      "msgKey": "dlg.base:fabia_wary.02",
+      "text": "Prices are on the sign. Don't touch anything you won't buy.",
+      "nodeId": "line-2",
+      "sourceType": "line"
+    }
+  ],
+  "$schema": "../../../../Schemas/dialogue-i18n.schema.json"
+}

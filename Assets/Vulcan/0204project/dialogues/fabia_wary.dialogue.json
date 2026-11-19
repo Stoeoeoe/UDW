@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../../Schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "base:fabia_wary",
+  "name": "Fabia — Wary",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "fabia"
+  ],
+  "createdAt": "2026-11-19T22:00:00.000Z",
+  "updatedAt": "2026-11-19T22:00:00.000Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:neutral",
+      "text": "Oh. It's you.",
+      "msgKey": "dlg.base:fabia_wary.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:angry",
+      "text": "Prices are on the sign. Don't touch anything you won't buy.",
+      "msgKey": "dlg.base:fabia_wary.02",
+      "next": null
+    }
+  ],
+  "folderPath": "Fabia"
+}

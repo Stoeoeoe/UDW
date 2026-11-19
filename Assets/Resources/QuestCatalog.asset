@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: QuestCatalog
   m_EditorClassIdentifier: Assembly-CSharp::Core.Quests.QuestCatalog
   entries:
-  - definition: {fileID: -8716238424114511454, guid: 6f30d331d644092439409da27eeda80b, type: 3}
+  - definition: {fileID: -8716238424114511454, guid: a7252e6630ca5d34eb45cf2508cff0cb, type: 3}
     enabled: 1

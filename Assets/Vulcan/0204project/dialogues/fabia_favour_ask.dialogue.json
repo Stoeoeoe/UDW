@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../Schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "base:fabia_favour_ask",
+  "name": "Fabia — Favour",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "fabia",
+    "quest"
+  ],
+  "createdAt": "2026-11-19T22:00:00.000Z",
+  "updatedAt": "2026-11-19T22:00:00.000Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:sad",
+      "text": "The frost took half my seedlings, and I can't leave the stall.",
+      "msgKey": "dlg.base:fabia_favour_ask.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:neutral",
+      "text": "Could you bring me three broad bean seeds? I'll make it worth your while.",
+      "msgKey": "dlg.base:fabia_favour_ask.02",
+      "next": null
+    }
+  ],
+  "folderPath": "Fabia"
+}

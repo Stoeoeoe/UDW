@@ -28,7 +28,8 @@
           "id": "back_home",
           "departAt": "08:00",
           "destination": "home",
-          "walkingDialogue": "base:dlg_salve"
+          "walkingDialogue": "base:dlg_salve",
+          "dialogue": null
         }
       ]
     }

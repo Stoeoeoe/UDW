@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../../Schemas/quest.schema.json",
+  "formatVersion": 1,
+  "id": "base:fabia_favour",
+  "title": "Fabia's Favour",
+  "description": "Fabia lost her seedlings to the frost and needs help replanting.",
+  "folderPath": "",
+  "steps": [
+    {
+      "id": "ask",
+      "journal": "Fabia's seedlings were lost to the frost. Hear what she needs.",
+      "objectives": [
+        {
+          "id": "talk",
+          "kind": "talk",
+          "text": "Talk to Fabia",
+          "character": "base:fabia",
+          "dialogue": "base:fabia_favour_ask"
+        }
+      ]
+    },
+    {
+      "id": "bring",
+      "journal": "Bring Fabia three broad bean seeds.",
+      "objectives": [
+        {
+          "id": "seeds",
+          "kind": "deliver",
+          "text": "Bring Fabia 3 broad bean seeds",
+          "character": "base:fabia",
+          "item": "base:broad_bean_seeds",
+          "count": 3,
+          "dialogue": "base:fabia_favour_thanks"
+        }
+      ]
+    }
+  ],
+  "giver": "base:fabia",
+  "onComplete": "SocialStanding.Increase(\"base:fabia\", 15)\nWallet.AddMoney(50)",
+  "start": {
+    "when": [
+      {
+        "on": "newDay"
+      }
+    ],
+    "condition": "SocialStanding.HasMoreThan('base:fabia', 40)"
+  }
+}

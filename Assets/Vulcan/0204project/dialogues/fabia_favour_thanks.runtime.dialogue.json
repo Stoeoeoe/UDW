@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../Schemas/dialogue.schema.json",
+  "version": 1,
+  "id": "base:fabia_favour_thanks",
+  "name": "Fabia — Favour thanks",
+  "oneShot": false,
+  "startNodeId": "line-1",
+  "tags": [
+    "fabia",
+    "quest"
+  ],
+  "createdAt": "2026-11-19T22:00:00.000Z",
+  "updatedAt": "2026-11-19T22:00:00.000Z",
+  "nodes": [
+    {
+      "id": "line-1",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:very_happy",
+      "text": "Three bean seeds! You're a lifesaver.",
+      "msgKey": "dlg.base:fabia_favour_thanks.01",
+      "next": "line-2"
+    },
+    {
+      "id": "line-2",
+      "type": "line",
+      "speaker": "base:fabia",
+      "emotion": "base:happy",
+      "text": "Here, for your trouble. And I won't forget this.",
+      "msgKey": "dlg.base:fabia_favour_thanks.02",
+      "next": null
+    }
+  ],
+  "folderPath": "Fabia"
+}
