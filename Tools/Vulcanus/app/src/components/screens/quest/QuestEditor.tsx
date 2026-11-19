@@ -40,6 +40,8 @@ import type {
 } from '../../../types/quest';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { DialogueSelect } from '../routine/DialogueSelect';
+import { OpenResourceButton } from '../../workspace/OpenResourceButton';
+import type { EditorResourceTypeId } from '../../../types/editorResource';
 
 function Field({
   label,
@@ -74,27 +76,43 @@ function Reference({
   entries,
   onChange,
   empty = 'Choose…',
+  type,
 }: {
   label: string;
   value: string;
   entries: readonly { id: string; name: string }[];
   onChange: (value: string) => void;
   empty?: string;
+  /** What kind of resource the field names; adds a button that opens it. */
+  type?: EditorResourceTypeId;
 }) {
   return (
     <FormControl>
       <FieldLabel>{label}</FieldLabel>
-      <Select size="sm" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{empty}</option>
-        {value && !entries.some((e) => e.id === value) && (
-          <option value={value}>{value} (unknown)</option>
+      <HStack spacing={1}>
+        <Select
+          size="sm"
+          aria-label={label}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">{empty}</option>
+          {value && !entries.some((e) => e.id === value) && (
+            <option value={value}>{value} (unknown)</option>
+          )}
+          {entries.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name} — {e.id}
+            </option>
+          ))}
+        </Select>
+        {type && (
+          <OpenResourceButton
+            resource={value ? { type, id: value } : null}
+            label={`Open ${label.toLowerCase()}`}
+          />
         )}
-        {entries.map((e) => (
-          <option key={e.id} value={e.id}>
-            {e.name} — {e.id}
-          </option>
-        ))}
-      </Select>
+      </HStack>
     </FormControl>
   );
 }
@@ -517,6 +535,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             label="Giver"
             value={quest.giver ?? ''}
             entries={characters}
+            type="character"
             empty="No giver"
             onChange={(giver) => patch({ giver: giver || undefined })}
           />
@@ -625,6 +644,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
           {'character' in o && (
             <Reference
               label="Character"
+              type="character"
               value={o.character}
               entries={characters}
               onChange={(character) => patchObjective(index, { ...o, character })}
@@ -633,6 +653,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
           {'item' in o && (
             <Reference
               label="Item"
+              type="item"
               value={o.item}
               entries={items}
               onChange={(item) => patchObjective(index, { ...o, item })}
@@ -671,6 +692,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             <>
               <Reference
                 label="Map"
+                type="location"
                 value={o.map}
                 entries={maps}
                 onChange={(map) => patchObjective(index, { ...o, map, trigger: undefined })}

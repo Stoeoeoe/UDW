@@ -17,6 +17,7 @@ import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
 import { LuaScriptEditor } from '../scripting/LuaScriptEditor';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { EmotionSelect } from '../../common/EmotionSelect';
+import { OpenResourceButton } from '../../workspace/OpenResourceButton';
 import { NodeIdField } from './DialogueNodeWidgets';
 import { ActionLuaValidation } from './dialogueUtils';
 import {
@@ -62,27 +63,33 @@ export const DialogueLineInspectorSection: React.FC<LineSectionProps> = ({
 
     <FormControl>
       <FieldLabel>Speaker</FieldLabel>
-      <Select
-        size="xs"
-        value={node.speaker ?? ''}
-        onChange={(event) => {
-          const characterId = event.target.value || undefined;
-          updateSelectedNode((current) => {
-            if (current.type !== 'line') return current;
-            return {
-              ...current,
-              speaker: characterId,
-            };
-          });
-        }}
-      >
-        <option value="">Narrator</option>
-        {characters.map((character) => (
-          <option key={character.id} value={character.id}>
-            {character.name}
-          </option>
-        ))}
-      </Select>
+      <HStack spacing={1}>
+        <Select
+          size="xs"
+          value={node.speaker ?? ''}
+          onChange={(event) => {
+            const characterId = event.target.value || undefined;
+            updateSelectedNode((current) => {
+              if (current.type !== 'line') return current;
+              return {
+                ...current,
+                speaker: characterId,
+              };
+            });
+          }}
+        >
+          <option value="">Narrator</option>
+          {characters.map((character) => (
+            <option key={character.id} value={character.id}>
+              {character.name}
+            </option>
+          ))}
+        </Select>
+        <OpenResourceButton
+          resource={node.speaker ? { type: 'character', id: node.speaker } : null}
+          label="Open speaker"
+        />
+      </HStack>
     </FormControl>
 
     <FormControl>

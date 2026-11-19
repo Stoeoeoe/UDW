@@ -14,6 +14,7 @@ export function EditorDocumentFrame({
   icon,
   layout,
   toolbar,
+  headerExtras,
   children,
 }: React.PropsWithChildren<{
   title: string;
@@ -21,6 +22,8 @@ export function EditorDocumentFrame({
   icon: IconType;
   layout: EditorLayout;
   toolbar?: React.ReactNode;
+  /** Shown at the end of the header, after the editor's own actions. */
+  headerExtras?: React.ReactNode;
 }>) {
   const [actionsHost, setActionsHost] = useState<HTMLDivElement | null>(null);
   return (
@@ -56,6 +59,7 @@ export function EditorDocumentFrame({
             )}
           </Box>
           <HStack ref={setActionsHost} spacing={2} />
+          {headerExtras}
         </HStack>
         {toolbar && <EditorDocumentToolbar>{toolbar}</EditorDocumentToolbar>}
         <Box flex={1} minH={0} minW={0} overflow="hidden">

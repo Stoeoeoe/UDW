@@ -2,7 +2,11 @@ import { QuestEditor } from '../screens/quest/QuestEditor';
 import React from 'react';
 import { EditorDocumentFrame } from '../common/EditorDocumentFrame';
 import { documentPresentation, documentTitle } from './documentPresentation';
-import { getEditorResourceDocumentId } from '../../lib/editorResourceTypes';
+import {
+  getEditorResourceDocumentId,
+  getEditorResourceTypeFromDocument,
+} from '../../lib/editorResourceTypes';
+import { ResourceLinks } from './ResourceLinks';
 import { MapToolbar, MapToolbarActions } from '../layout/MapToolbar';
 import { TilesetToolbar } from '../screens/tileset/TilesetToolbar';
 import { HStack } from '@chakra-ui/react';
@@ -55,12 +59,19 @@ function WorkspaceDocumentFrame({ tab }: { tab: WorkspaceTab }) {
     ) : tab.document.kind === 'tileset' ? (
       <TilesetToolbar />
     ) : undefined;
+  const resourceId = getEditorResourceDocumentId(tab.document);
+  const resourceType = getEditorResourceTypeFromDocument(tab.document);
   return (
     <EditorDocumentFrame
       {...presentation}
       title={title}
-      resourceId={getEditorResourceDocumentId(tab.document)}
+      resourceId={resourceId}
       toolbar={toolbar}
+      headerExtras={
+        resourceId && resourceType ? (
+          <ResourceLinks resource={{ type: resourceType, id: resourceId }} />
+        ) : undefined
+      }
     >
       <WorkspaceDocumentContent tab={tab} />
     </EditorDocumentFrame>
