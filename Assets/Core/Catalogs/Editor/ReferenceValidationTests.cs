@@ -50,7 +50,7 @@ namespace Core.Catalogs.Editor
             Assert.That(Known().Problems(routine).Select(problem => problem.Substring(problem.IndexOf(": ") + 2)), Is.EqualTo(new[]
             {
                 "Character uses the unknown CharacterDefinition 'base:nobody'.",
-                "Variants[0].Goals[0].WalkingDialogue uses the unknown VulcanusDialogueAsset 'base:missing'."
+                "Variants[0].Goals[0].WalkingDialogue.Id uses the unknown VulcanusDialogueAsset 'base:missing'."
             }));
         }
     }

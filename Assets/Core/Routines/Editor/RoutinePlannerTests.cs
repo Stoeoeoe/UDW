@@ -24,6 +24,9 @@ namespace Core.Routines.Editor
             (activity == null ? "" : $", activity: {{ animation: '{activity}' }}") +
             Property("walkingDialogue", walkingDialogue) + Property("dialogue", dialogue) + " }";
 
+        /// <summary>The goal with a dialogue property authored as an explicit null.</summary>
+        private static string Silent(string goal, string property) => goal[..^1] + $", {property}: null }}";
+
         private static string Fixed(string id, string condition, params string[] goals) =>
             $"{{ id: '{id}'{Property("condition", condition)}, goals: [{string.Join(",", goals)}] }}";
 
@@ -149,20 +152,40 @@ namespace Core.Routines.Editor
             }, dialogue: "base:morning");
 
             var hungry = Planner("hungry").PlanDay(routine, 1);
-            Assert.That(hungry.DialogueAt(-1, arrived: true), Is.EqualTo("base:morning"), "The routine's own dialogue starts the day.");
-            Assert.That(hungry.DialogueAt(0, arrived: false), Is.EqualTo("base:hurrying"));
-            Assert.That(hungry.DialogueAt(0, arrived: true), Is.EqualTo("base:selling"));
-            Assert.That(hungry.DialogueAt(1, arrived: false), Is.EqualTo("base:selling"), "Walking to lunch sets none, so selling stays.");
-            Assert.That(hungry.DialogueAt(1, arrived: true), Is.EqualTo("base:eating"));
-            Assert.That(hungry.DialogueAt(2, arrived: true), Is.EqualTo("base:eating"));
+            Assert.That(hungry.DialogueAt(-1, arrived: true).Id, Is.EqualTo("base:morning"), "The routine's own dialogue starts the day.");
+            Assert.That(hungry.DialogueAt(0, arrived: false).Id, Is.EqualTo("base:hurrying"));
+            Assert.That(hungry.DialogueAt(0, arrived: true).Id, Is.EqualTo("base:selling"));
+            Assert.That(hungry.DialogueAt(1, arrived: false).Id, Is.EqualTo("base:selling"), "Walking to lunch sets none, so selling stays.");
+            Assert.That(hungry.DialogueAt(1, arrived: true).Id, Is.EqualTo("base:eating"));
+            Assert.That(hungry.DialogueAt(2, arrived: true).Id, Is.EqualTo("base:eating"));
 
             // A skipped goal sets nothing, so its dialogue does not leak into the rest of the day.
             var full = Planner().PlanDay(routine, 1);
             Assert.That(full.Goals.Select(goal => goal.Id), Is.EqualTo(new[] { "market", "back_home" }));
-            Assert.That(full.DialogueAt(1, arrived: true), Is.EqualTo("base:selling"));
+            Assert.That(full.DialogueAt(1, arrived: true).Id, Is.EqualTo("base:selling"));
 
             var silent = Planner().PlanDay(Routine(new[] { Fixed("default", null, Goal("visit", 9, Square)) }), 1);
-            Assert.That(silent.DialogueAt(0, arrived: true), Is.Null, "Without any dialogue the character cannot be talked to.");
+            Assert.That(silent.DialogueAt(0, arrived: true).IsSet, Is.False, "A day that sets none leaves the character's own dialogues.");
+        }
+
+        [Test]
+        public void ANullDialogueIsNothingToSayAndDiffersFromOneThatIsNotSet()
+        {
+            var routine = Routine(new[]
+            {
+                Fixed("default", null,
+                    Silent(Goal("market", 8, Square, dialogue: "base:selling"), "walkingDialogue"),
+                    Silent(Goal("rest", 12, Square), "dialogue"),
+                    Goal("back_home", 14))
+            }, dialogue: "base:morning");
+
+            var day = Planner().PlanDay(routine, 1);
+            Assert.That(day.DialogueAt(0, arrived: false).Silent, Is.True, "Walking to the market has nothing to say.");
+            Assert.That(day.DialogueAt(0, arrived: true).Id, Is.EqualTo("base:selling"));
+            var resting = day.DialogueAt(1, arrived: true);
+            Assert.That(resting.Silent, Is.True, "Resting has nothing to say, which replaces the market's dialogue.");
+            Assert.That(resting.Id, Is.Null);
+            Assert.That(day.DialogueAt(2, arrived: false).Silent, Is.True, "Not set, so the silence stays.");
         }
     }
 }

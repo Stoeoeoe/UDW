@@ -428,8 +428,8 @@ namespace Core.Routines
             var plan = npc.Day.Timetable.Plan;
             var dialogue = plan.DialogueAt(segment.GoalIndex, arrived: !segment.IsWalk && !walking);
             if (npc.Talk) npc.Talk.UseDialogue(dialogue);
-            else if (dialogue != null)
-                throw new InvalidOperationException($"Routine '{plan.Routine.Id}' sets the dialogue '{dialogue}', but " +
+            else if (dialogue.IsSet)
+                throw new InvalidOperationException($"Routine '{plan.Routine.Id}' sets a dialogue, but " +
                     $"character '{npc.Character.CharacterId}' has no {nameof(ShowVulcanusDialogueInteractable)} to say it.");
         }
 

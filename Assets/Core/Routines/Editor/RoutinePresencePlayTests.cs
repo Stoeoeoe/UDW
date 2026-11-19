@@ -47,7 +47,7 @@ namespace Core.Routines.Editor
             Assert.That(fabia.Controller.IsMovementOwned, Is.True, "Fabia walks on.");
             Assert.That(Vector2.Distance(fabia.Graphics.position, Start(walkIn)), Is.GreaterThan(0.5f), "Fabia is past the door they came in by.");
             Assert.That(fabia.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true).DialogueId,
-                Is.EqualTo(day.Plan.DialogueAt(walkIn.GoalIndex, arrived: false) ?? ""), "Fabia says what the routine sets for the walk.");
+                Is.EqualTo(day.Plan.DialogueAt(walkIn.GoalIndex, arrived: false).Id ?? ""), "Fabia says what the routine sets for the walk.");
 
             // During the stay, Fabia is at the spot with the activity.
             var stay = day.Segments.First(s => !s.IsWalk && s.MapId == Map);

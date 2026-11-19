@@ -41,6 +41,37 @@ namespace Core.Routines
         public string Animation { get; private set; }
     }
 
+    /// <summary>
+    /// What a routine says about the dialogue at one point of the day: nothing (the previous one stays in effect), a
+    /// dialogue, or an explicit "nothing to say" that also silences the character's own dialogues. Authored as absent,
+    /// a dialogue ID, or <c>null</c>.
+    /// </summary>
+    [Serializable, ImportedData]
+    public sealed class RoutineDialogue
+    {
+        [field: SerializeField] public bool Silent { get; private set; }
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true)]
+        public string Id { get; private set; }
+
+        /// <summary>Whether the routine says anything here; otherwise the dialogue in effect before stays.</summary>
+        public bool IsSet => Silent || !string.IsNullOrEmpty(Id);
+
+        public sealed class Converter : JsonConverter<RoutineDialogue>
+        {
+            public override RoutineDialogue ReadJson(JsonReader reader, Type objectType, RoutineDialogue existingValue,
+                bool hasExistingValue, JsonSerializer serializer)
+            {
+                var token = JToken.Load(reader);
+                return token.Type == JTokenType.Null
+                    ? new RoutineDialogue { Silent = true }
+                    : new RoutineDialogue { Id = token.Value<string>() };
+            }
+
+            public override void WriteJson(JsonWriter writer, RoutineDialogue value, JsonSerializer serializer) =>
+                throw new NotSupportedException("Routines are only read.");
+        }
+    }
+
     /// <summary>One stop of a day: when to set off, where to go and what to do there.</summary>
     [Serializable, ImportedData]
     public sealed class RoutineGoal
@@ -54,12 +85,12 @@ namespace Core.Routines
         [field: SerializeField, JsonConverter(typeof(RoutinePlace.DestinationJsonConverter)), Tooltip("Empty for the routine's home.")]
         public RoutinePlace Destination { get; private set; } = new();
         [field: SerializeField, Validation.Nested] public RoutineActivity Activity { get; private set; } = new();
-        /// <summary>Dialogue ID while walking to this goal; empty keeps the dialogue in effect before.</summary>
-        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true),
-                Tooltip("Dialogue while walking here; empty keeps the one before.")] public string WalkingDialogue { get; private set; }
-        /// <summary>Dialogue ID once arrived; empty keeps the dialogue in effect before.</summary>
-        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true),
-                Tooltip("Dialogue once arrived; empty keeps the one before.")] public string Dialogue { get; private set; }
+        /// <summary>Dialogue while walking to this goal; unset keeps the dialogue in effect before.</summary>
+        [field: SerializeField, JsonConverter(typeof(RoutineDialogue.Converter)), Validation.Nested]
+        public RoutineDialogue WalkingDialogue { get; private set; } = new();
+        /// <summary>Dialogue once arrived; unset keeps the dialogue in effect before.</summary>
+        [field: SerializeField, JsonConverter(typeof(RoutineDialogue.Converter)), Validation.Nested]
+        public RoutineDialogue Dialogue { get; private set; } = new();
 
         public bool ToHome => string.IsNullOrEmpty(Destination.Map);
         /// <summary>Character animation played at the destination; empty for none.</summary>
@@ -102,10 +133,9 @@ namespace Core.Routines
                 Validation.Reference(typeof(global::Character.CharacterDefinition))]
         public string Character { get; private set; }
         [field: SerializeField, Validation.Required("The source requires a home.")] public RoutinePlace Home { get; private set; }
-        /// <summary>Dialogue ID at the start of each day; empty when the character cannot be talked to until a goal sets one.</summary>
-        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true),
-                Tooltip("Dialogue at the start of each day, until a goal sets another; empty for none.")]
-        public string Dialogue { get; private set; }
+        /// <summary>Dialogue at the start of each day; unset leaves the character's own dialogues until a goal sets one.</summary>
+        [field: SerializeField, JsonConverter(typeof(RoutineDialogue.Converter)), Validation.Nested]
+        public RoutineDialogue Dialogue { get; private set; } = new();
         [field: SerializeField, Validation.Nested] public RoutineEntry[] Overrides { get; private set; } = Array.Empty<RoutineEntry>();
         [field: SerializeField, Validation.Nested] public RoutineEntry[] Variants { get; private set; } = Array.Empty<RoutineEntry>();
     }

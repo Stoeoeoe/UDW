@@ -15,15 +15,15 @@ namespace Core.Routines
         public RoutinePlace Destination { get; }
         /// <summary>Character animation played at the destination; empty for none.</summary>
         public string ActivityAnimationId { get; }
-        /// <summary>Dialogue while walking here; empty keeps the one in effect before.</summary>
-        public string WalkingDialogueId { get; }
-        /// <summary>Dialogue once arrived; empty keeps the one in effect before.</summary>
-        public string DialogueId { get; }
+        /// <summary>Dialogue while walking here; unset keeps the one in effect before.</summary>
+        public RoutineDialogue WalkingDialogue { get; }
+        /// <summary>Dialogue once arrived; unset keeps the one in effect before.</summary>
+        public RoutineDialogue Dialogue { get; }
 
         internal PlannedGoal(RoutineGoal goal, RoutinePlace home)
         {
-            WalkingDialogueId = goal.WalkingDialogue;
-            DialogueId = goal.Dialogue;
+            WalkingDialogue = goal.WalkingDialogue;
+            Dialogue = goal.Dialogue;
             Id = goal.Id;
             DepartMinute = goal.DepartAt;
             Destination = goal.ToHome ? home : goal.Destination;
@@ -48,19 +48,19 @@ namespace Core.Routines
 
         /// <summary>
         /// The dialogue in effect: the newest one the day has set so far, starting from the routine's own. Walking to a goal
-        /// and then being there can each set one. Null when none is set.
+        /// and then being there can each set one. Unset when the day has set none, which leaves the character's own dialogues.
         /// </summary>
         /// <param name="goalIndex">The goal most recently set off for; -1 at home before the first departure.</param>
         /// <param name="arrived">Whether that goal's destination has been reached.</param>
-        public string DialogueAt(int goalIndex, bool arrived)
+        public RoutineDialogue DialogueAt(int goalIndex, bool arrived)
         {
             if (goalIndex < -1 || goalIndex >= Goals.Count) throw new ArgumentOutOfRangeException(nameof(goalIndex));
             for (var i = goalIndex; i >= 0; i--)
             {
-                if ((i < goalIndex || arrived) && !string.IsNullOrEmpty(Goals[i].DialogueId)) return Goals[i].DialogueId;
-                if (!string.IsNullOrEmpty(Goals[i].WalkingDialogueId)) return Goals[i].WalkingDialogueId;
+                if ((i < goalIndex || arrived) && Goals[i].Dialogue.IsSet) return Goals[i].Dialogue;
+                if (Goals[i].WalkingDialogue.IsSet) return Goals[i].WalkingDialogue;
             }
-            return string.IsNullOrEmpty(Routine.Dialogue) ? null : Routine.Dialogue;
+            return Routine.Dialogue;
         }
     }
 

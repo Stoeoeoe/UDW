@@ -24,8 +24,8 @@
       "description": "Where the character starts every morning and returns to overnight. Goals can use the destination \"home\"."
     },
     "dialogue": {
-      "$ref": "#/definitions/dialogueId",
-      "description": "What talking to the character starts at the start of each day, until a goal sets another dialogue. Omit for none."
+      "$ref": "#/definitions/routineDialogue",
+      "description": "What talking to the character starts at the start of each day, until a goal sets another dialogue. Omit to leave the character's own dialogues; null for nothing to say."
     },
     "overrides": {
       "type": "array",
@@ -48,6 +48,12 @@
       "type": "string",
       "description": "ID of a dialogue, for example base:fabia_greeting.",
       "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+    },
+    "routineDialogue": {
+      "oneOf": [
+        { "$ref": "#/definitions/dialogueId" },
+        { "type": "null", "description": "Nothing to say: the character cannot be talked to, whatever dialogues they have of their own." }
+      ]
     },
     "localId": {
       "type": "string",
@@ -103,12 +109,12 @@
           }
         },
         "walkingDialogue": {
-          "$ref": "#/definitions/dialogueId",
-          "description": "What talking to the character starts while walking to this goal. Omit to keep the dialogue in effect before."
+          "$ref": "#/definitions/routineDialogue",
+          "description": "What talking to the character starts while walking to this goal. Omit to keep the dialogue in effect before; null for nothing to say."
         },
         "dialogue": {
-          "$ref": "#/definitions/dialogueId",
-          "description": "What talking to the character starts once it has arrived. Omit to keep the dialogue in effect before."
+          "$ref": "#/definitions/routineDialogue",
+          "description": "What talking to the character starts once it has arrived. Omit to keep the dialogue in effect before; null for nothing to say."
         }
       }
     },
