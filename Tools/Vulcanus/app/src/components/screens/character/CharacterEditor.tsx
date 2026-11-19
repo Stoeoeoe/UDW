@@ -19,10 +19,19 @@ import { EmptyScreen } from '../common/EmptyScreen';
 import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
+import { FiArrowDown, FiArrowUp } from 'react-icons/fi';
 import { EmotionSelect } from '../../common/EmotionSelect';
 import { PortraitField, portraitFolder, usePickPortrait } from './PortraitField';
 import { ManifestResourceSelect } from '../../common/ManifestResourceSelect';
-import { DEFAULT_SOCIAL_STANDING, DEFAULT_WALK_SPEED, type Character } from '../../../types/schema';
+import {
+  DEFAULT_SOCIAL_STANDING,
+  DEFAULT_WALK_SPEED,
+  type Character,
+  type CharacterDialogue,
+} from '../../../types/schema';
+import { DialogueSelect } from '../routine/DialogueSelect';
+import { ConditionEditor } from '../scripting/ConditionEditor';
+import { GhostIconButton } from '../../common/IconButtons';
 
 export const CharacterEditor: React.FC = () => {
   const characters = useEditorStore((state) => state.characters);
@@ -147,6 +156,11 @@ const CharacterDetail: React.FC<{
           onUpdate={(updates) => onUpdate(character.id, updates)}
         />
 
+        <DialoguesSection
+          character={character}
+          onUpdate={(updates) => onUpdate(character.id, updates)}
+        />
+
         <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
           {({ isDirty, values }) => (
             <EditorFormSave
@@ -257,6 +271,97 @@ const SocialStandingSection: React.FC<{
     </HStack>
   </VStack>
 );
+
+/**
+ * What the character says when no quest objective and no routine sets a dialogue. The first entry whose condition
+ * holds when the player starts talking is said, so the order matters; with no match the character cannot be talked to.
+ */
+const DialoguesSection: React.FC<{
+  character: Character;
+  onUpdate: (updates: Partial<Character>) => void;
+}> = ({ character, onUpdate }) => {
+  const entries = character.dialogues ?? [];
+  const save = (next: CharacterDialogue[]) =>
+    onUpdate({ dialogues: next.length ? next : undefined });
+  const change = (index: number, entry: CharacterDialogue) =>
+    save(entries.map((e, i) => (i === index ? entry : e)));
+  const move = (index: number, by: -1 | 1) => {
+    const next = [...entries];
+    [next[index], next[index + by]] = [next[index + by], next[index]];
+    save(next);
+  };
+
+  return (
+    <VStack align="stretch" spacing={3}>
+      <FieldLabel>Dialogues</FieldLabel>
+      <Text fontSize="xs" color="editorMutedText">
+        Said when no quest or routine sets one. The first whose condition holds when the player
+        starts talking wins; without a match the character cannot be talked to.
+      </Text>
+      {entries.map((entry, index) => (
+        <VStack
+          key={index}
+          align="stretch"
+          spacing={2}
+          p={3}
+          borderWidth="1px"
+          borderColor="editorShellBorder"
+          borderRadius="md"
+        >
+          <HStack spacing={1}>
+            <DialogueSelect
+              label={`Dialogue ${index + 1}`}
+              value={entry.dialogue}
+              inherited={null}
+              onChange={(id) => id && change(index, { ...entry, dialogue: id })}
+              newName={`${character.name} – dialogue ${index + 1}`}
+              newFolder={character.name}
+            />
+            <GhostIconButton
+              aria-label={`Move dialogue ${index + 1} up`}
+              icon={<FiArrowUp />}
+              size="xs"
+              isDisabled={index === 0}
+              onClick={() => move(index, -1)}
+            />
+            <GhostIconButton
+              aria-label={`Move dialogue ${index + 1} down`}
+              icon={<FiArrowDown />}
+              size="xs"
+              isDisabled={index === entries.length - 1}
+              onClick={() => move(index, 1)}
+            />
+            <Button
+              size="xs"
+              variant="ghost"
+              color="red.400"
+              aria-label={`Remove dialogue ${index + 1}`}
+              onClick={() => save(entries.filter((_, i) => i !== index))}
+            >
+              Remove
+            </Button>
+          </HStack>
+          <ConditionEditor
+            label="Said if (empty = always)"
+            value={entry.condition ?? ''}
+            onChange={(condition) => change(index, { ...entry, condition: condition || undefined })}
+          />
+        </VStack>
+      ))}
+      <Box maxW="320px">
+        <DialogueSelect
+          label="Add a dialogue"
+          value={undefined}
+          inherited={null}
+          emptyLabel="Add a dialogue…"
+          onChange={(id) => id && save([...entries, { dialogue: id }])}
+          newName={`${character.name} – dialogue ${entries.length + 1}`}
+          newFolder={character.name}
+        />
+      </Box>
+    </VStack>
+  );
+};
 
 const MovementSection: React.FC<{
   character: Character;

@@ -414,7 +414,7 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
         ...p,
         map: resourceReference(p.map, prefix),
       });
-      const dialogue = <T extends { dialogue?: string }>(value: T): T =>
+      const dialogue = <T extends { dialogue?: string | null }>(value: T): T =>
         value.dialogue ? { ...value, dialogue: resourceReference(value.dialogue, prefix) } : value;
       const goals = (list: RoutineGoal[]) =>
         list.map((goal) => {

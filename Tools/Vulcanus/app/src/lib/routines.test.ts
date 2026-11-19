@@ -238,12 +238,12 @@ describe('dialogues through the day', () => {
 
     expect(goalDialogues(routine, [visit, back], null)).toEqual([
       {
-        walking: { id: 'base:hurrying', inherited: false },
-        there: { id: 'base:selling', inherited: false },
+        walking: { id: 'base:hurrying', silent: false, inherited: false },
+        there: { id: 'base:selling', silent: false, inherited: false },
       },
       {
-        walking: { id: 'base:selling', inherited: true },
-        there: { id: 'base:selling', inherited: true },
+        walking: { id: 'base:selling', silent: false, inherited: true },
+        there: { id: 'base:selling', silent: false, inherited: true },
       },
     ]);
     // A goal the previewed day skips sets nothing.
@@ -251,6 +251,18 @@ describe('dialogues through the day', () => {
     expect(
       goalDialogues({ ...routine, dialogue: undefined }, [back], null)[0]?.there.id,
     ).toBeNull();
+  });
+
+  it('treats null as nothing to say, which later goals keep until another is set', () => {
+    const routine = fabia();
+    routine.dialogue = 'base:fabia_greeting';
+    const [visit, back] = routine.variants[0].goals!;
+    visit.dialogue = null;
+    const [first, second] = goalDialogues(routine, [visit, back], null);
+    expect(first?.walking).toEqual({ id: 'base:fabia_greeting', silent: false, inherited: true });
+    expect(first?.there).toEqual({ id: null, silent: true, inherited: false });
+    expect(second?.walking).toEqual({ id: null, silent: true, inherited: true });
+    expect(messages(routine)).toEqual([]);
   });
 
   it('reports dialogues that do not exist', () => {

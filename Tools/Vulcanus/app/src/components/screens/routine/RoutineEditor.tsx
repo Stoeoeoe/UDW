@@ -140,8 +140,11 @@ const RoutineWorkspace: React.FC<{ routine: Routine }> = ({ routine }) => {
               label="Dialogue at the start of the day"
               newName={`${name} – start of day`}
               newFolder={name}
-              value={routine.dialogue}
+              value={routine.dialogue ?? undefined}
               inherited={null}
+              emptyLabel="character's usual dialogue"
+              silent={routine.dialogue === null}
+              onSilent={() => update({ ...routine, dialogue: null })}
               onChange={(dialogue) =>
                 update(dialogue ? { ...routine, dialogue } : without(routine, 'dialogue'))
               }

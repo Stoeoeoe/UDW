@@ -2,8 +2,8 @@ import React from 'react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CharacterEditor } from './CharacterEditor';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { CharacterEditor } from './CharacterEditor';
 import { theme } from '../../../theme';
 import type { Character } from '../../../types/schema';
 
@@ -67,5 +67,41 @@ describe('character starting social standing', () => {
     expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
       startingSocialStanding: undefined,
     });
+  });
+});
+
+describe('character dialogues', () => {
+  const withDialogues = (dialogues: Character['dialogues']) => {
+    cleanup();
+    useEditorStore.setState({
+      characters: [{ ...fabia, dialogues }],
+      dialogues: new Map([
+        ['base:hello', { id: 'base:hello', name: 'Hello' }],
+        ['base:grumpy', { id: 'base:grumpy', name: 'Grumpy' }],
+      ]) as never,
+    });
+    show();
+  };
+
+  it('adds a chosen dialogue to the end of the list', () => {
+    withDialogues([{ dialogue: 'base:hello' }]);
+    fireEvent.change(screen.getByLabelText('Add a dialogue'), { target: { value: 'base:grumpy' } });
+    expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
+      dialogues: [{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy' }],
+    });
+  });
+
+  it('reorders because the first match wins', () => {
+    withDialogues([{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy', condition: 'true' }]);
+    fireEvent.click(screen.getByLabelText('Move dialogue 2 up'));
+    expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
+      dialogues: [{ dialogue: 'base:grumpy', condition: 'true' }, { dialogue: 'base:hello' }],
+    });
+  });
+
+  it('removes entries and leaves the key out when none remain', () => {
+    withDialogues([{ dialogue: 'base:hello' }]);
+    fireEvent.click(screen.getByLabelText('Remove dialogue 1'));
+    expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', { dialogues: undefined });
   });
 });

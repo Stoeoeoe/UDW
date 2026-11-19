@@ -444,8 +444,12 @@ const GoalCard: React.FC<{
             label="Dialogue while walking there"
             newName={`${speaker} – on the way to ${goal.id}`}
             newFolder={speaker}
-            value={goal.walkingDialogue}
+            value={goal.walkingDialogue ?? undefined}
             inherited={dialogues?.walking.inherited ? dialogues.walking.id : null}
+            inheritedSilent={dialogues?.walking.inherited && dialogues.walking.silent}
+            emptyLabel="character's usual dialogue"
+            silent={goal.walkingDialogue === null}
+            onSilent={() => onChange({ ...goal, walkingDialogue: null })}
             onChange={(dialogue) =>
               onChange(
                 dialogue
@@ -463,8 +467,12 @@ const GoalCard: React.FC<{
             label="Dialogue once there"
             newName={`${speaker} – ${goal.id}`}
             newFolder={speaker}
-            value={goal.dialogue}
+            value={goal.dialogue ?? undefined}
             inherited={dialogues?.there.inherited ? dialogues.there.id : null}
+            inheritedSilent={dialogues?.there.inherited && dialogues.there.silent}
+            emptyLabel="character's usual dialogue"
+            silent={goal.dialogue === null}
+            onSilent={() => onChange({ ...goal, dialogue: null })}
             onChange={(dialogue) =>
               onChange(dialogue ? { ...goal, dialogue } : without(goal, 'dialogue'))
             }

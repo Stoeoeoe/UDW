@@ -11,6 +11,7 @@ import { createDialogue } from '../dialogue/createDialogue';
 import type { MetadataDraft } from '../dialogue/dialogueUtils';
 
 const NEW_DIALOGUE = '__new__';
+const NO_DIALOGUE = '__none__';
 
 const openDialogue = (id: string, name: string) =>
   useWorkspaceStore
@@ -26,13 +27,29 @@ export const DialogueSelect: React.FC<{
   label: string;
   value: string | undefined;
   inherited: string | null;
+  /** The dialogue that stays in effect is an explicit "no dialogue". */
+  inheritedSilent?: boolean;
   emptyLabel?: string;
   onChange: (id: string | undefined) => void;
+  /** Offers "no dialogue" (nothing to say, even for the character's own dialogues) and says when it is chosen. */
+  silent?: boolean;
+  onSilent?: () => void;
   /** Name suggested for a dialogue created here, such as "Fabia – market". */
   newName: string;
   /** Explorer folder for dialogues created here, such as the character's name. */
   newFolder: string;
-}> = ({ label, value, inherited, onChange, newName, newFolder, emptyLabel }) => {
+}> = ({
+  label,
+  value,
+  inherited,
+  inheritedSilent,
+  onChange,
+  silent,
+  onSilent,
+  newName,
+  newFolder,
+  emptyLabel,
+}) => {
   const dialogues = useEditorStore((state) => state.dialogues);
   const dialogueTypes = useEditorStore((state) => state.project?.dialogueTypes) ?? [];
   const toast = useToast();
@@ -63,16 +80,22 @@ export const DialogueSelect: React.FC<{
     <HStack spacing={1} flex={1} minW={0}>
       <CompactSelect
         aria-label={label}
-        value={value ?? ''}
+        value={silent ? NO_DIALOGUE : (value ?? '')}
         isInvalid={!known}
         onChange={(event) => {
           if (event.target.value === NEW_DIALOGUE) setCreating(true);
+          else if (event.target.value === NO_DIALOGUE) onSilent?.();
           else onChange(event.target.value || undefined);
         }}
       >
         <option value="">
-          {inherited ? `keeps ${name(inherited)}` : (emptyLabel ?? 'nothing to say')}
+          {inheritedSilent
+            ? 'keeps no dialogue'
+            : inherited
+              ? `keeps ${name(inherited)}`
+              : (emptyLabel ?? 'nothing to say')}
         </option>
+        {onSilent && <option value={NO_DIALOGUE}>no dialogue</option>}
         {!known && <option value={value}>{value}</option>}
         {[...dialogues.values()]
           .sort((a, b) => a.name.localeCompare(b.name))

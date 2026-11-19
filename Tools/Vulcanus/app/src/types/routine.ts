@@ -12,10 +12,10 @@ export interface RoutineGoal {
   condition?: string;
   destination: 'home' | RoutinePlace;
   activity?: { animation: string };
-  /** Dialogue while walking here; absent keeps the dialogue in effect before. */
-  walkingDialogue?: string;
-  /** Dialogue once arrived; absent keeps the dialogue in effect before. */
-  dialogue?: string;
+  /** Dialogue while walking here; absent keeps the dialogue in effect before, null means nothing to say. */
+  walkingDialogue?: string | null;
+  /** Dialogue once arrived; absent keeps the dialogue in effect before, null means nothing to say. */
+  dialogue?: string | null;
 }
 
 export interface RoutineChoice {
@@ -39,8 +39,11 @@ export interface Routine {
   id: string;
   character: string;
   home: RoutinePlace;
-  /** Dialogue at the start of each day, until a goal sets another; absent means the character cannot be talked to. */
-  dialogue?: string;
+  /**
+   * Dialogue at the start of each day, until a goal sets another. Absent leaves the character's own dialogues; null
+   * means nothing to say, which also silences them.
+   */
+  dialogue?: string | null;
   overrides?: RoutineEntry[];
   variants: RoutineEntry[];
   folderPath?: string;

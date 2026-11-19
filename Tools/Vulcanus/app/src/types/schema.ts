@@ -16,9 +16,7 @@ export interface KeyedEditorResource extends FolderedEditorResource {
 }
 
 export type SchemaEditorResource =
-  | NamedEditorResource
-  | DisplayNamedEditorResource
-  | KeyedEditorResource;
+  NamedEditorResource | DisplayNamedEditorResource | KeyedEditorResource;
 
 export function getSchemaResourceId(resource: SchemaEditorResource): string {
   if ('key' in resource) return resource.key;
@@ -480,6 +478,13 @@ export interface Character extends NamedEditorResource {
   emotionTypewriterSounds?: Record<string, string>; // Typewriter sound id per emotion id
   walkSpeed?: number; // Tiles per second; absent = DEFAULT_WALK_SPEED, as in Unity
   startingSocialStanding?: number; // 0-100 in a new game; absent = DEFAULT_SOCIAL_STANDING, as in Unity
+  dialogues?: CharacterDialogue[]; // What the character says when no quest and no routine sets a dialogue
+}
+
+/** The first entry whose condition holds is said; an entry without a condition always matches. */
+export interface CharacterDialogue {
+  dialogue: string; // Dialogue id
+  condition?: string; // Read-only Lua expression; absent = always
 }
 
 /** The walk speed Unity uses when a character leaves it out (tiles per second). */

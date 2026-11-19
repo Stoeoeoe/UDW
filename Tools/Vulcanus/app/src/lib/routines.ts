@@ -190,7 +190,7 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
   }
   checkPlace(routine.home, 'Home');
   const checkDialogue = (
-    id: string | undefined,
+    id: string | null | undefined,
     where: string,
     day?: RoutineDayRef,
     goalIndex?: number,
@@ -301,9 +301,16 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
 
 export interface GoalDialogues {
   /** The dialogue while walking to the goal, and whether the goal sets it or keeps the one before. */
-  walking: { id: string | null; inherited: boolean };
+  walking: GoalDialogue;
   /** The dialogue once arrived. */
-  there: { id: string | null; inherited: boolean };
+  there: GoalDialogue;
+}
+
+/** `id` is null when there is none; `silent` when the routine explicitly has nothing to say. */
+export interface GoalDialogue {
+  id: string | null;
+  silent: boolean;
+  inherited: boolean;
 }
 
 /**
@@ -315,13 +322,22 @@ export function goalDialogues(
   goals: readonly RoutineGoal[],
   preview: ReadonlySet<string> | null,
 ): (GoalDialogues | null)[] {
-  let current = routine.dialogue ?? null;
+  const phase = (
+    set: string | null | undefined,
+    before: { id: string | null; silent: boolean },
+  ): GoalDialogue =>
+    set === undefined
+      ? { ...before, inherited: true }
+      : { id: set, silent: set === null, inherited: false };
+  let current: { id: string | null; silent: boolean } = {
+    id: routine.dialogue ?? null,
+    silent: routine.dialogue === null,
+  };
   return goals.map((goal) => {
     if (preview && !goalRuns(goal, preview)) return null;
-    const walking = { id: goal.walkingDialogue ?? current, inherited: !goal.walkingDialogue };
-    current = walking.id;
-    const there = { id: goal.dialogue ?? current, inherited: !goal.dialogue };
-    current = there.id;
+    const walking = phase(goal.walkingDialogue, current);
+    const there = phase(goal.dialogue, walking);
+    current = there;
     return { walking, there };
   });
 }
