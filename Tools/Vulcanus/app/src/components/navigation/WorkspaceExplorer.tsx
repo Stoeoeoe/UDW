@@ -707,7 +707,8 @@ const WorkspaceExplorerNode: React.FC<{
   const IconComponent = getNodeIcon(node);
   const isActive = Boolean(node.document) && activeTabId === getActiveTabId(node);
   const isDirty = Boolean(node.document && saveUnits[getDocumentSaveUnitId(node.document)]?.dirty);
-  const paddingLeft = 2 + depth * 4;
+  // Spacing tokens skip 11 and 15, which would silently become pixels, so indents are explicit pixels.
+  const indent = 8 + depth * 12;
   const isUtilityLeaf =
     depth === 0 &&
     node.kind === 'leaf' &&
@@ -737,8 +738,8 @@ const WorkspaceExplorerNode: React.FC<{
     return (
       <Box>
         <HStack
-          px={Math.max(paddingLeft, 3)}
-          h="8"
+          px={3}
+          h="7"
           pr={2}
           borderRadius="sm"
           cursor="pointer"
@@ -809,19 +810,11 @@ const WorkspaceExplorerNode: React.FC<{
     const canCreate = Boolean(node.resourceKind && canCreateResourceKind(node.resourceKind));
     const folderPath = node.id.replace(/^folder:[^:]+:/, '');
     return (
-      <Box position="relative" pl={2}>
-        <Box
-          position="absolute"
-          left="15px"
-          top="6px"
-          bottom="6px"
-          w="1px"
-          bg="whiteAlpha.50"
-          pointerEvents="none"
-        />
+      <Box>
         <HStack
-          px={paddingLeft}
-          h="8"
+          spacing={1}
+          pl={`${indent}px`}
+          h="7"
           pr={2}
           borderRadius="sm"
           cursor="pointer"
@@ -880,8 +873,9 @@ const WorkspaceExplorerNode: React.FC<{
 
   return (
     <HStack
-      px={contextLabel ? 2 : isUtilityLeaf ? 3 : paddingLeft + 5}
-      minH={contextLabel ? 6 : 8}
+      pl={contextLabel ? 2 : isUtilityLeaf ? 3 : `${indent + 16}px`}
+      pr={2}
+      minH={contextLabel || !isUtilityLeaf ? 6 : 7}
       py={0}
       title={contextLabel ? `${node.label} — ${contextLabel}` : undefined}
       mt={isUtilityLeaf ? 1 : 0}
@@ -907,18 +901,9 @@ const WorkspaceExplorerNode: React.FC<{
       }}
       onContextMenu={(event) => onContextMenu(node, event)}
     >
-      <WorkspaceNodeVisual
-        node={node}
-        icon={IconComponent}
-        isActive={isActive}
-        compact={isUtilityLeaf || Boolean(contextLabel)}
-      />
+      <WorkspaceNodeVisual node={node} icon={IconComponent} isActive={isActive} compact />
       <VStack align="stretch" spacing={0} flex={1} minW={0}>
-        <Text
-          fontSize={contextLabel ? 'xs' : 'sm'}
-          fontWeight={isActive ? 'semibold' : 'medium'}
-          noOfLines={1}
-        >
+        <Text fontSize="xs" fontWeight={isActive ? 'semibold' : 'medium'} noOfLines={1}>
           {node.label}
         </Text>
       </VStack>
