@@ -37,6 +37,20 @@ replaces the selection; seasonal probabilities and authored assets stay unchange
 
 Implementation: [WeatherCommands.cs](../Assets/Core/TimeAndWeather/Editor/WeatherCommands.cs).
 
+## Social standing
+
+Set the player's standing with a character, village or other subject while the game is running in Play Mode:
+
+```powershell
+unity command set_social_standing --subject base:fabia --standing 75
+```
+
+The standing is a whole number from 0 to 100. The result lists the previous and new standing. It changes standing through
+`SocialStandingService`, so the saved state and the changed event behave as in play, and dialogue and routine conditions
+see it at once. See [Social standing](../Assets/Core/SocialStanding/README.md).
+
+Implementation: [SocialStandingCommands.cs](../Assets/Core/SocialStanding/Editor/SocialStandingCommands.cs).
+
 ## Sleeping in place
 
 Sleep through the night while the game is running in Play Mode:
