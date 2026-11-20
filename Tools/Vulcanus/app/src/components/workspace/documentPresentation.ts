@@ -27,8 +27,8 @@ export const documentPresentation: Record<
 > = {
   location: { layout: 'canvas', icon: FiMap },
   tileset: { layout: 'canvas', icon: FiGrid },
-  character: { layout: 'form', icon: FiUsers },
-  characters: { layout: 'form', icon: FiUsers },
+  character: { layout: 'sequence', icon: FiUsers },
+  characters: { layout: 'sequence', icon: FiUsers },
   entity: { layout: 'form', icon: FiBox },
   entities: { layout: 'form', icon: FiBox },
   item: { layout: 'form', icon: FiPackage },

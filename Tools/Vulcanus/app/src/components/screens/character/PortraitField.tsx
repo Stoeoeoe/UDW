@@ -44,7 +44,13 @@ interface PortraitFieldProps {
 }
 
 /** Picks one portrait image and previews it. */
-export const PortraitField: React.FC<PortraitFieldProps> = ({ path, folder, onChange, title, onRemove }) => {
+export const PortraitField: React.FC<PortraitFieldProps> = ({
+  path,
+  folder,
+  onChange,
+  title,
+  onRemove,
+}) => {
   const image = usePortraitImage(path);
   const pickPortrait = usePickPortrait(folder);
 
@@ -54,10 +60,18 @@ export const PortraitField: React.FC<PortraitFieldProps> = ({ path, folder, onCh
   };
 
   return (
-    <HStack align="start" spacing={3}>
+    <VStack
+      align="stretch"
+      spacing={2}
+      p={2}
+      borderWidth="1px"
+      borderColor="editorShellBorder"
+      borderRadius="md"
+      title={path}
+    >
       <Box
         boxSize="72px"
-        flexShrink={0}
+        alignSelf="center"
         bg="editorInlineBg"
         border="1px"
         borderColor="editorInlineBorder"
@@ -74,33 +88,28 @@ export const PortraitField: React.FC<PortraitFieldProps> = ({ path, folder, onCh
           />
         )}
       </Box>
-      <VStack align="start" spacing={1} minW={0}>
-        {typeof title === 'string' ? (
-          <Text fontSize="sm" color="editorText">
-            {title}
-          </Text>
-        ) : (
-          title
-        )}
-        <Text fontSize="xs" color="gray.500" fontFamily="mono" noOfLines={1} wordBreak="break-all">
-          {path ?? 'No image'}
+      {typeof title === 'string' ? (
+        <Text fontSize="xs" fontWeight="semibold" color="editorText" noOfLines={1}>
+          {title}
         </Text>
-        <HStack spacing={2}>
-          <Button size="xs" variant="outline" onClick={pick}>
-            {path ? 'Change' : 'Pick Image...'}
+      ) : (
+        title
+      )}
+      <HStack spacing={1} wrap="wrap">
+        <Button size="xs" variant="outline" onClick={pick}>
+          {path ? 'Change' : 'Pick Image...'}
+        </Button>
+        {path && !onRemove && (
+          <Button size="xs" variant="ghost" color="red.400" onClick={() => onChange(undefined)}>
+            Clear
           </Button>
-          {path && !onRemove && (
-            <Button size="xs" variant="ghost" color="red.400" onClick={() => onChange(undefined)}>
-              Clear
-            </Button>
-          )}
-          {onRemove && (
-            <Button size="xs" variant="ghost" color="red.400" onClick={onRemove}>
-              Remove
-            </Button>
-          )}
-        </HStack>
-      </VStack>
-    </HStack>
+        )}
+        {onRemove && (
+          <Button size="xs" variant="ghost" color="red.400" onClick={onRemove}>
+            Remove
+          </Button>
+        )}
+      </HStack>
+    </VStack>
   );
 };

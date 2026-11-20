@@ -16,6 +16,7 @@ import {
 import { useEditorStore } from '../../../store/useEditorStore';
 import { CreateItemDialog } from '../../common/CreateItemDialog';
 import { EmptyScreen } from '../common/EmptyScreen';
+import { TopTabbedEditorLayout } from '../common/TopTabbedEditorLayout';
 import { CompactNumberInput, ReadOnlyIdField } from '../../common/Fields';
 import { FieldLabel } from '../../common/Typography.tsx';
 import { GiPerson } from 'react-icons/gi';
@@ -101,81 +102,92 @@ const CharacterDetail: React.FC<{
     },
   });
 
+  const [tab, setTab] = useState<CharacterTab>('general');
+  const update = (updates: Partial<Character>) => onUpdate(character.id, updates);
+
   return (
     <form
+      style={{ height: '100%' }}
       onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
         form.handleSubmit();
       }}
     >
-      <VStack align="stretch" spacing={6}>
-        <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6} alignItems="start">
-          <GridItem>
-            <VStack align="stretch" spacing={4}>
-              <FormControl>
-                <FieldLabel>ID</FieldLabel>
-                <ReadOnlyIdField value={character.id} />
-              </FormControl>
-
-              <form.Field name="name">
-                {(field) => (
+      <TopTabbedEditorLayout
+        title=""
+        tabs={[
+          { id: 'general', label: 'General' },
+          {
+            id: 'portraits',
+            label: 'Portraits',
+            badge: Object.keys(character.portraits ?? {}).length,
+          },
+          {
+            id: 'voice',
+            label: 'Voice',
+            badge:
+              (character.typewriterSound ? 1 : 0) +
+              Object.keys(character.emotionTypewriterSounds ?? {}).length,
+          },
+          { id: 'dialogues', label: 'Dialogues', badge: character.dialogues?.length ?? 0 },
+        ]}
+        activeTab={tab}
+        onTabChange={setTab}
+        mainContent={
+          <Box h="full" overflowY="auto" p={6} bg="editorWorkspaceBg">
+            <Box w="full" maxW="1120px" mx="auto">
+              {tab === 'general' && (
+                <VStack align="stretch" spacing={5} maxW="420px">
                   <FormControl>
-                    <FieldLabel>Name</FieldLabel>
-                    <Input
-                      size="sm"
-                      name={field.name}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
+                    <FieldLabel>ID</FieldLabel>
+                    <ReadOnlyIdField value={character.id} />
                   </FormControl>
-                )}
-              </form.Field>
-            </VStack>
-          </GridItem>
-        </SimpleGrid>
 
-        <PortraitsSection
-          character={character}
-          onUpdate={(updates) => onUpdate(character.id, updates)}
-        />
+                  <form.Field name="name">
+                    {(field) => (
+                      <FormControl>
+                        <FieldLabel>Name</FieldLabel>
+                        <Input
+                          size="sm"
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                      </FormControl>
+                    )}
+                  </form.Field>
 
-        <VoiceSection
-          character={character}
-          onUpdate={(updates) => onUpdate(character.id, updates)}
-        />
-
-        <MovementSection
-          character={character}
-          onUpdate={(updates) => onUpdate(character.id, updates)}
-        />
-
-        <SocialStandingSection
-          character={character}
-          onUpdate={(updates) => onUpdate(character.id, updates)}
-        />
-
-        <DialoguesSection
-          character={character}
-          onUpdate={(updates) => onUpdate(character.id, updates)}
-        />
-
-        <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
-          {({ isDirty, values }) => (
-            <EditorFormSave
-              kind="character"
-              resourceId={character.id}
-              isDirty={isDirty}
-              values={values}
-              onSave={() => form.handleSubmit()}
-            />
-          )}
-        </form.Subscribe>
-      </VStack>
+                  <MovementSection character={character} onUpdate={update} />
+                  <SocialStandingSection character={character} onUpdate={update} />
+                </VStack>
+              )}
+              {tab === 'portraits' && <PortraitsSection character={character} onUpdate={update} />}
+              {tab === 'voice' && <VoiceSection character={character} onUpdate={update} />}
+              {tab === 'dialogues' && <DialoguesSection character={character} onUpdate={update} />}
+            </Box>
+          </Box>
+        }
+        footerContent={
+          <form.Subscribe selector={(state) => ({ isDirty: state.isDirty, values: state.values })}>
+            {({ isDirty, values }) => (
+              <EditorFormSave
+                kind="character"
+                resourceId={character.id}
+                isDirty={isDirty}
+                values={values}
+                onSave={() => form.handleSubmit()}
+              />
+            )}
+          </form.Subscribe>
+        }
+      />
     </form>
   );
 };
+
+type CharacterTab = 'general' | 'portraits' | 'voice' | 'dialogues';
 
 const PortraitsSection: React.FC<{
   character: Character;
@@ -196,23 +208,27 @@ const PortraitsSection: React.FC<{
 
   return (
     <VStack align="stretch" spacing={4}>
-      <FieldLabel>Portraits</FieldLabel>
-      <PortraitField
-        title="Default (used when an emotion has no portrait)"
-        folder={folder}
-        path={character.defaultPortrait}
-        onChange={(path) => onUpdate({ defaultPortrait: path })}
-      />
-      {Object.entries(portraits).map(([emotionId, path]) => (
+      <SimpleGrid columns={{ base: 2, md: 3, xl: 5 }} spacing={3}>
         <PortraitField
-          key={emotionId}
-          title={emotions.find((emotion) => emotion.id === emotionId)?.name ?? emotionId}
+          title="Default"
           folder={folder}
-          path={path}
-          onChange={(next) => next && setPortrait(emotionId, next)}
-          onRemove={() => removePortrait(emotionId)}
+          path={character.defaultPortrait}
+          onChange={(path) => onUpdate({ defaultPortrait: path })}
         />
-      ))}
+        {Object.entries(portraits).map(([emotionId, path]) => (
+          <PortraitField
+            key={emotionId}
+            title={emotions.find((emotion) => emotion.id === emotionId)?.name ?? emotionId}
+            folder={folder}
+            path={path}
+            onChange={(next) => next && setPortrait(emotionId, next)}
+            onRemove={() => removePortrait(emotionId)}
+          />
+        ))}
+      </SimpleGrid>
+      <Text fontSize="xs" color="editorMutedText">
+        The default is used when an emotion has no portrait of its own.
+      </Text>
       <HStack>
         <Box flex={1} maxW="240px">
           <EmotionSelect

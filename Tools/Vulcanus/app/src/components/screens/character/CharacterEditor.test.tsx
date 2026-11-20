@@ -70,6 +70,17 @@ describe('character starting social standing', () => {
   });
 });
 
+describe('character tabs', () => {
+  it('keeps the portraits, voice and dialogues on their own tabs', () => {
+    show();
+    expect(screen.getByLabelText('Walk speed')).toBeTruthy();
+    expect(screen.queryByText('Typewriter sound')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Voice/ }));
+    expect(screen.getByText('Typewriter sound')).toBeTruthy();
+    expect(screen.queryByLabelText('Walk speed')).toBeNull();
+  });
+});
+
 describe('character dialogues', () => {
   const withDialogues = (dialogues: Character['dialogues']) => {
     cleanup();
@@ -81,6 +92,7 @@ describe('character dialogues', () => {
       ]) as never,
     });
     show();
+    fireEvent.click(screen.getByRole('button', { name: /^Dialogues/ }));
   };
 
   it('adds a chosen dialogue to the end of the list', () => {
