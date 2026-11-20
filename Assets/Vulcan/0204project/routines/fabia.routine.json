@@ -20,16 +20,12 @@
           },
           "activity": {
             "animation": "base:wave"
-          },
-          "walkingDialogue": "base:dlg_salve",
-          "dialogue": "base:fabia_greeting"
+          }
         },
         {
           "id": "back_home",
           "departAt": "08:00",
-          "destination": "home",
-          "walkingDialogue": "base:dlg_salve",
-          "dialogue": null
+          "destination": "home"
         }
       ]
     }
