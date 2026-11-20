@@ -169,6 +169,15 @@ namespace Core.Routines.Editor
         }
 
         [Test]
+        public void ConditionsCanAskWhatACharacterIsBusyWith()
+        {
+            var lua = Game.Lua.CreateEngine();
+            Assert.That(lua.EvaluateCondition("Routines.HasOccupation('base:fabia', 'fishing')"), Is.False,
+                "No routine has them busy with anything.");
+            Assert.That(lua.EvaluateCondition("Routines.Occupation('base:fabia') == nil"), Is.True);
+        }
+
+        [Test]
         public void ANullDialogueIsNothingToSayAndDiffersFromOneThatIsNotSet()
         {
             var routine = Routine(new[]

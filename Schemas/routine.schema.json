@@ -108,6 +108,10 @@
             }
           }
         },
+        "occupation": {
+          "$ref": "#/definitions/localId",
+          "description": "What the character is busy with once they have arrived, such as fishing. Dialogue conditions can ask for it. Omit for nothing in particular."
+        },
         "walkingDialogue": {
           "$ref": "#/definitions/routineDialogue",
           "description": "What talking to the character starts while walking to this goal. Omit to keep the dialogue in effect before; null for nothing to say."

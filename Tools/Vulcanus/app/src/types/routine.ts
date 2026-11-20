@@ -12,6 +12,8 @@ export interface RoutineGoal {
   condition?: string;
   destination: 'home' | RoutinePlace;
   activity?: { animation: string };
+  /** What the character is busy with once arrived, such as `fishing`; dialogue conditions can ask for it. */
+  occupation?: string;
   /** Dialogue while walking here; absent keeps the dialogue in effect before, null means nothing to say. */
   walkingDialogue?: string | null;
   /** Dialogue once arrived; absent keeps the dialogue in effect before, null means nothing to say. */

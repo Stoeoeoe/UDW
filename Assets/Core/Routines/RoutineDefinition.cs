@@ -85,6 +85,8 @@ namespace Core.Routines
         [field: SerializeField, JsonConverter(typeof(RoutinePlace.DestinationJsonConverter)), Tooltip("Empty for the routine's home.")]
         public RoutinePlace Destination { get; private set; } = new();
         [field: SerializeField, Validation.Nested] public RoutineActivity Activity { get; private set; } = new();
+        /// <summary>What the character is busy with while at this goal, such as "fishing"; empty for nothing in particular.</summary>
+        [field: SerializeField, Tooltip("What the character is busy with here, such as fishing.")] public string Occupation { get; private set; }
         /// <summary>Dialogue while walking to this goal; unset keeps the dialogue in effect before.</summary>
         [field: SerializeField, JsonConverter(typeof(RoutineDialogue.Converter)), Validation.Nested]
         public RoutineDialogue WalkingDialogue { get; private set; } = new();

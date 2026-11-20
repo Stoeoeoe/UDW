@@ -1396,6 +1396,53 @@
       ]
     },
     {
+      "path": "Routines",
+      "methods": [
+        {
+          "name": "HasOccupation",
+          "parameters": [
+            {
+              "name": "characterId",
+              "type": "string"
+            },
+            {
+              "name": "occupation",
+              "type": "string"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
+        {
+          "name": "Occupation",
+          "parameters": [
+            {
+              "name": "characterId",
+              "type": "string"
+            }
+          ],
+          "returnType": "string",
+          "returnNullable": true,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "string",
+              "nullable": true
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "Shop",
       "methods": [
         {
@@ -1661,6 +1708,26 @@
     {
       "path": "Weather",
       "methods": [
+        {
+          "name": "Is",
+          "parameters": [
+            {
+              "name": "weather",
+              "type": "string",
+              "resourceType": "weather"
+            }
+          ],
+          "returnType": "boolean",
+          "returnNullable": false,
+          "writesState": false,
+          "outputs": [
+            {
+              "name": "result",
+              "type": "boolean",
+              "nullable": false
+            }
+          ]
+        },
         {
           "name": "SetWeather",
           "parameters": [

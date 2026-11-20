@@ -82,6 +82,14 @@ A conversation already running finishes as it started.
 Characters that always say the same thing have no routine and keep their
 dialogue on their own prefab.
 
+## What the character is busy with
+
+A goal can set an `occupation` tag (such as `fishing`; lowercase letters, digits, `_ . -`) for what the character does
+once arrived. It is derived from the timetable and the clock, so nothing is saved. `RoutineTimetable.OccupationAt` gives
+it: null while walking, before the first goal, or when the goal sets none. Lua reads it through the `Routines` module:
+`Routines.Occupation(characterId)` and `Routines.HasOccupation(characterId, occupation)`, both usable in conditions.
+A character without a routine is busy with nothing.
+
 ## Rules checked at import
 
 - The schema: IDs, `HH:MM` departure times, `"home"` or a map anchor as

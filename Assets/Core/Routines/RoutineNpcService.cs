@@ -130,6 +130,14 @@ namespace Core.Routines
             get { foreach (var npc in _npcs) yield return npc.Character; }
         }
 
+        /// <summary>What the character's routine has them busy with now, or null: walking, no routine, or nothing set.</summary>
+        public string OccupationOf(string characterId)
+        {
+            foreach (var day in _days)
+                if (day.Timetable.Plan.Routine.Character == characterId) return day.Timetable.OccupationAt(Minute());
+            return null;
+        }
+
         /// <summary>Today's timetables, one per enabled routine.</summary>
         public IEnumerable<RoutineTimetable> Timetables => _days.Select(day => day.Timetable);
 

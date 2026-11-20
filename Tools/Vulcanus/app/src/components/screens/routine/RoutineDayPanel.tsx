@@ -33,6 +33,7 @@ import {
   type RoutineDayRef,
   type RoutineIssue,
 } from '../../../lib/routines';
+import { LOCAL_ID_PATTERN } from '../../../lib/resourceIds';
 import {
   newGoal,
   setDayGoals,
@@ -433,6 +434,24 @@ const GoalCard: React.FC<{
             value={goal.activity?.animation}
             onChange={(animation) =>
               onChange(animation ? { ...goal, activity: { animation } } : without(goal, 'activity'))
+            }
+          />
+        </HStack>
+        <HStack spacing={2}>
+          <Text fontSize="xs" color="editorMutedText" flexShrink={0}>
+            busy with
+          </Text>
+          <CompactInput
+            aria-label="Occupation"
+            placeholder="nothing in particular"
+            value={goal.occupation ?? ''}
+            isInvalid={goal.occupation !== undefined && !LOCAL_ID_PATTERN.test(goal.occupation)}
+            onChange={(event) =>
+              onChange(
+                event.target.value
+                  ? { ...goal, occupation: event.target.value }
+                  : without(goal, 'occupation'),
+              )
             }
           />
         </HStack>

@@ -265,6 +265,16 @@ describe('dialogues through the day', () => {
     expect(messages(routine)).toEqual([]);
   });
 
+  it('accepts an occupation tag and rejects an invalid one', () => {
+    const routine = fabia();
+    routine.variants[0].goals![0].occupation = 'fishing';
+    expect(messages(routine)).toEqual([]);
+    routine.variants[0].goals![0].occupation = 'Fishing Now';
+    expect(messages(routine)).toEqual([
+      expect.stringContaining('needs an occupation of lowercase letters'),
+    ]);
+  });
+
   it('reports dialogues that do not exist', () => {
     const routine = fabia();
     routine.dialogue = 'base:missing';

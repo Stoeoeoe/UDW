@@ -240,6 +240,8 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
       if (goal.destination !== 'home') checkPlace(goal.destination, name, day, goalIndex);
       checkDialogue(goal.walkingDialogue, `${name} (walking)`, day, goalIndex);
       checkDialogue(goal.dialogue, name, day, goalIndex);
+      if (goal.occupation !== undefined && !LOCAL_ID_PATTERN.test(goal.occupation))
+        at(`${name} needs an occupation of lowercase letters, digits, _ . or -.`);
       if (goal.activity && !goal.activity.animation.trim())
         at(`${name} has an activity without an animation.`);
       else if (

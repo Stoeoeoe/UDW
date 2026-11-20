@@ -91,6 +91,18 @@ namespace Core.Routines
         /// <summary>The segment the character is in at a minute; at a door, the walk on the far side.</summary>
         public TimetableSegment At(float minute) => Segments[IndexAt(minute)];
 
+        /// <summary>
+        /// What the character is busy with at a minute: the occupation of the goal they have arrived at. Null while walking,
+        /// before the first goal, or when the goal has none.
+        /// </summary>
+        public string OccupationAt(float minute)
+        {
+            var segment = At(minute);
+            if (segment.IsWalk || segment.GoalIndex < 0) return null;
+            var occupation = Plan.Goals[segment.GoalIndex].Occupation;
+            return string.IsNullOrEmpty(occupation) ? null : occupation;
+        }
+
         /// <summary>The index of <see cref="At"/>'s segment in <see cref="Segments"/>.</summary>
         public int IndexAt(float minute)
         {

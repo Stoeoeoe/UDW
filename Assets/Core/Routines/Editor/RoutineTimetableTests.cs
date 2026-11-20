@@ -83,6 +83,19 @@ namespace Core.Routines.Editor
         }
 
         [Test]
+        public void OccupationIsWhatTheGoalSaysOnceArrived()
+        {
+            var timetable = Plan(Day("{ id: 'well', departAt: '08:00', destination: " + Well + ", occupation: 'fishing' }",
+                Goal("home", 12 * 60, null)), World());
+
+            Assert.That(timetable.OccupationAt(100), Is.Null, "Nothing before the first goal.");
+            Assert.That(timetable.OccupationAt(483), Is.Null, "Not while walking there.");
+            Assert.That(timetable.OccupationAt(486), Is.EqualTo("fishing"));
+            Assert.That(timetable.OccupationAt(700), Is.EqualTo("fishing"));
+            Assert.That(timetable.OccupationAt(12 * 60 + 60), Is.Null, "The goal after has none.");
+        }
+
+        [Test]
         public void AWalkToAnotherMapIsSplitAtTheDoor()
         {
             var timetable = Plan(Day(Goal("shop", Eight, Counter)), World(null, FrontDoor));

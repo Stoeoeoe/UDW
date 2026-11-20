@@ -15,6 +15,8 @@ namespace Core.Routines
         public RoutinePlace Destination { get; }
         /// <summary>Character animation played at the destination; empty for none.</summary>
         public string ActivityAnimationId { get; }
+        /// <summary>What the character is busy with once arrived; empty for nothing in particular.</summary>
+        public string Occupation { get; }
         /// <summary>Dialogue while walking here; unset keeps the one in effect before.</summary>
         public RoutineDialogue WalkingDialogue { get; }
         /// <summary>Dialogue once arrived; unset keeps the one in effect before.</summary>
@@ -22,6 +24,7 @@ namespace Core.Routines
 
         internal PlannedGoal(RoutineGoal goal, RoutinePlace home)
         {
+            Occupation = goal.Occupation;
             WalkingDialogue = goal.WalkingDialogue;
             Dialogue = goal.Dialogue;
             Id = goal.Id;
