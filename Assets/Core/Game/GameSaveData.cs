@@ -36,7 +36,6 @@ namespace Core.Game
 
         public void Validate(CharacterCatalog characters, ItemCatalog items)
         {
-            quests ??= new QuestState(); // Saves made before quests existed have none.
             if (schemaVersion != CurrentVersion)
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
             if (worldBaselineVersion < 1)

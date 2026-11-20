@@ -318,7 +318,7 @@
               "$ref": "#/definitions/localId"
             },
             "kind": {
-              "const": "talk"
+              "enum": ["talk"]
             },
             "text": {
               "$ref": "#/definitions/text"
@@ -352,7 +352,7 @@
               "$ref": "#/definitions/localId"
             },
             "kind": {
-              "const": "deliver"
+              "enum": ["deliver"]
             },
             "text": {
               "$ref": "#/definitions/text"
@@ -391,7 +391,7 @@
               "$ref": "#/definitions/localId"
             },
             "kind": {
-              "const": "have"
+              "enum": ["have"]
             },
             "text": {
               "$ref": "#/definitions/text"
@@ -423,7 +423,7 @@
               "$ref": "#/definitions/localId"
             },
             "kind": {
-              "const": "reach"
+              "enum": ["reach"]
             },
             "text": {
               "$ref": "#/definitions/text"
@@ -457,7 +457,7 @@
               "$ref": "#/definitions/localId"
             },
             "kind": {
-              "const": "condition"
+              "enum": ["condition"]
             },
             "text": {
               "$ref": "#/definitions/text"

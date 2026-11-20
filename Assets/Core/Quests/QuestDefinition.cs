@@ -72,7 +72,7 @@ namespace Core.Quests
         /// <summary>Talk and deliver: who to talk to.</summary>
         [field: SerializeField, Validation.Reference(typeof(global::Character.CharacterDefinition))] public string Character { get; private set; }
         /// <summary>Talk and deliver: the dialogue that plays instead of the character's usual one; empty for theirs.</summary>
-        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true)]
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset))]
         public string Dialogue { get; private set; }
         /// <summary>Deliver and have: the item.</summary>
         [field: SerializeField, Validation.Reference(typeof(Core.Inventory.ItemDefinition))] public string Item { get; private set; }
@@ -142,16 +142,12 @@ namespace Core.Quests
         [field: SerializeField, Validation.Nested] public QuestBranch[] NextIf { get; private set; } = Array.Empty<QuestBranch>();
 
         public bool HasDeadline => Deadline.Days >= 0;
-        /// <summary>Days after the step begins; 0 is the same day.</summary>
-        public int DeadlineDays => Deadline.Days;
-        /// <summary>Minutes after midnight on the deadline's day; -1 for the end of the day.</summary>
-        public int DeadlineMinute => Deadline.At;
         /// <summary>The game minute the deadline passes, for a step that began at <paramref name="startedAtMinute"/>.</summary>
         public long DeadlineAtMinute(long startedAtMinute)
         {
             const int day = 24 * 60;
-            var deadlineDay = startedAtMinute / day + DeadlineDays;
-            return deadlineDay * day + (DeadlineMinute >= 0 ? DeadlineMinute : day);
+            var deadlineDay = startedAtMinute / day + Deadline.Days;
+            return deadlineDay * day + (Deadline.At >= 0 ? Deadline.At : day);
         }
     }
 

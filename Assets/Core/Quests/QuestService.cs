@@ -182,7 +182,7 @@ namespace Core.Quests
                 foreach (var objective in step.Objectives)
                     if (objective.Character == characterId && !progress.CompletedObjectives.Contains(objective.Id) &&
                         (objective.Kind == QuestObjectiveKind.Talk || objective.Kind == QuestObjectiveKind.Deliver &&
-                            player && player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count))
+                            player.MainInventory.Count(RequireItem(quest, objective)) >= objective.Count))
                         return new QuestConversation(questId, step.Id, objective);
             }
             return null;
@@ -227,10 +227,8 @@ namespace Core.Quests
             });
         }
 
-        public void OnEvent(InventoryChangedEvent e)
-        {
-            if (e.InventoryRef == _characters.MainCharacter?.MainInventory) RequestCheck();
-        }
+        // Any inventory: checking is cheap, and the player may not exist yet when one changes.
+        public void OnEvent(InventoryChangedEvent e) => RequestCheck();
 
         public void OnEvent(GameTimeChangedEvent e)
         {
@@ -247,7 +245,7 @@ namespace Core.Quests
 
         // The clock has already set the new season when it announces it.
         private void OnSeasonStarted(SeasonData _) =>
-            _moments.Add(new Moment(QuestStartKind.NewSeason, season: _gameState.Time.season.ToString()));
+            _moments.Add(new Moment(QuestStartKind.NewSeason, season: _gameState.Time.season.ToString().ToLowerInvariant()));
 
         public void OnEvent(MapTriggerEnteredEvent e) => ForEachOpenObjective((_, objective) =>
             objective.Kind == QuestObjectiveKind.Reach && objective.Map == _mapId && objective.Trigger == e.TriggerId);
@@ -276,9 +274,9 @@ namespace Core.Quests
 
         private static bool Matches(QuestStartMoment when, Moment moment) => when.On == moment.Kind && when.On switch
         {
-            QuestStartKind.NewSeason => string.IsNullOrEmpty(when.Season) || string.Equals(when.Season, moment.Season, StringComparison.OrdinalIgnoreCase),
+            QuestStartKind.NewSeason => string.IsNullOrEmpty(when.Season) || when.Season == moment.Season,
             QuestStartKind.DivineFavour => (string.IsNullOrEmpty(when.Deity) || when.Deity == moment.Deity) && moment.Favour >= when.AtLeast,
-            QuestStartKind.LocationChanged => string.IsNullOrEmpty(when.Map) || string.Equals(when.Map, moment.Map, StringComparison.OrdinalIgnoreCase),
+            QuestStartKind.LocationChanged => string.IsNullOrEmpty(when.Map) || when.Map == moment.Map,
             _ => true
         };
 
@@ -308,8 +306,12 @@ namespace Core.Quests
             }
         }
 
-        private string[] ActiveQuestIds() =>
-            _gameState.Quests.All.Where(pair => pair.Value.Status == QuestStatus.Active).Select(pair => pair.Key).ToArray();
+        /// <summary>
+        /// The quests active now. Each is checked as it comes up, since the actions of an earlier one may start, end or fail
+        /// others meanwhile.
+        /// </summary>
+        private IEnumerable<string> ActiveQuestIds() =>
+            _gameState.Quests.All.Select(pair => pair.Key).ToArray().Where(questId => _gameState.Quests.Find(questId).Status == QuestStatus.Active);
 
         private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _items.Find(objective.Item) ??
             throw new InvalidOperationException($"Quest '{quest.Id}' needs the unknown item '{objective.Item}'.");

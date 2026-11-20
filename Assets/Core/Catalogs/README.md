@@ -77,7 +77,7 @@ older artifact. Map/actor/dialogue references are bound before playback.
 
 Do not force relationship data into the flat definition base. Vulcanus world
 catalogs retain map/location/prefab bindings. Dialogues use the discovered
-`DialogueCatalog` with case-insensitive IDs; each dialogue asset records its own project. The
+`DialogueCatalog`; each dialogue asset records its own project. IDs match exactly, including case, in every catalog. The
 world catalogs share `IdIndex.FirstWins`, preserving their first-binding-wins
 policy. The helper deliberately does not validate definitions.
 
@@ -110,6 +110,6 @@ The delayed import hook also covers `.vitm` imports, moves and deletions, so imp
 `LocationCatalog` discovers `LocationData` throughout `Assets`, including subassets
 of imported `.vmap` files. Map imports, moves and deletions also schedule discovery.
 `LevelManager` uses this catalog for location and scene lookup, so adding a location
-requires no manager assignment. Location IDs compare case-insensitively, matching
-the existing link and world-catalog contract. Project-scoped world catalogs remain
+requires no manager assignment. Location IDs match exactly, as in links and world catalogs.
+Project-scoped world catalogs remain
 responsible for map/prefab relationships; they do not register runtime locations.

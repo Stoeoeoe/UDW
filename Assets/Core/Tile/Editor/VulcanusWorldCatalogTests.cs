@@ -34,7 +34,6 @@ namespace Core.Tile.Editor
         }
 
         [TestCase("base:map-1")]
-        [TestCase("BASE:MAP-1")]
         public void MapLookupResolvesPrefabAndLocation(string id)
         {
             Assert.That(_catalog.TryGetMapPrefabByMapId(id, out var prefab), Is.True);
@@ -47,6 +46,7 @@ namespace Core.Tile.Editor
         [TestCase("")]
         [TestCase(" ")]
         [TestCase("missing")]
+        [TestCase("BASE:MAP-1")]
         [TestCase("map-1")]
         public void MissingMapIdsReturnFalseAndNullWithoutDroppingNamespaces(string id)
         {
@@ -59,7 +59,7 @@ namespace Core.Tile.Editor
         [Test]
         public void LocationLookupUsesLocationIdRatherThanMapIdOrAssetIdentity()
         {
-            var otherAsset = Location("BASE:VILLAGE");
+            var otherAsset = Location("base:village");
             Assert.That(_catalog.TryGetMapPrefabForLocation(otherAsset, out var prefab), Is.True);
             Assert.That(prefab, Is.SameAs(_prefab));
         }
@@ -105,7 +105,7 @@ namespace Core.Tile.Editor
         {
             Sync(null, new VulcanusWorldCatalog.MapBinding(" ", _prefab, null),
                 new VulcanusWorldCatalog.MapBinding("base:map-1", _prefab, _village),
-                new VulcanusWorldCatalog.MapBinding("BASE:MAP-1", null, Location("base:other")));
+                new VulcanusWorldCatalog.MapBinding("base:map-1", null, Location("base:other")));
             Assert.That(_catalog.TryGetMapPrefabByMapId("base:map-1", out var prefab), Is.True);
             Assert.That(prefab, Is.SameAs(_prefab));
             Assert.That(_catalog.TryGetLocationDataByMapId("base:map-1", out var location), Is.True);
@@ -116,7 +116,7 @@ namespace Core.Tile.Editor
         public void DuplicateLocationIdsKeepFirstBinding()
         {
             Sync(new VulcanusWorldCatalog.MapBinding("base:map-1", _prefab, _village),
-                new VulcanusWorldCatalog.MapBinding("base:map-2", null, Location("BASE:VILLAGE")));
+                new VulcanusWorldCatalog.MapBinding("base:map-2", null, Location("base:village")));
             Assert.That(_catalog.TryGetMapPrefabForLocation(Location("base:village"), out var prefab), Is.True);
             Assert.That(prefab, Is.SameAs(_prefab));
         }

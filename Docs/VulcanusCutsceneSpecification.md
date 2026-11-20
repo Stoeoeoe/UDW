@@ -99,7 +99,7 @@ Proposed runtime export: `<name>.runtime.cutscene.json`, alongside other project
 
 Every source requires `$schema`, `formatVersion`, `projectId`, `id`, `name`, `mapId`, `playPolicy`, `completion`, `actors`, and `sequence`. Use a numeric `formatVersion: 1` for the new interchange format; this is unrelated to the game save schema version. Unsupported format versions fail import. Do not add a save migration or save version bump for this feature.
 
-Cutscene IDs are permanent project-qualified IDs, for example `base:harbour_intro`; map/actor/anchor references retain their source IDs verbatim. New cutscene and local step/role IDs use exact ordinal comparison. Existing map/dialogue APIs remain case-insensitive where already established; cross-reference validation must use the referenced system's comparer and reject ambiguity. Renaming a label or file never changes identity. Duplicate creates new cutscene/step IDs and a new completion flag; ordinary edits retain them. Never generate missing required IDs at runtime or import.
+Cutscene IDs are permanent project-qualified IDs, for example `base:harbour_intro`; map/actor/anchor references retain their source IDs verbatim. All IDs, including map, anchor and dialogue IDs, use exact ordinal comparison. Renaming a label or file never changes identity. Duplicate creates new cutscene/step IDs and a new completion flag; ordinary edits retain them. Never generate missing required IDs at runtime or import.
 
 ### Root fields
 

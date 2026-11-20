@@ -30,7 +30,7 @@ namespace Core.Tile.Vulcanus
     /// </summary>
     public sealed class MapLinkGraph
     {
-        private readonly Dictionary<string, List<MapLink>> _linksFrom = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<MapLink>> _linksFrom = new(StringComparer.Ordinal);
 
         public MapLinkGraph(IEnumerable<MapLink> links)
         {
@@ -71,12 +71,12 @@ namespace Core.Tile.Vulcanus
         /// <summary>Whether a chain of links leads from one map to the other; a map always reaches itself.</summary>
         public bool CanReach(string fromMapId, string toMapId)
         {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { fromMapId };
+            var seen = new HashSet<string>(StringComparer.Ordinal) { fromMapId };
             var queue = new Queue<string>(seen);
             while (queue.Count > 0)
             {
                 var map = queue.Dequeue();
-                if (string.Equals(map, toMapId, StringComparison.OrdinalIgnoreCase)) return true;
+                if (map == toMapId) return true;
                 foreach (var link in LinksFrom(map))
                     if (seen.Add(link.ToMapId)) queue.Enqueue(link.ToMapId);
             }

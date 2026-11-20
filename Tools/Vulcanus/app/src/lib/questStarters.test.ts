@@ -3,22 +3,24 @@ import type { Cutscene } from '../types/cutscene';
 import type { Quest } from '../types/quest';
 import type { DialogueDocument } from '../types/schema';
 import { describeStartMoment, questStartedBy, startedQuestIds } from './questStarters';
-import { questStartWarnings, validateQuest } from './quests';
+import { questReferenceWarnings, questStartWarnings, validateQuest } from './quests';
+import { withGraph } from './questGraph.fixture';
 
-const quest = (extra: Partial<Quest> = {}): Quest => ({
-  formatVersion: 1,
-  id: 'base:wine',
-  title: 'Wine',
-  description: 'Bring wine.',
-  steps: [
-    {
-      id: 'bring',
-      journal: 'Bring it.',
-      objectives: [{ id: 'carry', text: 'Carry', kind: 'condition', condition: 'false' }],
-    },
-  ],
-  ...extra,
-});
+const quest = (extra: Partial<Quest> = {}): Quest =>
+  withGraph({
+    formatVersion: 1,
+    id: 'base:wine',
+    title: 'Wine',
+    description: 'Bring wine.',
+    steps: [
+      {
+        id: 'bring',
+        journal: 'Bring it.',
+        objectives: [{ id: 'carry', text: 'Carry', kind: 'condition', condition: 'false' }],
+      },
+    ],
+    ...extra,
+  });
 
 const dialogue = (lua: string): DialogueDocument =>
   ({
@@ -87,15 +89,15 @@ describe('start moments', () => {
       ],
       condition: 'GameState.Story.Has(',
     } as const;
-    const errors = validateQuest(
-      quest({ start: { when: [...start.when], condition: start.condition } }),
+    const starting = quest({ start: { when: [...start.when], condition: start.condition } });
+    expect(validateQuest(starting).join('\n')).toContain('Start condition');
+    const warnings = questReferenceWarnings(
+      starting,
       { characterIds: new Set(), itemIds: new Set(), dialogueIds: new Set(), maps: [] },
-      null,
       { deity: [{ id: 'base:ceres', description: 'Ceres' }] },
     );
-    expect(errors.join('\n')).toContain('Start condition');
-    expect(errors).toContain('Start moment 1: unknown map base:nowhere.');
-    expect(errors).toContain('Start moment 2: unknown deity base:unknown.');
+    expect(warnings).toContain('Start moment 1: unknown map base:nowhere.');
+    expect(warnings).toContain('Start moment 2: unknown deity base:unknown.');
     expect(questStartWarnings(quest({ start: { when: [...start.when] } }))).toHaveLength(1);
     expect(questStartWarnings(quest({ start: { when: [{ on: 'newDay' }] } }))).toEqual([]);
   });

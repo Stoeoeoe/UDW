@@ -82,8 +82,8 @@
               "source": { "type": "string" },
               "target": { "type": "string" },
               "sourcePin": { "type": "string", "pattern": "^(next|then|else|objective:.+)$" },
-              "targetPin": { "const": "in" },
-              "kind": { "const": "execution" }
+              "targetPin": { "enum": ["in"] },
+              "kind": { "enum": ["execution"] }
             }
           },
           {
@@ -97,7 +97,7 @@
               "target": { "type": "string" },
               "sourcePin": { "type": "string", "minLength": 1 },
               "targetPin": { "type": "string", "minLength": 1 },
-              "kind": { "const": "data" }
+              "kind": { "enum": ["data"] }
             }
           }
         ]

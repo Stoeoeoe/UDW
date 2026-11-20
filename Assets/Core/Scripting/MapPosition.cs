@@ -40,7 +40,7 @@ namespace Core.Scripting
             {
                 var id = anchor;
                 var target = map.GetComponentsInChildren<VulcanusMapAnchor>(true)
-                    .SingleOrDefault(value => StringComparer.OrdinalIgnoreCase.Equals(value.AnchorId, id));
+                    .SingleOrDefault(value => value.AnchorId == id);
                 if (!target) throw new InvalidOperationException($"Map '{map.MapId}' has no anchor '{anchor}'.");
                 return target.transform.position;
             }

@@ -263,7 +263,7 @@ namespace Core.Tile
                 return false;
 
             var anchors = FindObjectsByType<VulcanusMapAnchor>(FindObjectsSortMode.None);
-            anchor = Array.Find(anchors, candidate => string.Equals(candidate.AnchorId, anchorId, StringComparison.OrdinalIgnoreCase));
+            anchor = Array.Find(anchors, candidate => candidate.AnchorId == anchorId);
             return anchor != null;
         }
 

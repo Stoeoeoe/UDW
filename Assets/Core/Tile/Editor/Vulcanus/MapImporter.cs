@@ -446,7 +446,7 @@ namespace Core.Tile.Editor.Vulcanus
             group.transform.SetParent(mapRoot, false);
 
             var tilesetById = IdIndex.FirstWins(tilesetsByIndex,
-                tileset => tileset ? tileset.TilesetId : null, StringComparer.OrdinalIgnoreCase);
+                tileset => tileset ? tileset.TilesetId : null, StringComparer.Ordinal);
             foreach (var inst in layer.ObjectInstances)
             {
                 if (string.IsNullOrWhiteSpace(inst.TilesetId) || !tilesetById.TryGetValue(inst.TilesetId, out var tileset))

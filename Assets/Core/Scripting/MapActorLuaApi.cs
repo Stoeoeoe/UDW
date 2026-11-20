@@ -26,7 +26,7 @@ namespace Core.Scripting
 
         private readonly VulcanusImportedMap _map;
         private readonly Dictionary<string, GameCharacter> _actors = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, VulcanusMapAnchor> _anchors = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, VulcanusMapAnchor> _anchors = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SpawnedObject> _plannedActors = new(StringComparer.Ordinal);
         private readonly List<SpawnedObject> _createdActors = new();
         private CutsceneRun _run;

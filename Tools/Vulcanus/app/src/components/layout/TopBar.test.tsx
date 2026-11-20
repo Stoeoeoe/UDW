@@ -9,10 +9,11 @@ import { useWorkspaceStore } from '../../store/useWorkspaceStore';
 import { useSaveStore } from '../../lib/saveManager';
 import { fileSystem } from '../../lib/fileSystem';
 import type { Quest } from '../../types/quest';
+import { withGraph } from '../../lib/questGraph.fixture';
 import { theme } from '../../theme';
 
 enableMapSet();
-const quest: Quest = {
+const quest: Quest = withGraph({
   formatVersion: 1,
   id: 'base:festival',
   title: 'Festival',
@@ -24,7 +25,7 @@ const quest: Quest = {
       objectives: [{ id: 'wine', kind: 'have', item: 'base:wine', count: 2, text: 'Two wine' }],
     },
   ],
-};
+});
 const tab = {
   id: 'quest:' + quest.id,
   document: {

@@ -82,10 +82,11 @@ namespace Core.Tile.Editor
         }
 
         [Test]
-        public void TilesetLookupResolvesNamespacedIdRegardlessOfFilenameAndCase()
+        public void TilesetLookupResolvesTheExactNamespacedIdRegardlessOfFilename()
         {
-            var tileset = Write("tilesets/villagetileset.vts", "{\"id\":\"base:villagetileset\"}");
-            Assert.That(TilesetPath("BASE:VILLAGETILESET"), Is.EqualTo(tileset));
+            var tileset = Write("tilesets/village.vts", "{\"id\":\"base:villagetileset\"}");
+            Assert.That(TilesetPath("base:villagetileset"), Is.EqualTo(tileset));
+            Assert.That(TilesetPath("BASE:VILLAGETILESET"), Is.Null, "IDs match exactly, including case.");
         }
 
         [Test]
@@ -143,7 +144,7 @@ namespace Core.Tile.Editor
         public void DuplicateTilesetIdsFailWithBothSourcePaths()
         {
             var first = Write("tilesets/a.vts", "{\"id\":\"base:village\"}");
-            var second = Write("tilesets/b.vts", "{\"id\":\"BASE:VILLAGE\"}");
+            var second = Write("tilesets/b.vts", "{\"id\":\"base:village\"}");
             var error = Assert.Throws<InvalidOperationException>(() => VulcanusImportHelpers.BuildTilesetIndex(_map, _project));
             Assert.That(error.Message, Does.Contain(first).And.Contain(second));
         }

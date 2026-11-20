@@ -20,7 +20,7 @@ namespace Core.Tile.Editor.Vulcanus
             int mapHeight,
             int tileSize)
         {
-            var result = new Dictionary<string, VulcanusMapAnchor>(StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, VulcanusMapAnchor>(StringComparer.Ordinal);
             if (anchors == null || anchors.Count == 0)
                 return result;
 
@@ -79,7 +79,7 @@ namespace Core.Tile.Editor.Vulcanus
 
         private static Dictionary<string, LocationLinkDto> IndexLinksByTriggerId(IReadOnlyList<LocationLinkDto> links)
         {
-            var result = new Dictionary<string, LocationLinkDto>(StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, LocationLinkDto>(StringComparer.Ordinal);
             if (links == null)
                 return result;
 
@@ -136,7 +136,7 @@ namespace Core.Tile.Editor.Vulcanus
                 if (!CutsceneImporter.FindSources().TryGetValue(trigger.CutsceneId, out var sourcePath))
                     throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' has no source for '{trigger.CutsceneId}'.");
                 var definition = AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(sourcePath);
-                if (!definition || !StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, go.GetComponentInParent<VulcanusImportedMap>().MapId))
+                if (!definition || definition.MapId != go.GetComponentInParent<VulcanusImportedMap>().MapId)
                     throw new InvalidOperationException($"Cutscene trigger '{trigger.Id}' references a failed import or differently mapped cutscene '{trigger.CutsceneId}'.");
                 go.AddComponent<CutsceneTrigger>().Configure(trigger.CutsceneId);
             }

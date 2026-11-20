@@ -27,7 +27,7 @@ namespace Core.Routines.Editor
                     fixedDialogues.TryAdd(character.CharacterId, prefab.name);
             }
 
-            var anchorsByMap = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var anchorsByMap = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             var placedCharacters = new Dictionary<string, string>(StringComparer.Ordinal);
             var worlds = CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>().ToArray();
             var links = MapLinkGraph.Build(worlds);

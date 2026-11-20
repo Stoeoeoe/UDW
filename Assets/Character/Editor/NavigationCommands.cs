@@ -35,7 +35,7 @@ namespace Character.Editor
             if (!maps || !maps.CurrentMap) throw new InvalidOperationException("No location map is loaded.");
             var characters = Object.FindObjectsByType<GameCharacter>(FindObjectsSortMode.None);
             var character = characters.FirstOrDefault(candidate =>
-                string.Equals(candidate.CharacterId, characterId, StringComparison.OrdinalIgnoreCase));
+                candidate.CharacterId == characterId);
             if (!character)
                 throw new ArgumentException($"No character '{characterId}' in the current map. Present: " +
                     string.Join(", ", characters.Select(candidate => candidate.CharacterId)));

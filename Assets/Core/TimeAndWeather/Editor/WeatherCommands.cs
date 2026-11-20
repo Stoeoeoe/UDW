@@ -41,7 +41,7 @@ namespace Core.TimeAndWeather.Editor
 
             var key = weather.Trim();
             var matches = FindWeather().Where(candidate =>
-                string.Equals(candidate.id, key, StringComparison.OrdinalIgnoreCase) ||
+                candidate.id == key ||
                 string.Equals(candidate.label, key, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(candidate.name, key, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (matches.Length != 1)

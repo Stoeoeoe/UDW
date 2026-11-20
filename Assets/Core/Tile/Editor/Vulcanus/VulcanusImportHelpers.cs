@@ -154,7 +154,7 @@ namespace Core.Tile.Editor.Vulcanus
             var projectRoot = !string.IsNullOrEmpty(projectAssetPath)
                 ? Path.GetDirectoryName(ToAbsolutePath(projectAssetPath))
                 : Path.GetDirectoryName(mapFolder) ?? mapFolder;
-            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var filePath in Directory.GetFiles(projectRoot, "*.vts", SearchOption.AllDirectories)
                          .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {

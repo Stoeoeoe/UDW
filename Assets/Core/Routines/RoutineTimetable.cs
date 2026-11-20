@@ -225,14 +225,14 @@ namespace Core.Routines
                 // The first time a link comes out of the queue is the shortest way through it.
                 if (stop.Entered != null && !crossed.Add(stop.Entered)) continue;
                 var map = world.Map(stop.MapId);
-                if (string.Equals(stop.MapId, to.Map, StringComparison.OrdinalIgnoreCase)
+                if (stop.MapId == to.Map
                     && TryWalk(map, stop.Position, map.Anchor(to.Anchor), out var toGoal))
                     open.Add(new Stop { MapId = stop.MapId, Position = toGoal.Route[^1], Distance = stop.Distance + toGoal.Length,
                         Crossings = stop.Crossings, Previous = stop, Walk = toGoal, IsGoal = true });
                 foreach (var link in world.Links.LinksFrom(stop.MapId))
                 {
                     // Links within a map are shortcuts the player takes; characters walk.
-                    if (string.Equals(link.ToMapId, stop.MapId, StringComparison.OrdinalIgnoreCase) || crossed.Contains(link)) continue;
+                    if (link.ToMapId == stop.MapId || crossed.Contains(link)) continue;
                     if (!TryWalk(map, stop.Position, map.DoorPosition(link), out var toDoor)) continue;
                     open.Add(new Stop { MapId = link.ToMapId, Position = world.Map(link.ToMapId).Anchor(link.ArrivalAnchorId),
                         Distance = stop.Distance + toDoor.Length, Crossings = stop.Crossings + 1, Entered = link, Previous = stop,

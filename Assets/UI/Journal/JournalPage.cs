@@ -82,7 +82,7 @@ namespace UI.Journal
             if (step.HasDeadline)
             {
                 var deadline = step.DeadlineAtMinute(progress.StepStartedAtMinute);
-                _details.Add(Line(step.DeadlineMinute < 0 ? $"Due by the end of day {deadline / MinutesPerDay}" : $"Due {When(deadline)}", "inventory-hint"));
+                _details.Add(Line(step.Deadline.At < 0 ? $"Due by the end of day {deadline / MinutesPerDay}" : $"Due {When(deadline)}", "inventory-hint"));
             }
         }
 

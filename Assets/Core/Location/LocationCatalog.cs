@@ -10,7 +10,6 @@ namespace Core.Location
     {
         public const string ResourceName = "LocationCatalog";
         public override string Path => "Assets";
-        public override StringComparer IdComparer => StringComparer.OrdinalIgnoreCase;
         protected override string GetDefinitionId(LocationData definition) => definition.id;
     }
 }

@@ -19,7 +19,6 @@ import type { GraphCommand } from '../../common/graph/GraphEditorToolbar';
 import {
   copyGraphSelection,
   pasteGraphSelection,
-  deleteGraphSelection,
   layoutGraph,
   insertExecutionNode,
 } from '../../../lib/graphEditing';
@@ -35,15 +34,16 @@ import type { CutsceneGraphNode as AuthoredNode } from '../../../types/cutsceneG
 import type { Cutscene } from '../../../types/cutscene';
 import { GraphEditingContext } from '../cutscene/CutsceneGraphContext';
 import {
-  graphFromQuest,
   newQuestObjective,
   objectivePin,
   questActions,
   questDataWire,
   questFunctions,
   questActionResources,
+  questNodeLabels,
   questStepLabels,
   questWire,
+  removeQuestNodes,
 } from '../../../lib/questGraph';
 import { questStartWarnings, unusedQuestLocalId } from '../../../lib/quests';
 import { describeStartMoment } from '../../../lib/questStarters';
@@ -62,7 +62,7 @@ type QuestViewNode = Node<
     /** Objectives of this step that have a wire: meeting one of them ends the step. */
     branched: ReadonlySet<string>;
     changeComment: (id: string, comment: string | undefined) => void;
-    selectObjective: (step: number, objective: number) => void;
+    selectObjective: (objective: number) => void;
     addObjective: (step: number, kind: QuestObjective['kind']) => void;
     removeObjective: (step: number, objective: number) => void;
   },
@@ -74,17 +74,11 @@ function StepNode({ data, selected }: NodeProps<QuestViewNode>) {
   const index = data.quest.steps.findIndex((s) => s.id === n.stepId);
   const step = data.quest.steps[index];
   const title =
-    n.kind === 'step'
-      ? !n.group && step?.objectives.length === 1
+    n.kind !== 'step'
+      ? questNodeLabels[n.kind]
+      : !n.group && step.objectives.length === 1
         ? questStepLabels[step.objectives[0].kind]
-        : questStepLabels.group
-      : n.kind === 'entry'
-        ? 'Begin'
-        : n.kind === 'exit'
-          ? 'Complete quest'
-          : n.kind === 'failure'
-            ? 'On failure'
-            : 'Execute Lua Script';
+        : questStepLabels.group;
   return (
     <GraphNodeFrame
       title={title}
@@ -119,7 +113,7 @@ function StepNode({ data, selected }: NodeProps<QuestViewNode>) {
                 aria-label={`Select objective ${o.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  data.selectObjective(index, oi);
+                  data.selectObjective(oi);
                 }}
               >
                 <Text noOfLines={1}>{o.text}</Text>
@@ -261,7 +255,8 @@ export function QuestGraphCanvas(props: {
   quest: Quest;
   onChange: (updates: Partial<Quest>) => void;
   onSelect: (node: QuestGraphNode) => void;
-  onObjective: (step: number, objective: number) => void;
+  /** An objective of a step node was selected, by its position in the step. */
+  onObjective: (nodeId: string, objective: number) => void;
 }) {
   return (
     <ReactFlowProvider>
@@ -293,7 +288,7 @@ function Workspace({
     });
     return () => cancelAnimationFrame(frame);
   }, [initialized, flow]);
-  const graph = useMemo(() => graphFromQuest(quest), [quest]);
+  const graph = quest.editorGraph;
   const actions = useMemo(() => questActions(manifest), [manifest]);
   const functions = useMemo(() => questFunctions(manifest), [manifest]);
   const everyAction = useMemo(() => [...actions, ...functions], [actions, functions]);
@@ -490,34 +485,33 @@ function Workspace({
     const insertAfter =
       anchor && (!kind.startsWith('step:') || anchor.kind === 'step') ? anchor : undefined;
     const from = picker?.from;
-    const target =
-      picker && !from
-        ? undefined
-        : from
-          ? next.edges.find(
-              (e) =>
-                e.kind === 'execution' &&
-                (from.handleType === 'source'
-                  ? e.source === from.nodeId && e.sourcePin === pinOf(from.handleId)
-                  : e.target === from.nodeId),
-            )
-          : (next.edges.find((e) => e.kind === 'execution' && selectedEdges.has(e.id)) ??
-            (insertAfter
-              ? next.edges.find((e) => e.kind === 'execution' && e.source === insertAfter.id)
-              : next.edges.find(
-                  (e) =>
-                    e.kind === 'execution' &&
-                    e.target === next.nodes.find((n) => n.kind === 'exit')?.id,
-                )));
-    const source = target
-      ? next.nodes.find((n) => n.id === target.source)
-      : from
-        ? from.handleType === 'source'
-          ? next.nodes.find((n) => n.id === from.nodeId)
-          : undefined
-        : picker
-          ? undefined
-          : insertAfter;
+    /** The wire the new node goes into, if any, and the node it follows. */
+    const placement = (): { target?: QuestGraph['edges'][number]; source?: QuestGraphNode } => {
+      const wires = next.edges.filter((e) => e.kind === 'execution');
+      const nodeOf = (id: string | null) => next.nodes.find((n) => n.id === id);
+      let target: QuestGraph['edges'][number] | undefined;
+      if (from) {
+        // Dragged from a pin: into the wire on that pin, else after the pin's node.
+        target = wires.find((e) =>
+          from.handleType === 'source'
+            ? e.source === from.nodeId && e.sourcePin === pinOf(from.handleId)
+            : e.target === from.nodeId,
+        );
+        if (!target)
+          return { source: from.handleType === 'source' ? nodeOf(from.nodeId) : undefined };
+      } else if (picker) {
+        return {}; // Opened on the empty canvas: a free node.
+      } else {
+        // From the palette: into the selected wire, after the selected node, or before Complete quest.
+        const exit = next.nodes.find((n) => n.kind === 'exit')!;
+        target =
+          wires.find((e) => selectedEdges.has(e.id)) ??
+          wires.find((e) => (insertAfter ? e.source === insertAfter.id : e.target === exit.id));
+        if (!target) return { source: insertAfter };
+      }
+      return { target, source: nodeOf(target.source) };
+    };
+    const { target, source } = placement();
     const node: QuestGraphNode = {
       id,
       kind: 'lua',
@@ -605,7 +599,7 @@ function Workspace({
         g.nodes.find((n) => n.stepId === step.id)!.group = true;
       }),
     });
-    onObjective(index, step.objectives.length);
+    onObjective(graph.nodes.find((n) => n.stepId === step.id)!.id, step.objectives.length);
   };
   const removeObjective = (index: number, objective: number) => {
     const removed = quest.steps[index].objectives[objective];
@@ -659,10 +653,14 @@ function Workspace({
       } else if (command === 'paste') paste();
       else if (command === 'duplicate') paste(copy(), 48);
       else if (command === 'delete') {
-        const next = structuredClone(graph);
-        deleteGraphSelection(next, selected, selectedEdges);
-        const survivingSteps = new Set(next.nodes.map((n) => n.stepId));
-        onChange({ editorGraph: next, steps: quest.steps.filter((s) => survivingSteps.has(s.id)) });
+        const { editorGraph, steps } = removeQuestNodes(quest, selected);
+        onChange({
+          steps,
+          editorGraph: {
+            ...editorGraph,
+            edges: editorGraph.edges.filter((e) => !selectedEdges.has(e.id)),
+          },
+        });
         editor.clear();
       } else if (command === 'layout') {
         const sizes = new Map(
@@ -723,9 +721,9 @@ function Workspace({
                 if (value === undefined) delete node.comment;
                 else node.comment = value;
               }),
-            selectObjective: (step, objective) => {
+            selectObjective: (objective) => {
               setSelected(new Set([node.id]));
-              onObjective(step, objective);
+              onObjective(node.id, objective);
             },
             addObjective,
             removeObjective,

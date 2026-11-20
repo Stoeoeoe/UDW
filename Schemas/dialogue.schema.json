@@ -126,7 +126,7 @@
             },
             "type": {
               "type": "string",
-              "const": "line"
+              "enum": ["line"]
             },
             "speaker": {
               "type": "string",
@@ -161,7 +161,7 @@
             },
             "type": {
               "type": "string",
-              "const": "choice"
+              "enum": ["choice"]
             },
             "options": {
               "type": "array",
@@ -185,7 +185,7 @@
             },
             "type": {
               "type": "string",
-              "const": "action"
+              "enum": ["action"]
             },
             "lua": {
               "type": "string"
@@ -210,7 +210,7 @@
             },
             "type": {
               "type": "string",
-              "const": "jump"
+              "enum": ["jump"]
             },
             "targetDialogueId": {
               "type": ["string", "null"],
@@ -236,7 +236,7 @@
             },
             "type": {
               "type": "string",
-              "const": "comment"
+              "enum": ["comment"]
             },
             "text": {
               "type": "string"
@@ -257,7 +257,7 @@
             },
             "type": {
               "type": "string",
-              "const": "end"
+              "enum": ["end"]
             },
             "editor": {
               "$ref": "#/$defs/DialogueNodeEditorMeta"

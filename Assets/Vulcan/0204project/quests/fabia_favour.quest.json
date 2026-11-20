@@ -36,7 +36,7 @@
     }
   ],
   "giver": "base:fabia",
-  "onComplete": "SocialStanding.Increase(\"base:fabia\", 15)\nWallet.AddMoney(50)",
+  "onComplete": "do\nSocialStanding.Increase(\"base:fabia\", 15)\nWallet.AddMoney(50)\nend",
   "start": {
     "when": [
       {
@@ -44,5 +44,88 @@
       }
     ],
     "condition": "SocialStanding.HasMoreThan('base:fabia', 40)"
+  },
+  "editorGraph": {
+    "nodes": [
+      {
+        "id": "begin",
+        "kind": "entry",
+        "position": {
+          "x": 0,
+          "y": 120
+        }
+      },
+      {
+        "id": "step-node-0",
+        "kind": "step",
+        "stepId": "ask",
+        "group": false,
+        "position": {
+          "x": 340,
+          "y": 120
+        }
+      },
+      {
+        "id": "step-node-1",
+        "kind": "step",
+        "stepId": "bring",
+        "group": false,
+        "position": {
+          "x": 680,
+          "y": 120
+        }
+      },
+      {
+        "id": "complete",
+        "kind": "exit",
+        "position": {
+          "x": 1020,
+          "y": 120
+        }
+      },
+      {
+        "id": "completion-script",
+        "kind": "lua",
+        "code": "SocialStanding.Increase(\"base:fabia\", 15)\nWallet.AddMoney(50)",
+        "position": {
+          "x": 1360,
+          "y": 120
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "wire-981638fd-0c9b-4e60-8198-c8760e804f07",
+        "source": "step-node-0",
+        "target": "step-node-1",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-e5993a64-41d0-45eb-a4ed-879cb5878675",
+        "source": "step-node-1",
+        "target": "complete",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-9abaaf79-bd26-4200-9d12-d05c31426740",
+        "source": "begin",
+        "target": "step-node-0",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-11e8448b-7903-4c4f-8c49-15908718e310",
+        "source": "complete",
+        "target": "completion-script",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      }
+    ]
   }
 }

@@ -13,11 +13,12 @@ map and optionally one of its triggers. Conditions are read-only Lua expressions
 actions are synchronous Lua statements. Quest and step IDs complete in `Quests.*`
 calls in both Lua and condition editors throughout Vulcanus.
 
-The validation panel reports format and Lua errors plus unknown characters, items,
-dialogues, maps and map-specific triggers. Format/Lua errors keep the draft dirty
-and prevent saving an invalid import file. Reference errors remain visible while
-content is being authored elsewhere. Undo/redo, discard, autosave, Save and Save All
-use the normal workspace controls.
+The quest is checked when it is saved (autosave included) and when **Validate** is
+pressed; the validation panel shows the result of the last check. Graph, format and
+Lua errors keep the draft dirty and prevent saving an invalid import file. Unknown
+characters, items, dialogues, maps, map-specific triggers and deities are warnings:
+they never block saving, and Unity fails the import if the content is really missing.
+Undo/redo, discard, autosave, Save and Save All use the normal workspace controls.
 
 Saving writes `quests/<name>.quest.json` and its sibling `<name>.i18n.json` using
 the repository's quest schemas. Message keys follow Unity's quest contract:

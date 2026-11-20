@@ -5,7 +5,7 @@ and `.vmap` imports a map prefab plus its `LocationData` subasset. The importer 
 project, tileset, and sprite-sheet dependencies before import so a fresh collection of
 source files imports in the correct order.
 
-Tileset references resolve by the authored JSON `id`, case-insensitively. A filename
+Tileset references resolve by the authored JSON `id`, matching exactly. A filename
 does not supply an alias for that ID. Each map builds one tileset index; duplicate IDs
 fail import. Sprite-sheet paths resolve relative to their source file or project file.
 There is no recursive filename fallback. Missing required tilesets, textures, or object

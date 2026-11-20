@@ -80,7 +80,7 @@ namespace Core.Location
                 return targetLocation == currentLocation;
 
             return string.IsNullOrWhiteSpace(targetLocationId) ||
-                   string.Equals(targetLocationId, currentLocation.id, StringComparison.OrdinalIgnoreCase);
+                   targetLocationId == currentLocation.id;
         }
 
         private void OnDrawGizmos()

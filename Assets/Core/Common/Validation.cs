@@ -142,8 +142,6 @@ namespace Core.Common
         public sealed class ReferenceAttribute : RuleAttribute
         {
             public Type Target { get; }
-            /// <summary>Whether IDs match regardless of case, as for dialogues.</summary>
-            public bool IgnoreCase { get; set; }
             public ReferenceAttribute(Type target, string message = null) : base(message) => Target = target;
         }
 

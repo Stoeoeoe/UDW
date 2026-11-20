@@ -10,6 +10,8 @@ import { useScriptingManifestStore } from '../../../store/useScriptingManifestSt
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { fileSystem } from '../../../lib/fileSystem';
+import { withGraph } from '../../../lib/questGraph.fixture';
+import { compileQuestGraph } from '../../../lib/questGraph';
 import { theme } from '../../../theme';
 import type { Character } from '../../../types/schema';
 
@@ -77,7 +79,7 @@ beforeEach(() => {
     maps: [],
     dialogues: new Map(),
     quests: [
-      {
+      withGraph({
         formatVersion: 1,
         id: 'base:festival',
         title: 'Festival',
@@ -97,7 +99,7 @@ beforeEach(() => {
             ],
           },
         ],
-      },
+      }),
     ],
   });
   useScriptingManifestStore.setState({
@@ -141,6 +143,12 @@ const show = () =>
       </EditorDocumentFrame>
     </ChakraProvider>,
   );
+/** What saving would write: edits change the graph, and only saving compiles it. */
+const compiled = () =>
+  compileQuestGraph(
+    useEditorStore.getState().quests[0],
+    useScriptingManifestStore.getState().manifest,
+  );
 const addQuestNode = (label: string, source = 'step-node-0') => {
   act(() => {
     graph.props.onConnectStart({}, { nodeId: source, handleId: 'exec:next', handleType: 'source' });
@@ -150,6 +158,14 @@ const addQuestNode = (label: string, source = 'step-node-0') => {
 };
 
 describe('quest editor', () => {
+  it('validates on request, listing unknown content as a warning', () => {
+    show();
+    expect(screen.queryByRole('status', { name: /warning/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    expect(screen.getByText('talk.ask: unknown dialogue base:festival_intro.')).toBeTruthy();
+    expect(screen.getByText('1 warning')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'No issues' })).toBeTruthy();
+  });
   it('changes objective kind without retaining forbidden dialogue or character fields', () => {
     show();
     fireEvent.click(screen.getByLabelText('Select objective ask'));
@@ -159,7 +175,7 @@ describe('quest editor', () => {
       id: 'ask',
       text: 'Talk to Fabia',
       kind: 'condition',
-      condition: '',
+      condition: 'false',
     });
     expect(screen.queryByLabelText('Quest dialogue')).toBeNull();
   });
@@ -213,9 +229,9 @@ describe('quest editor', () => {
       count: 5,
     });
   });
-  it('preserves existing Lua hooks as editable nodes rather than hidden settings fields', () => {
+  it('edits Lua hooks as script nodes rather than hidden settings fields', () => {
     useEditorStore.setState((s) => ({
-      quests: [{ ...s.quests[0], onComplete: 'Inventory.Give("base:fig", 1)' }],
+      quests: [withGraph({ ...s.quests[0], onComplete: 'Inventory.Give("base:fig", 1)' })],
     }));
     show();
     const view = graph.props.nodes.find((n: any) => n.id === 'completion-script');
@@ -223,9 +239,7 @@ describe('quest editor', () => {
     fireEvent.change(screen.getByLabelText('base:festival/completion-script'), {
       target: { value: 'Inventory.Give("base:fig", 2)' },
     });
-    expect(useEditorStore.getState().quests[0].onComplete).toContain(
-      'Inventory.Give("base:fig", 2)',
-    );
+    expect(compiled().onComplete).toContain('Inventory.Give("base:fig", 2)');
   });
   it('adds completion actions after the selected Complete quest node', () => {
     show();
@@ -240,8 +254,8 @@ describe('quest editor', () => {
       target: { value: 'base:fig' },
     });
     fireEvent.change(screen.getByLabelText('Inventory: give count'), { target: { value: '1' } });
-    expect(useEditorStore.getState().quests[0].onComplete).toBe('Inventory.Give("base:fig", 1)');
-    expect(useEditorStore.getState().quests[0].steps[0].onComplete).toBeUndefined();
+    expect(compiled().onComplete).toBe('Inventory.Give("base:fig", 1)');
+    expect(compiled().steps[0].onComplete).toBeUndefined();
   });
   it('adds an If / Else after a step and wires a read-only expression into its condition', () => {
     show();
@@ -291,12 +305,12 @@ describe('quest editor', () => {
         targetHandle: 'exec:in',
       }),
     );
-    expect(quest().steps[0].objectives[0].next).toBe('end');
+    expect(compiled().steps[0].objectives[0].next).toBe('end');
 
     fireEvent.click(screen.getByLabelText('Select objective ask'));
     fireEvent.change(screen.getByLabelText('Objective ID'), { target: { value: 'ask2' } });
     expect(quest().editorGraph!.edges.some((e) => e.sourcePin === 'objective:ask2')).toBe(true);
-    expect(quest().steps[0].objectives[0].next).toBe('end');
+    expect(compiled().steps[0].objectives[0].next).toBe('end');
 
     fireEvent.change(screen.getByLabelText('Add objective to talk'), {
       target: { value: 'condition' },
@@ -340,11 +354,12 @@ describe('quest editor', () => {
         expect.objectContaining({ source: added.id, target: 'step-node-0' }),
       ]),
     );
-    expect(q.steps.map((s) => s.id)).toEqual([added.stepId, 'talk']);
+    expect(compiled().steps.map((s) => s.id)).toEqual([added.stepId, 'talk']);
     expect(added.position).toEqual({ x: 430, y: 240 });
   });
   it('does not propose nodes for a completed wire connection, and Escape cancels suggestions', () => {
     show();
+    const before = useEditorStore.getState().quests[0].editorGraph;
     act(() => {
       graph.props.onConnectStart(
         {},
@@ -359,7 +374,7 @@ describe('quest editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add node', exact: true }));
     fireEvent.keyDown(screen.getByLabelText('Search graph nodes'), { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Choose graph node' })).toBeNull();
-    expect(useEditorStore.getState().quests[0].editorGraph).toBeUndefined();
+    expect(useEditorStore.getState().quests[0].editorGraph).toBe(before);
   });
   it('duplicates a selected quest step through the shared toolbar with fresh persistent IDs', () => {
     show();

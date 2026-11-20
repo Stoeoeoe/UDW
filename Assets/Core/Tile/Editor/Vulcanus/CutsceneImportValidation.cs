@@ -44,7 +44,7 @@ namespace Core.Tile.Editor.Vulcanus
                     {
                         if (trigger.Type != "cutscene") continue;
                         var definition = Resources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName).Get(trigger.CutsceneId);
-                        if (!definition || !StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, map.Id))
+                        if (!definition || definition.MapId != map.Id)
                             throw new InvalidOperationException($"{path}: trigger '{trigger.Id}' requires its enabled cutscene '{trigger.CutsceneId}' on this map.");
                     }
                 }

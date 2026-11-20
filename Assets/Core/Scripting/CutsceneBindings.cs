@@ -40,7 +40,7 @@ namespace Core.Scripting
             if (!runtime.Maps.CurrentMap)
                 throw new InvalidOperationException("Cutscene binding requires the initialized map.");
             var map = runtime.Maps.CurrentMap;
-            if (!StringComparer.OrdinalIgnoreCase.Equals(definition.MapId, map.MapId))
+            if (definition.MapId != map.MapId)
                 throw new InvalidOperationException($"Cutscene '{definition.CutsceneId}' belongs to map '{definition.MapId}', not the current map '{map.MapId}'.");
 
             try

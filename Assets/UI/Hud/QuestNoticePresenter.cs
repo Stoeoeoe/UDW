@@ -32,10 +32,10 @@ namespace UI.Hud
 
         public void OnEvent(QuestChangedEvent e) => _waiting.Enqueue(e.Change switch
         {
-            QuestChange.Started => $"New quest: {e.Quest.Title}",
-            QuestChange.StepFinished => $"Quest updated: {e.Quest.Title}",
-            QuestChange.Completed => $"Quest completed: {e.Quest.Title}",
-            _ => $"Quest failed: {e.Quest.Title}"
+            QuestChange.Started => $"New quest: {e.Quest.TranslatedTitle}",
+            QuestChange.StepFinished => $"Quest updated: {e.Quest.TranslatedTitle}",
+            QuestChange.Completed => $"Quest completed: {e.Quest.TranslatedTitle}",
+            _ => $"Quest failed: {e.Quest.TranslatedTitle}"
         });
 
         // Unscaled: notices keep their pace while dialogues stop game time.

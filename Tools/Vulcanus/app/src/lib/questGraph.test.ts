@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { graphFromQuest, withGraph } from './questGraph.fixture';
 import {
   compileQuestGraph,
-  graphFromQuest,
   objectivePin,
   questDataWire,
   questFunctions,
   questActions,
   questWire,
   removeQuestNode,
+  removeQuestNodes,
 } from './questGraph';
 import { validateQuest } from './quests';
 import type { Quest } from '../types/quest';
@@ -53,7 +54,7 @@ const manifest: ScriptingManifest = {
   ],
 };
 function quest(): Quest {
-  return {
+  return withGraph({
     formatVersion: 1,
     id: 'base:delivery',
     title: 'Fabia Delivery',
@@ -78,7 +79,7 @@ function quest(): Quest {
         ],
       },
     ],
-  };
+  });
 }
 describe('quest graph compilation', () => {
   it('preserves persistent step/objective IDs and every lifecycle script on first graph edit', () => {
@@ -183,7 +184,7 @@ describe('quest graph compilation', () => {
       next,
     });
     function branching(): Quest {
-      return {
+      return withGraph({
         formatVersion: 1,
         id: 'base:choice',
         title: 'Choice',
@@ -197,7 +198,7 @@ describe('quest graph compilation', () => {
           { id: 'helped', journal: 'You helped.', objectives: [condition('x')], next: 'end' },
           { id: 'refused', journal: 'You refused.', objectives: [condition('y')] },
         ],
-      };
+      });
     }
 
     it('opens a branching quest as a graph and compiles it back unchanged', () => {
@@ -364,7 +365,7 @@ describe('quest graph compilation', () => {
         expect(compiled.steps[0].nextIf).toEqual([
           { condition: 'GameState.Story.Has("met_baker")', next: 'helped' },
         ]);
-        expect(validateQuest(compiled, undefined, bindings)).toEqual([]);
+        expect(validateQuest(compiled, bindings)).toEqual([]);
       });
 
       it('lets a wired function feed another function and uses the Branch literal when unwired', () => {
@@ -510,6 +511,7 @@ describe('quest graph compilation', () => {
     it('rejects a step called end', () => {
       const source = branching();
       source.steps[2].id = 'end';
+      source.editorGraph.nodes.find((n) => n.stepId === 'refused')!.stepId = 'end';
       expect(validateQuest(source).join()).toContain('end');
     });
 
@@ -518,6 +520,16 @@ describe('quest graph compilation', () => {
       const graph = removeQuestNode(graphFromQuest(source), 'step-node-1');
       const wire = graph.edges.find((e) => e.sourcePin === objectivePin('aid'))!;
       expect(wire.target).toBe('complete');
+    });
+
+    it('removes step nodes with their steps, keeping Begin and Complete quest', () => {
+      const source = branching();
+      const removed = removeQuestNodes(source, ['begin', 'step-node-1', 'complete']);
+      expect(removed.steps.map((s) => s.id)).toEqual(['choose', 'refused']);
+      expect(removed.editorGraph.nodes.map((n) => n.id)).toEqual(
+        expect.arrayContaining(['begin', 'complete']),
+      );
+      expect(removed.editorGraph.nodes.some((n) => n.id === 'step-node-1')).toBe(false);
     });
   });
 });

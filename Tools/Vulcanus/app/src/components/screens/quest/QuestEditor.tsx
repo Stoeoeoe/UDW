@@ -13,18 +13,18 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
-import { questStartWarnings, validateQuest } from '../../../lib/quests';
+import { questStartWarnings } from '../../../lib/quests';
 import { describeStartMoment, questStartedBy } from '../../../lib/questStarters';
 import { ConditionEditor } from '../scripting/ConditionEditor';
 import { EditorHeaderActions, EditorValidationStatus } from '../../common/EditorDocumentFrame';
 import { QuestGraphCanvas } from './QuestGraphCanvas';
 import {
-  graphFromQuest,
-  editQuestGraph,
+  newQuestObjective,
   objectivePin,
-  removeQuestNode,
   questActionResources,
+  questNodeLabels,
   questStepLabels,
+  removeQuestNodes,
 } from '../../../lib/questGraph';
 import type { QuestGraph, QuestGraphNode } from '../../../types/questGraph';
 import { InspectorShell } from '../../common/InspectorShell';
@@ -351,14 +351,16 @@ export function QuestEditor({ questId }: { questId: string }) {
   );
 }
 
-type Selection = 'settings' | 'issues' | { step: number; objective?: number } | { nodeId: string };
+/** A node, and for a step node optionally one of its objectives by position. */
+type Selection = 'settings' | 'issues' | { nodeId: string; objective?: number };
 
 function QuestWorkspace({ quest }: { quest: Quest }) {
   const characters = useEditorStore((s) => s.characters);
   const items = useEditorStore((s) => s.items);
   const maps = useEditorStore((s) => s.maps);
-  const dialogues = useEditorStore((s) => s.dialogues);
   const update = useEditorStore((s) => s.updateQuest);
+  const issues = useEditorStore((s) => s.questIssues[quest.id]);
+  const checkQuest = useEditorStore((s) => s.checkQuest);
   const manifest = useScriptingManifestStore((s) => s.manifest);
   const resources = useMemo(
     () => questActionResources(manifest, { characters, items }),
@@ -368,85 +370,56 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
     () => (resources.deity ?? []).map((d) => ({ id: d.id, name: d.description ?? d.id })),
     [resources],
   );
-  const [selection, setSelection] = useState<Selection>({ step: 0 });
-  const graph = useMemo(() => graphFromQuest(quest), [quest]);
-  const selectionNode =
-    typeof selection === 'object' && 'nodeId' in selection
-      ? graph.nodes.find((n) => n.id === selection.nodeId)
+  const graph = quest.editorGraph;
+  const [selection, setSelection] = useState<Selection>(() => ({
+    nodeId: graph.nodes.find((n) => n.kind === 'step' && n.stepId === quest.steps[0].id)!.id,
+  }));
+  const selectedNode =
+    typeof selection === 'object' ? graph.nodes.find((n) => n.id === selection.nodeId) : undefined;
+  const step =
+    selectedNode?.kind === 'step'
+      ? quest.steps.find((s) => s.id === selectedNode.stepId)
       : undefined;
-  const selected =
-    selectionNode?.kind === 'step'
-      ? quest.steps.findIndex((s) => s.id === selectionNode.stepId)
-      : typeof selection === 'object' && 'step' in selection
-        ? selection.step
-        : -1;
-  const step = quest.steps[selected];
+  // A step with one objective edits it straight away.
   const index =
-    selectionNode?.kind === 'step' && step?.objectives.length === 1
-      ? 0
-      : typeof selection === 'object' && 'step' in selection
-        ? (selection.objective ?? -1)
-        : -1;
+    (typeof selection === 'object' ? selection.objective : undefined) ??
+    (step?.objectives.length === 1 ? 0 : -1);
   const o = step?.objectives[index];
-  const grouped =
-    graph.nodes.find((n) => n.kind === 'step' && n.stepId === step?.id)?.group === true ||
-    (step?.objectives.length ?? 0) > 1;
-  const node = selectionNode?.kind !== 'step' ? selectionNode : undefined;
+  const grouped = selectedNode?.group === true || (step?.objectives.length ?? 0) > 1;
+  /** The selected node unless it is a step, which has its own fields. */
+  const node = selectedNode?.kind !== 'step' ? selectedNode : undefined;
   const selectNode = (node: QuestGraphNode) => setSelection({ nodeId: node.id });
-  const errors = useMemo(
-    () =>
-      validateQuest(
-        quest,
-        {
-          characterIds: new Set(characters.map((c) => c.id)),
-          itemIds: new Set(items.map((i) => i.id)),
-          dialogueIds: new Set(dialogues.keys()),
-          maps,
-        },
-        manifest,
-        resources,
-      ),
-    [quest, characters, items, dialogues, maps, manifest, resources],
-  );
-  const patch = (updates: Partial<Quest>) => {
-    const merged = { ...quest, ...updates };
-    update(quest.id, editQuestGraph(merged, updates.editorGraph ?? graph, manifest, resources));
-  };
-  const patchStep = (updates: Partial<QuestStep>) => {
-    const next =
-      updates.id === undefined
-        ? graph
-        : {
-            ...graph,
-            nodes: graph.nodes.map((n) =>
-              n.kind === 'step' && n.stepId === step.id ? { ...n, stepId: updates.id } : n,
-            ),
-          };
+  const patch = (updates: Partial<Quest>) => update(quest.id, updates);
+  const patchStep = (updates: Partial<QuestStep>) =>
     patch({
-      steps: quest.steps.map((s, i) => (i === selected ? { ...s, ...updates } : s)),
-      editorGraph: next,
+      steps: quest.steps.map((s) => (s === step ? { ...s, ...updates } : s)),
+      editorGraph:
+        updates.id === undefined
+          ? graph
+          : {
+              ...graph,
+              nodes: graph.nodes.map((n) =>
+                n === selectedNode ? { ...n, stepId: updates.id } : n,
+              ),
+            },
     });
-  };
   /** An objective's branch wire leaves the pin named after its ID, so it follows renames and goes with removal. */
   const withObjectiveWires = (
     change: (edge: QuestGraph['edges'][number]) => QuestGraph['edges'][number] | null,
-  ) => {
-    const stepNode = graph.nodes.find((n) => n.kind === 'step' && n.stepId === step.id);
-    return {
-      ...graph,
-      edges: graph.edges.flatMap((e) =>
-        e.source === stepNode?.id && e.sourcePin !== 'next' ? (change(e) ?? []) : [e],
-      ),
-    };
-  };
+  ) => ({
+    ...graph,
+    edges: graph.edges.flatMap((e) =>
+      e.source === selectedNode!.id && e.sourcePin !== 'next' ? (change(e) ?? []) : [e],
+    ),
+  });
   const patchObjective = (objectiveIndex: number, objective: QuestObjective) => {
-    const previous = step.objectives[objectiveIndex];
-    const objectives = step.objectives.map((entry, i) =>
+    const previous = step!.objectives[objectiveIndex];
+    const objectives = step!.objectives.map((entry, i) =>
       i === objectiveIndex ? objective : entry,
     );
     if (previous.id === objective.id) return patchStep({ objectives });
     patch({
-      steps: quest.steps.map((s, i) => (i === selected ? { ...s, objectives } : s)),
+      steps: quest.steps.map((s) => (s === step ? { ...s, objectives } : s)),
       editorGraph: withObjectiveWires((e) =>
         e.sourcePin === objectivePin(previous.id)
           ? { ...e, sourcePin: objectivePin(objective.id) }
@@ -457,24 +430,14 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
   const removeSelected = () => {
     if (o && grouped) {
       patch({
-        steps: quest.steps.map((s, i) =>
-          i === selected
-            ? { ...s, objectives: step.objectives.filter((_, oi) => oi !== index) }
-            : s,
+        steps: quest.steps.map((s) =>
+          s === step ? { ...s, objectives: step.objectives.filter((_, oi) => oi !== index) } : s,
         ),
         editorGraph: withObjectiveWires((e) => (e.sourcePin === objectivePin(o.id) ? null : e)),
       });
-      setSelection({ step: selected });
+      setSelection({ nodeId: selectedNode!.id });
     } else {
-      const removing = node ?? graph.nodes.find((n) => n.stepId === step?.id);
-      if (!removing) return;
-      patch({
-        editorGraph: removeQuestNode(graph, removing.id),
-        steps:
-          removing.kind === 'step'
-            ? quest.steps.filter((s) => s.id !== removing.stepId)
-            : quest.steps,
-      });
+      patch(removeQuestNodes(quest, [selectedNode!.id]));
       setSelection('settings');
     }
   };
@@ -487,27 +450,13 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             ? 'Validation'
             : o
               ? questStepLabels[o.kind]
-              : node
-                ? node.kind === 'lua'
-                  ? 'Execute Lua Script'
-                  : node.kind === 'branch'
-                    ? 'If / Else'
-                    : node.kind === 'function'
-                      ? 'Read-only function'
-                      : node.kind === 'expression'
-                        ? 'Read-only Lua expression'
-                        : node.kind === 'action'
-                          ? 'Action'
-                          : node.kind === 'exit'
-                            ? 'Complete quest'
-                            : node.kind === 'failure'
-                              ? 'On failure'
-                              : 'Begin'
-                : 'Step'
+              : selectedNode
+                ? questNodeLabels[selectedNode.kind]
+                : ''
       }
       subtitle={o?.id ?? step?.id ?? node?.action?.method}
       onDelete={
-        step || (node && !['entry', 'exit'].includes(node.kind)) ? removeSelected : undefined
+        selectedNode && !['entry', 'exit'].includes(selectedNode.kind) ? removeSelected : undefined
       }
       deleteLabel={o && grouped ? 'Delete objective' : step ? 'Delete step' : 'Delete node'}
     >
@@ -549,17 +498,25 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
         </>
       ) : selection === 'issues' ? (
         <>
-          {errors.length ? (
-            errors.map((error, i) => (
-              <Text key={i} role="alert" fontSize="sm" color="editorDangerText">
-                {error}
-              </Text>
-            ))
-          ) : (
+          {!issues ? (
+            <Text fontSize="sm" color="editorMutedText">
+              Not checked yet. Saving checks the quest, or press Validate.
+            </Text>
+          ) : !issues.errors.length && !issues.warnings.length ? (
             <Text fontSize="sm" color="editorMutedText">
               No quest errors.
             </Text>
-          )}
+          ) : null}
+          {issues?.errors.map((error, i) => (
+            <Text key={`error-${i}`} role="alert" fontSize="sm" color="editorDangerText">
+              {error}
+            </Text>
+          ))}
+          {issues?.warnings.map((warning, i) => (
+            <Text key={`warning-${i}`} role="status" fontSize="sm" color="orange.400">
+              {warning}
+            </Text>
+          ))}
         </>
       ) : node ? (
         node.kind === 'lua' ? (
@@ -620,21 +577,12 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
               aria-label="Objective kind"
               size="sm"
               value={o.kind}
-              onChange={(e) => {
-                const base = { id: o.id, text: o.text };
-                const kind = e.target.value as QuestObjective['kind'];
-                const objective: QuestObjective =
-                  kind === 'talk'
-                    ? { ...base, kind, character: '' }
-                    : kind === 'deliver'
-                      ? { ...base, kind, character: '', item: '', count: 1 }
-                      : kind === 'have'
-                        ? { ...base, kind, item: '', count: 1 }
-                        : kind === 'reach'
-                          ? { ...base, kind, map: '' }
-                          : { ...base, kind, condition: '' };
-                patchObjective(index, objective);
-              }}
+              onChange={(e) =>
+                patchObjective(index, {
+                  ...newQuestObjective(e.target.value as QuestObjective['kind'], o.id),
+                  text: o.text,
+                })
+              }
             >
               {['talk', 'deliver', 'have', 'reach', 'condition'].map((kind) => (
                 <option key={kind}>{kind}</option>
@@ -715,7 +663,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
               label="Complete when"
               value={o.condition}
               condition
-              documentId={`${quest.id}/${selected}/${index}/condition`}
+              documentId={`${quest.id}/${selectedNode!.id}/${index}/condition`}
               onChange={(condition) => patchObjective(index, { ...o, condition: condition ?? '' })}
             />
           )}
@@ -766,7 +714,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             label="Fail when"
             value={step.failWhen}
             condition
-            documentId={`${quest.id}/${selected}/failWhen`}
+            documentId={`${quest.id}/${selectedNode!.id}/failWhen`}
             onChange={(failWhen) => patchStep({ failWhen })}
           />
         </>
@@ -777,7 +725,24 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
   return (
     <>
       <EditorHeaderActions>
-        <EditorValidationStatus errors={errors} onClick={() => setSelection('issues')} />
+        {issues && (
+          <EditorValidationStatus errors={issues.errors} onClick={() => setSelection('issues')} />
+        )}
+        {issues && issues.warnings.length > 0 && (
+          <Text fontSize="sm" color="orange.400">
+            {issues.warnings.length} {issues.warnings.length === 1 ? 'warning' : 'warnings'}
+          </Text>
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            checkQuest(quest.id);
+            setSelection('issues');
+          }}
+        >
+          Validate
+        </Button>
         <Button
           size="sm"
           variant="outline"
@@ -797,7 +762,7 @@ function QuestWorkspace({ quest }: { quest: Quest }) {
             quest={quest}
             onChange={patch}
             onSelect={selectNode}
-            onObjective={(step, objective) => setSelection({ step, objective })}
+            onObjective={(nodeId, objective) => setSelection({ nodeId, objective })}
           />
         }
       />

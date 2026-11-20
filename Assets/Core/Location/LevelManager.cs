@@ -130,7 +130,7 @@ namespace Core.Location
         }
 
         private static bool IsOpen(LocationData open, LocationData location) =>
-            open != null && string.Equals(location.id, open.id, StringComparison.OrdinalIgnoreCase);
+            open != null && location.id == open.id;
 
         // A loaded save resumes where it was made. The screen is still covered from startup (ScreenFader.Awake),
         // so a different scene can replace the open one without the player seeing it.
@@ -385,7 +385,7 @@ namespace Core.Location
             var sceneLocation = GetLocationForScene(behaviour.gameObject.scene);
             // Objects in a location scene only receive that location. Managers in the
             // persistent systems scene receive every location.
-            return sceneLocation == null || string.Equals(sceneLocation.id, location.id, StringComparison.OrdinalIgnoreCase);
+            return sceneLocation == null || sceneLocation.id == location.id;
         }
 
         private LocationData GetLocationForScene(Scene scene)
@@ -482,7 +482,7 @@ namespace Core.Location
 
             var spawnPoints = FindObjectsByType<SpawnPoint>(FindObjectsSortMode.None);
             var target = !string.IsNullOrWhiteSpace(entryKey)
-                ? Array.Find(spawnPoints, sp => string.Equals(sp.Key, entryKey, StringComparison.OrdinalIgnoreCase))
+                ? Array.Find(spawnPoints, sp => sp.Key == entryKey)
                 : null;
             if (!string.IsNullOrWhiteSpace(entryKey) && target == null)
                 throw new InvalidOperationException($"[LevelManager] Missing entry '{entryKey}' in '{CurrentLocationData.id}'.");

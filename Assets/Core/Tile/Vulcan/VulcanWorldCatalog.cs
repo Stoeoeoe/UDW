@@ -68,7 +68,7 @@ namespace Core.Tile.Vulcanus
             for (var i = 0; i < entityPrefabMappings.Length; i++)
             {
                 var mapping = entityPrefabMappings[i];
-                if (mapping == null || !string.Equals(mapping.GetEntityTypeId(), entityTypeId, StringComparison.OrdinalIgnoreCase))
+                if (mapping == null || mapping.GetEntityTypeId() != entityTypeId)
                     continue;
 
                 prefab = mapping.prefab;
@@ -180,10 +180,10 @@ namespace Core.Tile.Vulcanus
         private void RebuildCaches()
         {
             _bindingByMapId = IdIndex.FirstWins(mapBindings, binding => binding?.MapId,
-                StringComparer.OrdinalIgnoreCase);
+                StringComparer.Ordinal);
             _bindingByLocationId = IdIndex.FirstWins(mapBindings, binding =>
                 binding != null && !string.IsNullOrWhiteSpace(binding.MapId) && binding.LocationData
-                    ? binding.LocationData.id : null, StringComparer.OrdinalIgnoreCase);
+                    ? binding.LocationData.id : null, StringComparer.Ordinal);
         }
     }
 }

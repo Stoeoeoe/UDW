@@ -65,7 +65,7 @@ namespace Core.Tile.Editor.Vulcanus
                     foreach (var instance in layer.ObjectInstances)
                     {
                         var tileset = tilesetsByIndex.FirstOrDefault(candidate =>
-                            candidate && string.Equals(candidate.TilesetId, instance.TilesetId, StringComparison.OrdinalIgnoreCase));
+                            candidate && candidate.TilesetId == instance.TilesetId);
                         if (!tileset || !tileset.TryGetObjectDefinition(instance.ObjectDefinitionId, out var definition))
                             throw new InvalidOperationException(
                                 $"Object '{instance.Id}' references missing tileset or object '{instance.TilesetId}/{instance.ObjectDefinitionId}'.");

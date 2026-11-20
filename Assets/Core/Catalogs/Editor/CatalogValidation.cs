@@ -34,7 +34,7 @@ namespace Core.Catalogs.Editor
                 var problem = references.Problems(asset).FirstOrDefault();
                 if (problem != null) throw new InvalidOperationException(problem);
             }
-            var duplicate = definitions.GroupBy(catalog.GetId, catalog.IdComparer).FirstOrDefault(group => group.Count() > 1);
+            var duplicate = definitions.GroupBy(catalog.GetId, StringComparer.Ordinal).FirstOrDefault(group => group.Count() > 1);
             if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key}'.");
 
             switch (catalog)

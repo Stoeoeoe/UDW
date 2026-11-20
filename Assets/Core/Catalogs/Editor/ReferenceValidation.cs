@@ -16,7 +16,7 @@ namespace Core.Catalogs.Editor
     {
         private const string BackingFieldAffix = ">k__BackingField";
         private readonly Func<Type, IEnumerable<string>> _idsOf;
-        private readonly Dictionary<(Type, bool), HashSet<string>> _known = new();
+        private readonly Dictionary<Type, HashSet<string>> _known = new();
 
         /// <summary>Checks against the definitions found in the project.</summary>
         public ReferenceValidation() : this(DiscoveredIds) { }
@@ -53,10 +53,8 @@ namespace Core.Catalogs.Editor
 
         private HashSet<string> Known(Validation.ReferenceAttribute reference)
         {
-            var key = (reference.Target, reference.IgnoreCase);
-            if (!_known.TryGetValue(key, out var ids))
-                _known[key] = ids = new HashSet<string>(_idsOf(reference.Target),
-                    reference.IgnoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            if (!_known.TryGetValue(reference.Target, out var ids))
+                _known[reference.Target] = ids = new HashSet<string>(_idsOf(reference.Target), StringComparer.Ordinal);
             return ids;
         }
 

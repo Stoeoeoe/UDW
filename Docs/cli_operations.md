@@ -27,7 +27,7 @@ unity command set_weather --weather LightRainSpring
 unity command set_weather --weather Sunny
 ```
 
-Use an ID returned by `list_weather`. The command also accepts a label or asset
+Use an ID returned by `list_weather`, exactly as listed. The command also accepts a label or asset
 name, ignoring case. Unknown or ambiguous matches are rejected.
 
 Switching weather updates the existing effects, post-processing, daylight tint,

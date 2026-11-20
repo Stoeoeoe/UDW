@@ -109,7 +109,7 @@ namespace Core.Tile.Editor
 
             _mapJson = JObject.Parse(@"{
                 'id':'test:map', 'name':'A display name', 'width':4, 'height':4,
-                'tilesetRefs':['TEST:TILES'],
+                'tilesetRefs':['test:tiles'],
                 'metadata':{'id':'override:forbidden','scenePath':'wrong','locationType':'Indoor','muteWeatherAudio':true},
                 'layers':[
                     {'name':'Terrain','kind':'terrain','data':[[0]],'terrainData':[[0]],'terrainPalette':['dirt']},
@@ -857,7 +857,7 @@ namespace Core.Tile.Editor
             var catalog = ScriptableObject.CreateInstance<LocationCatalog>();
             AssetDatabase.CreateAsset(catalog, _root + "/locations.asset");
             ImportMap();
-            yield return AwaitCatalog(() => catalog.Get("TEST:MAP"));
+            yield return AwaitCatalog(() => catalog.Get("test:map"));
             Assert.That(catalog.Get("test:map"), Is.SameAs(ImportedLocation()));
 
             var owner = new GameObject("Location lookup");
@@ -865,7 +865,7 @@ namespace Core.Tile.Editor
             _views.Add(owner);
             var manager = Game.Add<LevelManager>(owner);
             Set(manager, "_locations", catalog);
-            Assert.That(manager.GetLocationDataById("TEST:MAP"), Is.SameAs(ImportedLocation()));
+            Assert.That(manager.GetLocationDataById("test:map"), Is.SameAs(ImportedLocation()));
 
             _mapJson["id"] = "test:renamed";
             ImportMap();

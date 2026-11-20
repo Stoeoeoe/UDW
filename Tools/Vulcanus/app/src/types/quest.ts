@@ -52,8 +52,11 @@ export interface Quest {
   start?: QuestStart;
   steps: QuestStep[];
   folderPath?: string;
-  /** Editor source; compiled into steps and lifecycle Lua when saved. */
-  editorGraph?: import('./questGraph').QuestGraph;
+  /**
+   * The source of the quest's flow. Saving compiles it into the steps' `next`, `nextIf` and `onComplete` and the
+   * quest's `onStart`, `onComplete` and `onFail`; between saves those hold what the last save wrote.
+   */
+  editorGraph: import('./questGraph').QuestGraph;
 }
 export interface QuestI18n {
   questId: string;

@@ -6,10 +6,10 @@ import { useSaveStore } from '../../lib/saveManager';
 import { fileSystem, FileSystemManager } from '../../lib/fileSystem';
 import { saveAllDirtyWorkspaceUnits } from '../../lib/workspaceSaveActions';
 import type { Quest } from '../../types/quest';
-import { graphFromQuest } from '../../lib/questGraph';
+import { graphFromQuest, withGraph } from '../../lib/questGraph.fixture';
 
 enableMapSet();
-const quest: Quest = {
+const quest: Quest = withGraph({
   formatVersion: 1,
   id: 'base:festival_wine',
   title: 'Wine for the festival',
@@ -21,7 +21,7 @@ const quest: Quest = {
       objectives: [{ id: 'carry', kind: 'have', item: 'base:wine', count: 2, text: 'Wine' }],
     },
   ],
-};
+});
 beforeEach(() => {
   useWorkspaceStore.getState().setAutosaveEnabled(false);
   useEditorStore.getState().resetQuests();
@@ -33,6 +33,25 @@ afterEach(() => {
 });
 
 describe('quest saving', () => {
+  it('checks on save, where unknown content only warns, and then holds what it wrote', async () => {
+    const save = vi.spyOn(fileSystem, 'saveJson').mockResolvedValue();
+    useEditorStore.setState({ items: [] });
+    await useEditorStore.getState().addQuest(quest);
+    expect(useEditorStore.getState().questIssues[quest.id]).toEqual({
+      errors: [],
+      warnings: ['buy.carry: unknown item base:wine.'],
+    });
+    const editorGraph = graphFromQuest({ ...quest, onComplete: 'local reward = 5' });
+    useEditorStore.getState().updateQuest(quest.id, { editorGraph });
+    expect(useEditorStore.getState().quests[0].onComplete).toBeUndefined();
+    await useEditorStore.getState().saveQuest(quest.id);
+    const { $schema, ...written } = save.mock.calls
+      .filter((c) => c[1].endsWith('.quest.json'))
+      .at(-1)![2] as Quest & { $schema: string };
+    expect($schema).toBeDefined();
+    expect(written.onComplete).toBe('do\nlocal reward = 5\nend');
+    expect(useEditorStore.getState().quests[0]).toEqual(written);
+  });
   it('compiles graph hooks at save and marks the authored source clean without rescheduling', async () => {
     const save = vi.spyOn(fileSystem, 'saveJson').mockResolvedValue();
     await useEditorStore.getState().addQuest(quest);

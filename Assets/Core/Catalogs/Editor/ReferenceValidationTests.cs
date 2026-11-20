@@ -34,8 +34,9 @@ namespace Core.Catalogs.Editor
             Assert.That(Known().Problems(quest).ToArray(), Is.EqualTo(new[]
             {
                 "QuestDefinition 'base:wine_quest': Giver uses the unknown CharacterDefinition 'base:nobody'.",
+                "QuestDefinition 'base:wine_quest': Steps[0].Objectives[0].Dialogue uses the unknown VulcanusDialogueAsset 'BASE:GREETING'.",
                 "QuestDefinition 'base:wine_quest': Steps[0].Objectives[1].Item uses the unknown ItemDefinition 'base:amphora'."
-            }), "Dialogue IDs ignore case, empty references mean none, and map and trigger are not references.");
+            }), "IDs match exactly, including case; empty references mean none, and map and trigger are not references.");
         }
 
         [Test]

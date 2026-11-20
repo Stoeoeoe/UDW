@@ -132,7 +132,7 @@ namespace Core.Tile.Editor.Vulcanus
         private static Dictionary<string, VulcanusProject.EntityPrefabMapping> IndexByTypeId(
             VulcanusProject.EntityPrefabMapping[] mappings)
         {
-            var dict = new Dictionary<string, VulcanusProject.EntityPrefabMapping>(StringComparer.OrdinalIgnoreCase);
+            var dict = new Dictionary<string, VulcanusProject.EntityPrefabMapping>(StringComparer.Ordinal);
             if (mappings == null) return dict;
             foreach (var m in mappings)
             {

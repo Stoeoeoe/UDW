@@ -21,7 +21,7 @@ namespace Core.Tile.Vulcanus
         {
             MapId = mapId;
             Grid = grid ?? throw new ArgumentNullException(nameof(grid), $"Map '{mapId}' has no baked navigation grid; reimport it.");
-            _anchors = new Dictionary<string, Vector2>(anchors, StringComparer.OrdinalIgnoreCase);
+            _anchors = new Dictionary<string, Vector2>(anchors, StringComparer.Ordinal);
         }
 
         public Vector2 Anchor(string anchorId) =>
@@ -74,7 +74,7 @@ namespace Core.Tile.Vulcanus
 
         public WorldNavigation(IEnumerable<NavigationMap> maps, MapLinkGraph links)
         {
-            _maps = maps.ToDictionary(map => map.MapId, StringComparer.OrdinalIgnoreCase);
+            _maps = maps.ToDictionary(map => map.MapId, StringComparer.Ordinal);
             Links = links;
         }
 
@@ -91,7 +91,7 @@ namespace Core.Tile.Vulcanus
                     var root = binding.MapPrefab.transform;
                     var anchors = binding.MapPrefab.GetComponentsInChildren<VulcanusMapAnchor>(true)
                         .ToDictionary(anchor => anchor.AnchorId, anchor => (Vector2)root.InverseTransformPoint(anchor.transform.position),
-                            StringComparer.OrdinalIgnoreCase);
+                            StringComparer.Ordinal);
                     var grid = binding.MapPrefab.GetComponentInChildren<VulcanusImportedMap>(true).NavigationCosts;
                     return new NavigationMap(binding.MapId, grid, anchors);
                 });

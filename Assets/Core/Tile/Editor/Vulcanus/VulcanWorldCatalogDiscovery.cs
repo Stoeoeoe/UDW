@@ -102,9 +102,9 @@ namespace Core.Tile.Editor.Vulcanus
             unresolvedMapPrefabs = 0;
             var projectPath = AssetDatabase.GetAssetPath(project);
             var root = Path.GetDirectoryName(VulcanusImportHelpers.ToAbsolutePath(projectPath));
-            var existing = IdIndex.FirstWins(existingBindings, binding => binding?.MapId, StringComparer.OrdinalIgnoreCase);
+            var existing = IdIndex.FirstWins(existingBindings, binding => binding?.MapId, StringComparer.Ordinal);
             var result = new List<VulcanusWorldCatalog.MapBinding>();
-            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (var file in Directory.GetFiles(root, "*.vmap", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))
             {
                 if (!VulcanusImportHelpers.TryAbsoluteToAssetPath(file, out var path)) continue;

@@ -46,7 +46,7 @@ A step can continue somewhere other than the following step in the list:
   be met; when they are, the step continues to its own `next`.
 - A step's `next` (a step ID or `end`) says where it goes when it completes without a branching objective, including
   through `Quests.CompleteStep`. Without one it continues to the following step in the list, and after the last the
-  quest completes. Existing quests therefore work unchanged.
+  quest completes.
 - A step's `nextIf` is a list of `{ condition, next }`, checked in order when the step completes without a branching
   objective. The first condition (a read-only Lua expression) that holds decides; if none does, the step's `next`
   applies. Use it where the story state decides rather than the player's last action, such as a flag set in dialogue.
@@ -87,11 +87,12 @@ quest scripting API. Return values from action nodes are discarded; for example
 `Inventory.Give` still gives nothing and returns false when the bag is full. Graph
 authoring does not change that inventory behavior.
 
-`editorGraph` stores node positions, wires, step references and authored actions in
-the quest source. At save, Vulcanus validates and compiles it into the existing
-`steps` and Lua fields that Unity imports. Unity checks the extended source schema
-and imports those compiled fields; no quest save format changes are needed. Existing
-quests open as graphs without rewriting their content until edited. Each
+Every quest Vulcanus edits has an `editorGraph`: node positions, wires, step references and authored actions. Edits
+change only the graph and the steps' own fields. Saving, which also happens automatically, checks the quest and
+compiles the graph into the `steps` and Lua fields that Unity imports; **Validate** runs the same check without
+saving. Problems with the graph, the shape or Lua block saving. Content the project doesn't have (characters, items,
+dialogues, maps, triggers, deities) is only a warning in Vulcanus, since another mod may provide it; Unity fails the
+import if it is really missing. Unity imports the compiled fields and ignores the graph. Each
 objective of a step node has its own output; wiring it to a step or to Complete quest makes it a branching objective
 (`next`). The step's own output, which also carries its actions, becomes the step's `next` where it doesn't lead to the
 following step in the list. Steps and Complete quest can have several incoming wires, so branches can join. The steps are
@@ -135,6 +136,7 @@ to the quest's own. Renaming a step or objective drops its translations.
   loop. Steps reached only through `Quests.GoToStep` are fine.
 - When catalogs refresh: the giver, characters, dialogues, items and deities a quest names exist
   (`Validation.Reference`, checked by `ReferenceValidation`), and `QuestCatalogValidation` checks the maps and triggers.
+  Map and trigger IDs match exactly, including case, here and at runtime.
 
 ## Starting by themselves
 

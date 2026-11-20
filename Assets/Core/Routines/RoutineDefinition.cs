@@ -50,7 +50,7 @@ namespace Core.Routines
     public sealed class RoutineDialogue
     {
         [field: SerializeField] public bool Silent { get; private set; }
-        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true)]
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset))]
         public string Id { get; private set; }
 
         /// <summary>Whether the routine says anything here; otherwise the dialogue in effect before stays.</summary>

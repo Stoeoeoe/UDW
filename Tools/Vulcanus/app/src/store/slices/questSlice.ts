@@ -5,7 +5,13 @@ import {
 } from '../../lib/resourceRegistry';
 import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { cancelPendingSaveUnit, scheduleSaveUnit, useSaveStore } from '../../lib/saveManager';
-import { validateQuest, questI18n } from '../../lib/quests';
+import {
+  questI18n,
+  questReferenceWarnings,
+  questStartWarnings,
+  validateQuest,
+  type QuestReferences,
+} from '../../lib/quests';
 import { compileQuestGraph, questActionResources } from '../../lib/questGraph';
 import { useScriptingManifestStore } from '../useScriptingManifestStore';
 import { castDraft } from 'immer';
@@ -21,17 +27,27 @@ type ImmerStateCreator<T> = StateCreator<
   T
 >;
 
+/** What the last check of a quest found: errors block saving, warnings don't. */
+export interface QuestIssues {
+  errors: string[];
+  warnings: string[];
+}
+
 export interface QuestSlice {
   quests: Quest[];
   /** The last saved version of each quest, to tell unsaved edits apart. */
   savedQuests: Record<string, Quest>;
   questPast: Record<string, Quest[]>;
   questFuture: Record<string, Quest[]>;
+  /** From the last save or check of each quest. */
+  questIssues: Record<string, QuestIssues>;
 
   addQuest: (quest: Quest) => Promise<void>;
   updateQuest: (id: string, updates: Partial<Quest>) => void;
   deleteQuest: (id: string) => Promise<void>;
   saveQuest: (id: string) => Promise<void>;
+  /** Checks the quest as saving does, without saving it. */
+  checkQuest: (id: string) => QuestIssues;
   discardQuest: (id: string) => void;
   undoQuest: (id: string) => void;
   redoQuest: (id: string) => void;
@@ -85,6 +101,33 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
       else state.quests.push(castDraft(quest));
     });
 
+  /** Records the quest's issues; the export is there when nothing blocks saving. */
+  const check = (quest: Quest) => {
+    const state = get();
+    const manifest = useScriptingManifestStore.getState().manifest;
+    const resources = questActionResources(manifest, state);
+    const references: QuestReferences = {
+      characterIds: new Set(state.characters.map((c) => c.id)),
+      itemIds: new Set(state.items.map((i) => i.id)),
+      dialogueIds: new Set(state.dialogues.keys()),
+      maps: state.maps,
+    };
+    const issues: QuestIssues = {
+      errors: validateQuest(quest, manifest, resources),
+      warnings: [
+        ...questReferenceWarnings(quest, references, resources),
+        ...questStartWarnings(quest),
+      ],
+    };
+    set((draft) => {
+      draft.questIssues[quest.id] = issues;
+    });
+    return {
+      issues,
+      exported: issues.errors.length ? undefined : compileQuestGraph(quest, manifest, resources),
+    };
+  };
+
   const history = (direction: 'undo' | 'redo', id: string) => {
     const from = direction === 'undo' ? 'questPast' : 'questFuture';
     const to = direction === 'undo' ? 'questFuture' : 'questPast';
@@ -106,23 +149,12 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
     savedQuests: {},
     questPast: {},
     questFuture: {},
+    questIssues: {},
 
     addQuest: async (quest) => {
       quest = normalizeResourceDocument(quest, 'quest', get().project?.idPrefix);
       assertUniqueResourceIds([...get().quests, quest]);
       replace(quest.id, quest);
-      syncDirty(quest.id);
-      // Incomplete quest drafts stay in the workspace until their import errors are corrected.
-      if (
-        validateQuest(
-          quest,
-          undefined,
-          useScriptingManifestStore.getState().manifest,
-          questActionResources(useScriptingManifestStore.getState().manifest, get()),
-        ).length
-      ) {
-        return;
-      }
       await get().saveQuest(quest.id);
       const unit = useSaveStore.getState().saveUnits[saveUnitOf(quest.id)];
       if (unit.status === 'error') throw new Error(unit.error!);
@@ -164,6 +196,7 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
         delete state.savedQuests[id];
         delete state.questPast[id];
         delete state.questFuture[id];
+        delete state.questIssues[id];
       });
     },
 
@@ -173,25 +206,31 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
       cancelPendingSaveUnit(unit);
       if (!quest) return;
       const saves = useSaveStore.getState();
-      const manifest = useScriptingManifestStore.getState().manifest;
-      const resources = questActionResources(manifest, get());
-      const errors = validateQuest(quest, undefined, manifest, resources);
-      if (errors.length) {
-        saves.markError(unit, errors.join(' '));
+      const { issues, exported } = check(quest);
+      if (!exported) {
+        saves.markError(unit, issues.errors.join(' '));
         return;
       }
-      const exportedQuest = compileQuestGraph(quest, manifest, resources);
       saves.markSaving(unit);
       try {
-        await write(exportedQuest);
+        await write(exported);
         set((state) => {
-          state.savedQuests[id] = castDraft(quest);
+          state.savedQuests[id] = castDraft(exported);
         });
-        if (sameQuest(find(id), quest)) saves.markSaved(unit);
-        else syncDirty(id);
+        // Unless edited meanwhile, the quest now holds what its file holds, compiled fields included.
+        if (sameQuest(find(id), quest)) {
+          replace(id, exported);
+          saves.markSaved(unit);
+        } else syncDirty(id);
       } catch (error) {
         saves.markError(unit, error instanceof Error ? error.message : 'Unknown error');
       }
+    },
+
+    checkQuest: (id) => {
+      const quest = find(id);
+      if (!quest) throw new Error(`Unknown quest ${id}.`);
+      return check(quest).issues;
     },
 
     discardQuest: (id) => {
@@ -223,6 +262,7 @@ export const createQuestSlice: ImmerStateCreator<QuestSlice> = (set, get) => {
         savedQuests: {},
         questPast: {},
         questFuture: {},
+        questIssues: {},
       });
     },
   };

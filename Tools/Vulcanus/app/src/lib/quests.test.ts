@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { questI18n, validateQuest } from './quests';
+import { questI18n, questReferenceWarnings, validateQuest } from './quests';
+import { withGraph } from './questGraph.fixture';
 import { bindingCompletions } from './luaBindings';
 import { parseScriptingManifest } from './scriptingManifest';
 import { normalizeResourceDocument } from './resourceRegistry';
@@ -7,7 +8,7 @@ import type { Quest } from '../types/quest';
 import type { Map as GameMap } from '../types/schema';
 
 // The quest authoring example in Assets/Core/Quests/README.md, with every objective kind.
-export const festivalQuest: Quest = {
+export const festivalQuest: Quest = withGraph({
   formatVersion: 1,
   id: 'base:festival_wine',
   title: 'Wine for the festival',
@@ -52,7 +53,7 @@ export const festivalQuest: Quest = {
       ],
     },
   ],
-};
+});
 const references = {
   characterIds: new Set(['base:fabia']),
   itemIds: new Set(['base:wine']),
@@ -83,34 +84,47 @@ const manifest = parseScriptingManifest({
 
 describe('quest authoring contract', () => {
   it('accepts all objective kinds and parses game calls without running them', () => {
-    expect(validateQuest(festivalQuest, references, manifest)).toEqual([]);
+    expect(validateQuest(festivalQuest, manifest)).toEqual([]);
+    expect(questReferenceWarnings(festivalQuest, references, {})).toEqual([]);
   });
-  it('reports unknown content, including triggers scoped to the chosen map', () => {
-    const errors = validateQuest(festivalQuest, {
-      characterIds: new Set(),
-      itemIds: new Set(),
-      dialogueIds: new Set(),
-      maps: references.maps.map((m) => ({ ...m, spatialPrimitives: { triggers: [] } })),
-    });
+  it('warns about unknown content, including triggers scoped to the chosen map, without blocking', () => {
+    const warnings = questReferenceWarnings(
+      festivalQuest,
+      {
+        characterIds: new Set(),
+        itemIds: new Set(),
+        dialogueIds: new Set(),
+        maps: references.maps.map((m) => ({ ...m, spatialPrimitives: { triggers: [] } })),
+      },
+      {},
+    );
     for (const kind of ['character', 'item', 'dialogue', 'trigger'])
-      expect(errors.some((e) => e.includes(`unknown ${kind}`))).toBe(true);
+      expect(warnings.some((e) => e.includes(`unknown ${kind}`))).toBe(true);
     expect(
-      validateQuest(festivalQuest, { ...references, maps: [] }).some((e) =>
+      questReferenceWarnings(festivalQuest, { ...references, maps: [] }, {}).some((e) =>
         e.includes('unknown map'),
       ),
     ).toBe(true);
+    expect(
+      questReferenceWarnings(
+        festivalQuest,
+        { ...references, maps: [{ ...references.maps[0], id: 'base:Village' }] },
+        {},
+      ),
+    ).toContain('buy.arrive: unknown map base:village.');
   });
   it('rejects empty steps, duplicate IDs, invalid deadlines, syntax and writes in conditions', () => {
     const quest = structuredClone(festivalQuest);
+    quest.steps[0].objectives.push({ ...quest.steps[0].objectives[0] });
     quest.steps.push({
-      id: 'buy',
+      id: 'wait',
       journal: 'Wait',
       objectives: [],
       failWhen: "Quests.Start('base:festival_wine')",
       deadline: { days: -1, at: '25:00' },
       onComplete: 'if then',
     });
-    const errors = validateQuest(quest, references, manifest);
+    const errors = validateQuest(withGraph(quest), manifest);
     for (const part of [
       'objectives',
       'duplicate ID',

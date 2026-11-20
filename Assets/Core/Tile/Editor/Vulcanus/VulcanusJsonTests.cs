@@ -24,7 +24,7 @@ namespace Core.Tile.Editor.Vulcanus
             var quest = VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
                 "{ id: 'test:quest', steps: [{ id: 'go', objectives: [{ id: 'reach', kind: 'reach' }], deadline: { days: 1, at: '18:30' } }] }");
             Assert.That(quest.Steps[0].Objectives[0].Kind, Is.EqualTo(QuestObjectiveKind.Reach));
-            Assert.That(quest.Steps[0].DeadlineMinute, Is.EqualTo(18 * 60 + 30));
+            Assert.That(quest.Steps[0].Deadline.At, Is.EqualTo(18 * 60 + 30));
         }
 
         [Test]

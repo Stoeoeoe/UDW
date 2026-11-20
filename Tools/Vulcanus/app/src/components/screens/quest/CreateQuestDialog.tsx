@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { qualifyResourceId } from '../../../lib/resourceIds';
+import { newQuestGraph } from '../../../lib/questGraph';
 
 export function CreateQuestDialog({
   folderPath,
@@ -39,6 +40,7 @@ export function CreateQuestDialog({
         title,
         description: title,
         folderPath,
+        editorGraph: newQuestGraph('step-1'),
         steps: [
           {
             id: 'step-1',

@@ -65,6 +65,31 @@ namespace Core.Quests.Editor
         }
 
         [Test]
+        public void MapIdsMatchExactly()
+        {
+            Quest("{ id: 'go', kind: 'reach', map: 'test:map' }");
+            _quests.OnLocationEnter(Location("Test:Map"));
+            Assert.That(OnFirstStep(), Is.True);
+        }
+
+        [Test]
+        public void AQuestThatAnotherQuestsActionsEndedIsNotCheckedAgain()
+        {
+            Game.Catalog<QuestCatalog>(
+                VulcanusJson.Populate(Game.Asset<QuestDefinition>(), "{ id: 'test:first', steps: [{ id: 'a', " +
+                    "objectives: [{ id: 'met', kind: 'condition', condition: 'true' }], onComplete: \"Quests.GoToStep('test:second', 'end')\" }] }"),
+                VulcanusJson.Populate(Game.Asset<QuestDefinition>(), "{ id: 'test:second', steps: [{ id: 'b', " +
+                    "objectives: [{ id: 'never', kind: 'condition', condition: 'false' }] }] }"));
+            Game.CreatePlayer();
+            _quests = Game.Get<QuestService>();
+            _quests.Start("test:first");
+            _quests.Start("test:second");
+            _quests.Tick();
+            Assert.That(_quests.Find("test:first").Status, Is.EqualTo(QuestStatus.Completed));
+            Assert.That(_quests.Find("test:second").Status, Is.EqualTo(QuestStatus.Completed));
+        }
+
+        [Test]
         public void ReachingATriggerIsMetWhenThePlayerWalksIntoIt()
         {
             Quest("{ id: 'go', kind: 'reach', map: 'test:map', trigger: 'gate' }");

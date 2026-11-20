@@ -72,7 +72,7 @@ namespace Character
     [Serializable, ImportedData]
     public sealed class CharacterDialogue
     {
-        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset), IgnoreCase = true)]
+        [field: SerializeField, Validation.Reference(typeof(Core.Dialogue.Vulcanus.VulcanusDialogueAsset))]
         public string Dialogue { get; private set; }
         /// <summary>Read-only Lua expression; empty means always.</summary>
         [field: SerializeField, Validation.LuaExpression] public string Condition { get; private set; }

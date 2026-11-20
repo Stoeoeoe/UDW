@@ -78,6 +78,19 @@ export const questGraphSchema = z.strictObject({
 /** The `next` that completes the quest; steps cannot be called this. */
 export const questEnd = 'end';
 
+/** What each node is called on the canvas and in the inspector; a step node is named after its objectives. */
+export const questNodeLabels: Record<QuestGraphNode['kind'], string> = {
+  entry: 'Begin',
+  exit: 'Complete quest',
+  failure: 'On failure',
+  step: 'Step',
+  action: 'Action',
+  lua: 'Execute Lua Script',
+  branch: 'If / Else',
+  function: 'Read-only function',
+  expression: 'Read-only Lua expression',
+};
+
 export const questStepLabels: Record<QuestObjective['kind'] | 'group', string> = {
   talk: 'Talk to character',
   deliver: 'Deliver items',
@@ -225,88 +238,16 @@ export function questWire(
   };
 }
 
-/** Read existing quests without renaming persistent steps/objectives or modifying scripts. */
-export function graphFromQuest(quest: Quest): QuestGraph {
-  if (quest.editorGraph) return quest.editorGraph;
-  const nodes: QuestGraphNode[] = [{ id: 'begin', kind: 'entry', position: { x: 0, y: 120 } }];
-  const edges: QuestGraph['edges'] = [];
-  const place = (node: Omit<QuestGraphNode, 'position'>) =>
-    nodes.push({ ...node, position: { x: nodes.length * 340, y: 120 } });
-  let start = 'begin';
-  if (quest.onStart) {
-    place({ id: 'start-script', kind: 'lua', code: quest.onStart });
-    edges.push(questWire('begin', 'start-script'));
-    start = 'start-script';
-  }
-  // A step's own wire leaves from its last script, if it has any.
-  const stepNodes = new Map<string, { node: string; last: string }>();
-  quest.steps.forEach((step, index) => {
-    const node = `step-node-${index}`;
-    place({ id: node, kind: 'step', stepId: step.id, group: step.objectives.length > 1 });
-    let last = node;
-    if (step.onComplete) {
-      last = `step-script-${index}`;
-      place({ id: last, kind: 'lua', code: step.onComplete });
-      edges.push(questWire(node, last));
-    }
-    stepNodes.set(step.id, { node, last });
-  });
-  // This terminal is the boundary between the last step's actions and quest completion actions.
-  place({ id: 'complete', kind: 'exit' });
-  const target = (id: string) => (id === questEnd ? 'complete' : stepNodes.get(id)?.node);
-  quest.steps.forEach((step, index) => {
-    const { node, last } = stepNodes.get(step.id)!;
-    const next = target(step.next ?? quest.steps[index + 1]?.id ?? questEnd);
-    // Each condition is a Branch node; False leads to the next one, and finally to where the step goes otherwise.
-    let from = { id: last, pin: 'next' };
-    const x = nodes.find((n) => n.id === node)!.position.x;
-    step.nextIf?.forEach((branch, i) => {
-      const id = `step-branch-${index}-${i}`;
-      const condition = `step-condition-${index}-${i}`;
-      nodes.push(
-        {
-          id,
-          kind: 'branch',
-          arguments: { condition: false },
-          position: { x: x + 340 * (i + 1), y: 360 },
-        },
-        {
-          id: condition,
-          kind: 'expression',
-          expression: branch.condition,
-          outputs: [{ name: 'value', type: 'boolean' }],
-          position: { x: x + 340 * (i + 1), y: 640 },
-        },
-      );
-      edges.push(questDataWire(condition, 'value', id, 'condition'));
-      edges.push(questWire(from.id, id, from.pin));
-      const yes = target(branch.next);
-      if (yes) edges.push(questWire(id, yes, 'then'));
-      from = { id, pin: 'else' };
-    });
-    if (next) edges.push(questWire(from.id, next, from.pin));
-    for (const objective of step.objectives) {
-      const branch = objective.next && target(objective.next);
-      if (branch) edges.push(questWire(node, branch, objectivePin(objective.id)));
-    }
-  });
-  const first = quest.steps[0] ? stepNodes.get(quest.steps[0].id)!.node : 'complete';
-  edges.push(questWire(start, first));
-  if (quest.onComplete) {
-    place({ id: 'completion-script', kind: 'lua', code: quest.onComplete });
-    edges.push(questWire('complete', 'completion-script'));
-  }
-  if (quest.onFail) {
-    nodes.push({ id: 'failure', kind: 'failure', position: { x: 0, y: 540 } });
-    nodes.push({
-      id: 'failure-script',
-      kind: 'lua',
-      code: quest.onFail,
-      position: { x: 340, y: 540 },
-    });
-    edges.push(questWire('failure', 'failure-script'));
-  }
-  return { nodes, edges };
+/** A new quest's graph: Begin, its one step, Complete quest. */
+export function newQuestGraph(stepId: string): QuestGraph {
+  return {
+    nodes: [
+      { id: 'begin', kind: 'entry', position: { x: 0, y: 120 } },
+      { id: 'step-node-0', kind: 'step', stepId, position: { x: 340, y: 120 } },
+      { id: 'complete', kind: 'exit', position: { x: 680, y: 120 } },
+    ],
+    edges: [questWire('begin', 'step-node-0'), questWire('step-node-0', 'complete')],
+  };
 }
 
 // Lua strings use decimal escapes for controls: JSON's \u escapes are not Lua escapes.
@@ -339,7 +280,6 @@ export function compileQuestGraph(
   resources: ScriptingResources = manifest?.resources ?? {},
 ): Quest {
   const graph = quest.editorGraph;
-  if (!graph) return quest;
   questGraphSchema.parse(graph);
   const nodes = new Map(graph.nodes.map((n) => [n.id, n]));
   const fail = (message: string): never => {
@@ -409,7 +349,9 @@ export function compileQuestGraph(
       };
     if (node.kind === 'action') {
       const found = actions.find((a) => a.id === node.action?.method);
-      return found ? { ...none, inputs: found.parameters } : none;
+      if (!found)
+        return fail(`unknown or unavailable action on ${node.id}. Load the bindings manifest.`);
+      return { ...none, inputs: found.parameters };
     }
     return none;
   };
@@ -483,13 +425,12 @@ export function compileQuestGraph(
       ? expressionOf(nodes.get(wire.source)!)
       : String(node.arguments?.condition === true);
   };
-  const code = (node: QuestGraphNode): string => {
-    if (node.kind === 'lua') return `do\n${node.code ?? ''}\nend`;
-    const action = actions.find((a) => a.id === node.action?.method);
-    if (!action || !node.action)
-      return fail(`unknown or unavailable action on ${node.id}. Load the bindings manifest.`);
-    return `${action.id}(${argumentValues(node, action.parameters, node.action.arguments).join(', ')})`;
-  };
+  const code = (node: QuestGraphNode): string =>
+    node.kind === 'lua'
+      ? `do\n${node.code ?? ''}\nend`
+      : `${node.action!.method}(${argumentValues(node, signatureOf(node).inputs, node.action!.arguments).join(', ')})`;
+  // Only steps and Complete quest take several incoming wires (checked above), so a script, action or Branch is
+  // reached once, through its one path.
   const scriptsSeen = new Set<string>();
   /** The scripts on a wire's way to the next step or Complete quest, and what it ends at. */
   const follow = (from: QuestGraphNode, pin: string) => {
@@ -501,7 +442,6 @@ export function compileQuestGraph(
         return { scripts, target: node };
       if (node.kind !== 'lua' && node.kind !== 'action')
         return fail('execution cannot enter another root.');
-      if (scriptsSeen.has(node.id)) fail('cycle or shared execution path.');
       scriptsSeen.add(node.id);
       scripts.push(code(node));
       edge = execEdges.find((e) => e.source === node.id && e.sourcePin === 'next');
@@ -521,7 +461,6 @@ export function compileQuestGraph(
     const conditions: Flow['conditions'] = [];
     let node = first;
     while (node.kind === 'branch') {
-      if (branchesSeen.has(node.id)) fail('a Branch can only follow one step.');
       branchesSeen.add(node.id);
       const wire = (pin: string) =>
         execEdges.find((e) => e.source === node.id && e.sourcePin === pin);
@@ -591,14 +530,12 @@ export function compileQuestGraph(
     while (edge) {
       const node = nodes.get(edge.target)!;
       if (node.kind === 'branch') {
-        if (branchesSeen.has(node.id)) fail('a Branch can only follow one step.');
         branchesSeen.add(node.id);
         const arm = (name: string) => chain(node, name, forbidden).join('\n');
         scripts.push(`if ${conditionOf(node)} then\n${arm('then')}\nelse\n${arm('else')}\nend`);
         return scripts;
       }
       if (node.kind !== 'lua' && node.kind !== 'action') return fail(forbidden);
-      if (scriptsSeen.has(node.id)) fail('cycle or shared execution path.');
       scriptsSeen.add(node.id);
       scripts.push(code(node));
       edge = execEdges.find((e) => e.source === node.id && e.sourcePin === 'next');
@@ -623,8 +560,7 @@ export function compileQuestGraph(
     ...pureSeen,
   ]);
   if (reached.size !== nodes.size) fail('connect or remove disconnected nodes.');
-  if (!flows.length || flows.length !== quest.steps.length)
-    fail('each quest step must appear once in the flow.');
+  if (flows.length !== quest.steps.length) fail('each quest step must appear once in the flow.');
   const join = (parts: string[]) => (parts.length ? parts.join('\n') : undefined);
   const targetId = (node: QuestGraphNode) => (node.kind === 'exit' ? questEnd : node.stepId!);
   return {
@@ -651,21 +587,6 @@ export function compileQuestGraph(
   };
 }
 
-/** Allow incomplete wiring while editing; save still requires a successful compilation. */
-export function editQuestGraph(
-  quest: Quest,
-  graph: QuestGraph,
-  manifest: ScriptingManifest | null,
-  resources?: ScriptingResources,
-): Quest {
-  const draft = { ...quest, editorGraph: graph };
-  try {
-    return compileQuestGraph(draft, manifest, resources);
-  } catch {
-    return draft;
-  }
-}
-
 /** Remove a node; every wire that led into it continues to where its own "next" led. */
 export function removeQuestNode(graph: QuestGraph, id: string): QuestGraph {
   const onward = graph.edges.find(
@@ -682,4 +603,17 @@ export function removeQuestNode(graph: QuestGraph, id: string): QuestGraph {
         : []),
     ],
   };
+}
+
+/** Removes nodes other than Begin and Complete quest, with the steps of step nodes; wires reconnect as above. */
+export function removeQuestNodes(
+  quest: Quest,
+  ids: Iterable<string>,
+): Pick<Quest, 'editorGraph' | 'steps'> {
+  let graph = quest.editorGraph;
+  for (const id of ids)
+    if (graph.nodes.some((n) => n.id === id && n.kind !== 'entry' && n.kind !== 'exit'))
+      graph = removeQuestNode(graph, id);
+  const stepIds = new Set(graph.nodes.map((n) => n.stepId));
+  return { editorGraph: graph, steps: quest.steps.filter((s) => stepIds.has(s.id)) };
 }

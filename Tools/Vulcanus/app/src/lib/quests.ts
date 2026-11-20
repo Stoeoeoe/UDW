@@ -58,7 +58,7 @@ export const questSchema = z.strictObject({
   description: text,
   giver: resource.optional(),
   folderPath: z.string().optional(),
-  editorGraph: questGraphSchema.optional(),
+  editorGraph: questGraphSchema,
   onStart: text.optional(),
   onComplete: text.optional(),
   onFail: text.optional(),
@@ -95,19 +95,16 @@ export interface QuestReferences {
   maps: readonly GameMap[];
 }
 
-/** Import shape, Lua parsing and the catalog references Unity checks. Never executes authored Lua. */
+/** What blocks saving: the graph, the import shape and Lua parsing. Never executes authored Lua. */
 export function validateQuest(
   quest: Quest,
-  references?: QuestReferences,
   manifest: ScriptingManifest | null = null,
   resources?: ScriptingResources,
 ): string[] {
-  if (quest.editorGraph) {
-    try {
-      quest = compileQuestGraph(quest, manifest, resources);
-    } catch (error) {
-      return [error instanceof Error ? error.message : String(error)];
-    }
+  try {
+    quest = compileQuestGraph(quest, manifest, resources);
+  } catch (error) {
+    return [error instanceof Error ? error.message : String(error)];
   }
   const parsed = questSchema.safeParse(quest);
   const errors = parsed.success
@@ -130,26 +127,8 @@ export function validateQuest(
       ),
     );
   };
-  const known = (
-    id: string | undefined,
-    ids: ReadonlySet<string> | undefined,
-    kind: string,
-    where: string,
-  ) => {
-    if (id && ids && !ids.has(id)) errors.push(`${where}: unknown ${kind} ${id}.`);
-  };
-  known(quest.giver, references?.characterIds, 'character', 'Giver');
   for (const field of ['onStart', 'onComplete', 'onFail'] as const) lua(quest[field], field);
   lua(quest.start?.condition, 'Start condition', true);
-  quest.start?.when.forEach((when, i) => {
-    const where = `Start moment ${i + 1}`;
-    if (when.on === 'divineFavour' && when.deity && resources?.deity)
-      known(when.deity, new Set(resources.deity.map((d) => d.id)), 'deity', where);
-    if (when.on === 'locationChanged' && when.map && references) {
-      if (!references.maps.some((map) => map.id.toLowerCase() === when.map!.toLowerCase()))
-        errors.push(`${where}: unknown map ${when.map}.`);
-    }
-  });
   unique(
     quest.steps.map((step) => step.id),
     'Steps',
@@ -172,20 +151,50 @@ export function validateQuest(
     lua(step.failWhen, `${step.id} fail condition`, true);
     lua(step.onComplete, `${step.id} onComplete`);
     step.objectives.forEach((o) => {
-      const where = `${step.id}.${o.id}`;
-      if ('character' in o) known(o.character, references?.characterIds, 'character', where);
-      if ('item' in o) known(o.item, references?.itemIds, 'item', where);
-      if ('dialogue' in o) known(o.dialogue, references?.dialogueIds, 'dialogue', where);
-      if (o.kind === 'condition') lua(o.condition, where, true);
-      if (o.kind === 'reach' && references) {
-        const map = references.maps.find((map) => map.id.toLowerCase() === o.map.toLowerCase());
-        if (!map) errors.push(`${where}: unknown map ${o.map}.`);
-        else if (o.trigger && !map.spatialPrimitives?.triggers?.some((t) => t.id === o.trigger))
-          errors.push(`${where}: unknown trigger ${o.trigger} on ${o.map}.`);
-      }
+      if (o.kind === 'condition') lua(o.condition, `${step.id}.${o.id}`, true);
     });
   });
   return errors;
+}
+
+/**
+ * Content the quest names that this project doesn't have. It never blocks saving: the content may come from another
+ * mod, and Unity fails the import if it is really missing.
+ */
+export function questReferenceWarnings(
+  quest: Quest,
+  references: QuestReferences,
+  resources: ScriptingResources,
+): string[] {
+  const warnings: string[] = [];
+  const known = (id: string | undefined, ids: ReadonlySet<string>, kind: string, where: string) => {
+    if (id && !ids.has(id)) warnings.push(`${where}: unknown ${kind} ${id}.`);
+  };
+  const mapNamed = (id: string) => references.maps.find((map) => map.id === id);
+  // Deities come only from Unity's bindings export, which may not be loaded.
+  const deityIds = resources.deity && new Set(resources.deity.map((d) => d.id));
+  known(quest.giver, references.characterIds, 'character', 'Giver');
+  quest.start?.when.forEach((when, i) => {
+    const where = `Start moment ${i + 1}`;
+    if (when.on === 'divineFavour' && deityIds) known(when.deity, deityIds, 'deity', where);
+    if (when.on === 'locationChanged' && when.map && !mapNamed(when.map))
+      warnings.push(`${where}: unknown map ${when.map}.`);
+  });
+  quest.steps.forEach((step) =>
+    step.objectives.forEach((o) => {
+      const where = `${step.id}.${o.id}`;
+      if ('character' in o) known(o.character, references.characterIds, 'character', where);
+      if ('item' in o) known(o.item, references.itemIds, 'item', where);
+      if ('dialogue' in o) known(o.dialogue, references.dialogueIds, 'dialogue', where);
+      if (o.kind === 'reach') {
+        const map = mapNamed(o.map);
+        if (!map) warnings.push(`${where}: unknown map ${o.map}.`);
+        else if (o.trigger && !map.spatialPrimitives?.triggers?.some((t) => t.id === o.trigger))
+          warnings.push(`${where}: unknown trigger ${o.trigger} on ${o.map}.`);
+      }
+    }),
+  );
+  return warnings;
 }
 
 /** Things that are allowed but worth a second look; they never block saving. */

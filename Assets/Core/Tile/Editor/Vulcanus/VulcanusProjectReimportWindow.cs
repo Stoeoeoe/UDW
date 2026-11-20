@@ -641,7 +641,7 @@ namespace Core.Tile.Editor.Vulcanus
 
             summary.IsImportableFolder = VulcanusImportHelpers.TryAbsoluteToAssetPath(summary.FolderPath, out _);
 
-            var entityBuilders = new Dictionary<string, EntitySummaryBuilder>(StringComparer.OrdinalIgnoreCase);
+            var entityBuilders = new Dictionary<string, EntitySummaryBuilder>(StringComparer.Ordinal);
             var files = Directory.GetFiles(summary.FolderPath, "*.*", SearchOption.AllDirectories)
                 .Where(IsSupportedSourceFile)
                 .OrderBy(GetSourceSortKey, StringComparer.OrdinalIgnoreCase)
@@ -750,7 +750,7 @@ namespace Core.Tile.Editor.Vulcanus
             var mapId = !string.IsNullOrWhiteSpace(dto.Id) ? dto.Id : VulcanusImportHelpers.GetBaseName(source.AbsolutePath);
             var mapName = !string.IsNullOrWhiteSpace(dto.Name) ? dto.Name : mapId;
             var instances = EnumerateEntities(dto).ToArray();
-            var entityTypeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var entityTypeIds = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var instance in instances)
             {

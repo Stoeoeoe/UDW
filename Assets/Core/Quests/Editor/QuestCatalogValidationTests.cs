@@ -8,12 +8,7 @@ namespace Core.Quests.Editor
 {
     public sealed class QuestCatalogValidationTests : GameTest
     {
-        private static QuestCatalogValidation.KnownContent Known()
-        {
-            var known = new QuestCatalogValidation.KnownContent();
-            known.TriggersByMap["base:map-1"] = new HashSet<string> { "temple" };
-            return known;
-        }
+        private static Dictionary<string, HashSet<string>> Known() => new() { ["base:map-1"] = new HashSet<string> { "temple" } };
 
         private QuestDefinition Quest(string giver, string objectives) => VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
             $"{{ id: 'base:festival_wine', giver: '{giver}', steps: [{{ id: 'bring', objectives: [{objectives}] }}] }}");
