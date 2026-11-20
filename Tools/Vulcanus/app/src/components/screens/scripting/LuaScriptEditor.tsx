@@ -28,6 +28,8 @@ import {
   type LuaArgumentReferences,
 } from '../../../lib/luaBindings';
 import { withProjectCharacters } from '../../../lib/scriptingManifest';
+import { LUA_CODE_BG_HEX, LUA_CODE_TEXT_HEX } from '../../../lib/editorColors';
+import { Box, Text } from '@chakra-ui/react';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -310,8 +312,8 @@ function defineTheme(monaco: typeof Monaco) {
       { token: 'delimiter', foreground: 'ABB2BF' },
     ],
     colors: {
-      'editor.background': '#282c34',
-      'editor.foreground': '#ABB2BF',
+      'editor.background': LUA_CODE_BG_HEX,
+      'editor.foreground': LUA_CODE_TEXT_HEX,
       'editorCursor.foreground': '#528BFF',
       'editor.selectionBackground': '#3E4451',
       'editor.lineHighlightBackground': '#2C313A',
@@ -360,7 +362,8 @@ function initLsp(): Promise<boolean> {
 
 let instanceCounter = 0;
 
-export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
+const MonacoLuaScriptEditor: React.FC<LuaScriptEditorProps & { autoFocus?: boolean }> = ({
+  autoFocus = false,
   value,
   onChange,
   height = '220px',
@@ -776,6 +779,7 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
       // Position suggest widget above cursor when near bottom of editor
       fixedOverflowWidgets,
     });
+    if (autoFocus) editor.focus();
   };
 
   return (
@@ -799,3 +803,64 @@ export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = ({
     />
   );
 };
+
+/**
+ * Lua code, edited with Monaco once the field is clicked or focused. Until then it shows the code as text: a cutscene
+ * or inspector can show many scripts, and each Monaco editor costs a font measurement, a language-server document and
+ * its completion providers.
+ */
+export const LuaScriptEditor: React.FC<LuaScriptEditorProps> = (props) => {
+  const [active, setActive] = useState(false);
+  if (active) return <MonacoLuaScriptEditor {...props} autoFocus />;
+  return <LuaScriptPreview {...props} onActivate={() => setActive(true)} />;
+};
+
+/** The code as text, with the count of binding problems Monaco would underline. */
+function LuaScriptPreview({
+  value,
+  height = '220px',
+  scope = SCRIPT_SCOPE,
+  onActivate,
+}: LuaScriptEditorProps & { onActivate: () => void }) {
+  const manifest = useScriptingManifestStore((s) => s.manifest);
+  const storyValues = useEditorStore((s) => s.project?.storyValues);
+  const problems = useMemo(
+    () =>
+      bindingDiagnostics(value, manifest, scope).length +
+      storyValueDiagnostics(value, storyValues ?? []).length,
+    [value, manifest, scope, storyValues],
+  );
+  return (
+    <Box
+      role="button"
+      tabIndex={0}
+      aria-label="Edit Lua script"
+      h={height}
+      position="relative"
+      overflow="hidden"
+      px={3}
+      py={1}
+      bg="editorCodeBg"
+      color="editorCodeText"
+      fontFamily="mono"
+      fontSize="13px"
+      lineHeight="19px"
+      whiteSpace="pre-wrap"
+      wordBreak="break-word"
+      cursor="text"
+      onClick={onActivate}
+      onFocus={onActivate}
+    >
+      {value || (
+        <Text as="span" color="editorMutedText">
+          Click to write Lua
+        </Text>
+      )}
+      {problems > 0 && (
+        <Text position="absolute" bottom={1} right={2} fontSize="xs" color="orange.300">
+          {problems} {problems === 1 ? 'problem' : 'problems'}
+        </Text>
+      )}
+    </Box>
+  );
+}

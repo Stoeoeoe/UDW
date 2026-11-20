@@ -1,5 +1,6 @@
 import { extendTheme, type ThemeConfig } from '@chakra-ui/react';
 import type { StyleFunctionProps } from '@chakra-ui/styled-system';
+import { LUA_CODE_BG_HEX, LUA_CODE_TEXT_HEX } from './lib/editorColors';
 
 const config: ThemeConfig = {
   initialColorMode: 'dark',
@@ -135,6 +136,8 @@ export const theme = extendTheme({
       editorDangerText: {
         default: 'red.300',
       },
+      editorCodeBg: { default: LUA_CODE_BG_HEX },
+      editorCodeText: { default: LUA_CODE_TEXT_HEX },
     },
   },
   colors: {

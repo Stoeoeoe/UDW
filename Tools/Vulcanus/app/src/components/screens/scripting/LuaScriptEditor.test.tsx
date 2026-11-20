@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LuaScriptEditor } from './LuaScriptEditor';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
@@ -31,7 +31,7 @@ vi.mock('@monaco-editor/react', () => ({
         getLineContent: () => state.value,
         getWordUntilPosition: (p: any) => ({ startColumn: p.column, endColumn: p.column }),
       };
-      const editor = { getModel: () => model, updateOptions: vi.fn(), state };
+      const editor = { getModel: () => model, updateOptions: vi.fn(), focus: vi.fn(), state };
       ref.current = editor;
     }
     ref.current.state.value = props.value;
@@ -83,6 +83,13 @@ const bindings = (name: string) =>
       },
     ],
   });
+/** Renders, then opens every script in Monaco, as clicking each one does. */
+const show = (ui: React.ReactElement) => {
+  const view = render(ui);
+  for (const preview of screen.getAllByRole('button', { name: 'Edit Lua script' }))
+    fireEvent.click(preview);
+  return view;
+};
 const latest = () => mock.completions.filter((p) => !p.dispose.mock.calls.length).at(-1)!.provider;
 const complete = (editor: any, provider = latest()) =>
   provider.provideCompletionItems(editor.getModel(), {
@@ -97,10 +104,34 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+describe('Lua script preview', () => {
+  it('creates no Monaco editor until the script is clicked or focused', async () => {
+    render(
+      <>
+        <LuaScriptEditor value="Characters.Face('player')" onChange={() => {}} />
+        <LuaScriptEditor value="" onChange={() => {}} />
+      </>,
+    );
+    expect(screen.getByText("Characters.Face('player')")).toBeTruthy();
+    expect(screen.getByText('Click to write Lua')).toBeTruthy();
+    expect(screen.queryByTestId('lua-editor')).toBeNull();
+    fireEvent.focus(screen.getAllByRole('button', { name: 'Edit Lua script' })[0]);
+    await waitFor(() => expect(mock.editors).toHaveLength(1));
+    expect(mock.editors[0].focus).toHaveBeenCalled();
+    expect(screen.getAllByTestId('lua-editor')).toHaveLength(1);
+  });
+
+  it('counts the binding problems Monaco would underline', () => {
+    useScriptingManifestStore.setState({ manifest: parseScriptingManifest(unityBindings) });
+    render(<LuaScriptEditor value={'Characters.Face("player", "host")'} onChange={() => {}} />);
+    expect(screen.getByText('1 problem')).toBeTruthy();
+  });
+});
+
 describe('Lua script editor providers', () => {
   it('filters action APIs and marks unavailable calls inside a regular Lua block', async () => {
     useScriptingManifestStore.setState({ manifest: parseScriptingManifest(unityBindings) });
-    const view = render(
+    const view = show(
       <LuaScriptEditor documentId="block" value="Characters." onChange={() => {}} />,
     );
     await waitFor(() => expect(mock.completions.length).toBeGreaterThan(0));
@@ -124,7 +155,7 @@ describe('Lua script editor providers', () => {
   it('inserts quoted player IDs and updates permissions when an action phase changes', async () => {
     useScriptingManifestStore.setState({ manifest: parseScriptingManifest(unityBindings) });
     const actors = [{ id: 'player', name: 'Player' }];
-    const view = render(
+    const view = show(
       <LuaScriptEditor
         value="Characters.Face("
         scope={{ mode: 'actions', context: 'cutscene', phase: 'sequence' }}
@@ -162,7 +193,7 @@ describe('Lua script editor providers', () => {
     );
   });
   it('registers on first asynchronous mount, replaces full paths and offers signatures without LuaLS', async () => {
-    render(<LuaScriptEditor value="Characters.Fa" onChange={() => {}} />);
+    show(<LuaScriptEditor value="Characters.Fa" onChange={() => {}} />);
     await waitFor(() => expect(mock.completions.length).toBeGreaterThan(0));
     const editor = mock.editors[0];
     const result = await complete(editor);
@@ -182,7 +213,7 @@ describe('Lua script editor providers', () => {
   });
 
   it('refreshes and invalidates manifest completions live', async () => {
-    render(<LuaScriptEditor value="Characters." onChange={() => {}} />);
+    show(<LuaScriptEditor value="Characters." onChange={() => {}} />);
     await waitFor(() => expect(mock.completions.length).toBeGreaterThan(0));
     act(() => useScriptingManifestStore.setState({ manifest: bindings('Walk') }));
     let result = await complete(mock.editors[0]);
@@ -193,7 +224,7 @@ describe('Lua script editor providers', () => {
   });
 
   it('isolates simultaneous editors and disposes providers on unmount', async () => {
-    const view = render(
+    const view = show(
       <>
         <LuaScriptEditor value="Characters." onChange={() => {}} />
         <LuaScriptEditor value="Characters." onChange={() => {}} />
@@ -208,7 +239,7 @@ describe('Lua script editor providers', () => {
   });
 
   it('changes model identity when the selected script changes', async () => {
-    const view = render(
+    const view = show(
       <LuaScriptEditor documentId="first" value="Characters." onChange={() => {}} />,
     );
     await waitFor(() => expect(mock.editors).toHaveLength(1));
