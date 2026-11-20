@@ -148,6 +148,24 @@ namespace Core.TimeAndWeather.Editor
         }
 
         [Test]
+        public void ConditionsCanAskWhatTheWeatherIs()
+        {
+            _clock.Start();
+            var dry = _summer.weatherData.GetRandomItem();
+            dry.id = "test:dry";
+            var other = Game.Asset<WeatherData>();
+            other.id = "test:other";
+            var catalog = Game.Asset<WeatherCatalog>();
+            catalog.Synchronize(new[] { dry, other });
+            var lua = new VulcanusLuaEngine(Game.Bind(new WeatherLuaApi(_weather, catalog)));
+
+            _weather.SetWeather(dry);
+            Assert.That(lua.EvaluateCondition("Weather.Is('test:dry')"), Is.True);
+            Assert.That(lua.EvaluateCondition("Weather.Is('test:other')"), Is.False);
+            Assert.That(() => lua.EvaluateCondition("Weather.Is('test:missing')"), Throws.Exception, "An unknown weather is an authoring error.");
+        }
+
+        [Test]
         public void WeatherBindingRejectsUnknownDisabledAndInvalidDefinitionsBeforeExecution()
         {
             _clock.Start();

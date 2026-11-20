@@ -26,6 +26,11 @@ namespace Core.Scripting
 
         [Preserve] public void ValidateWeather(string weather) => RequireWeather(weather);
 
+        /// <summary>Whether the weather now is this one. Throws for a weather that is not registered and enabled.</summary>
+        [LuaCall, Preserve]
+        public bool Is([LuaResource("weather")] string weather) =>
+            _manager.CurrentWeather == (_weather.Get(weather) ?? throw new InvalidOperationException($"Weather '{weather}' is not registered and enabled."));
+
         [LuaAction("weather.setWeather", "Set weather", "Weather", "Change weather until the next seasonal roll, without advancing the calendar.",
             "cutscene", Validator = nameof(ValidateWeather), Phases = new[] { "setup", "sequence", "completion" })]
         [LuaPreview(LuaPreviewSpatialState.Described)]

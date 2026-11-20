@@ -54,6 +54,15 @@ describe('character starting social standing', () => {
     );
   });
 
+  it('names the band the starting standing falls in', () => {
+    show();
+    expect(screen.getByLabelText('Starting band').textContent).toBe('Neutral');
+    cleanup();
+    useEditorStore.setState({ characters: [{ ...fabia, startingSocialStanding: 20 }] });
+    show();
+    expect(screen.getByLabelText('Starting band').textContent).toBe('Wary');
+  });
+
   it('saves a whole number kept between 0 and 100, and nothing when emptied', () => {
     show();
     const field = screen.getByLabelText('Starting social standing');
@@ -82,10 +91,11 @@ describe('character tabs', () => {
 });
 
 describe('character dialogues', () => {
-  const withDialogues = (dialogues: Character['dialogues']) => {
+  const withRules = (dialogueRules: Character['dialogueRules']) => {
     cleanup();
     useEditorStore.setState({
-      characters: [{ ...fabia, dialogues }],
+      characters: [{ ...fabia, dialogueRules }],
+      routines: [],
       dialogues: new Map([
         ['base:hello', { id: 'base:hello', name: 'Hello' }],
         ['base:grumpy', { id: 'base:grumpy', name: 'Grumpy' }],
@@ -95,25 +105,68 @@ describe('character dialogues', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Dialogues/ }));
   };
 
-  it('adds a chosen dialogue to the end of the list', () => {
-    withDialogues([{ dialogue: 'base:hello' }]);
+  it('adds a chosen dialogue as a row that holds always', () => {
+    withRules([{ dialogue: 'base:hello' }]);
     fireEvent.change(screen.getByLabelText('Add a dialogue'), { target: { value: 'base:grumpy' } });
     expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
+      dialogueRules: [{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy' }],
       dialogues: [{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy' }],
     });
   });
 
-  it('reorders because the first match wins', () => {
-    withDialogues([{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy', condition: 'true' }]);
-    fireEvent.click(screen.getByLabelText('Move dialogue 2 up'));
+  it('saves a standing column both as the row and as the compiled condition', () => {
+    withRules([{ dialogue: 'base:hello' }]);
+    fireEvent.change(screen.getByLabelText('Standing 1'), { target: { value: 'wary-' } });
     expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
-      dialogues: [{ dialogue: 'base:grumpy', condition: 'true' }, { dialogue: 'base:hello' }],
+      dialogueRules: [{ dialogue: 'base:hello', standing: 'wary-' }],
+      dialogues: [
+        { dialogue: 'base:hello', condition: "SocialStanding.HasLessThan('base:fabia', 40)" },
+      ],
+    });
+    fireEvent.change(screen.getByLabelText('Standing 1'), { target: { value: '' } });
+    expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
+      dialogueRules: [{ dialogue: 'base:hello' }],
+      dialogues: [{ dialogue: 'base:hello' }],
     });
   });
 
-  it('removes entries and leaves the key out when none remain', () => {
-    withDialogues([{ dialogue: 'base:hello' }]);
+  it('reorders because the first match wins', () => {
+    withRules([{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy', weather: 'Sunny' }]);
+    fireEvent.click(screen.getByLabelText('Move dialogue 2 up'));
+    expect(updateCharacter).toHaveBeenLastCalledWith(
+      'base:fabia',
+      expect.objectContaining({
+        dialogueRules: [{ dialogue: 'base:grumpy', weather: 'Sunny' }, { dialogue: 'base:hello' }],
+      }),
+    );
+  });
+
+  it('removes rows and leaves both keys out when none remain', () => {
+    withRules([{ dialogue: 'base:hello' }]);
     fireEvent.click(screen.getByLabelText('Remove dialogue 1'));
-    expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', { dialogues: undefined });
+    expect(updateCharacter).toHaveBeenLastCalledWith('base:fabia', {
+      dialogueRules: undefined,
+      dialogues: undefined,
+    });
+  });
+
+  it('shows each rule as a table row and opens its Lua condition under it', () => {
+    withRules([{ dialogue: 'base:hello' }, { dialogue: 'base:grumpy', condition: 'true' }]);
+    expect(screen.getAllByRole('row')).toHaveLength(3);
+    expect(screen.queryByText(/And also, if/)).toBeNull();
+    fireEvent.click(screen.getByLabelText('Lua condition 2'));
+    expect(screen.getByText(/And also, if/)).toBeTruthy();
+  });
+
+  it('edits dialogues authored without rules as rows', () => {
+    cleanup();
+    useEditorStore.setState({
+      characters: [{ ...fabia, dialogues: [{ dialogue: 'base:hello', condition: 'true' }] }],
+      routines: [],
+      dialogues: new Map() as never,
+    });
+    show();
+    fireEvent.click(screen.getByRole('button', { name: /^Dialogues/ }));
+    expect(screen.getByLabelText('Move dialogue 1 down')).toBeTruthy();
   });
 });

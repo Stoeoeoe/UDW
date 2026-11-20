@@ -24,11 +24,24 @@
   "dialogues": [
     {
       "dialogue": "base:fabia_wary",
-      "condition": "SocialStanding.HasLessThan('base:fabia', 30)"
+      "condition": "SocialStanding.HasLessThan('base:fabia', 40)"
     },
     {
       "dialogue": "base:fabia_friendly",
-      "condition": "SocialStanding.HasMoreThan('base:fabia', 70)"
+      "condition": "SocialStanding.HasMoreThan('base:fabia', 59)"
+    },
+    {
+      "dialogue": "base:fabia_greeting"
+    }
+  ],
+  "dialogueRules": [
+    {
+      "dialogue": "base:fabia_wary",
+      "standing": "wary-"
+    },
+    {
+      "dialogue": "base:fabia_friendly",
+      "standing": "friendly+"
     },
     {
       "dialogue": "base:fabia_greeting"

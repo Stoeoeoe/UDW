@@ -73,6 +73,22 @@
         }
       }
     },
+    "dialogueRules": {
+      "type": "array",
+      "description": "Editor source of dialogues: rows of a decision table that Vulcanus compiles into dialogues when saving. Unity reads only dialogues.",
+      "items": {
+        "type": "object",
+        "required": ["dialogue"],
+        "additionalProperties": false,
+        "properties": {
+          "dialogue": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$" },
+          "standing": { "type": "string", "pattern": "^[a-z]+[+-]?$", "description": "A standing band id, optionally followed by + (or better) or - (or worse)." },
+          "occupation": { "type": "string", "pattern": "\\S" },
+          "weather": { "type": "string", "pattern": "\\S" },
+          "condition": { "type": "string", "pattern": "\\S" }
+        }
+      }
+    },
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'NPCs/Villagers'). Empty string or absent = root."

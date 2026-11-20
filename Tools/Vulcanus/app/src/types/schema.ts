@@ -479,6 +479,16 @@ export interface Character extends NamedEditorResource {
   walkSpeed?: number; // Tiles per second; absent = DEFAULT_WALK_SPEED, as in Unity
   startingSocialStanding?: number; // 0-100 in a new game; absent = DEFAULT_SOCIAL_STANDING, as in Unity
   dialogues?: CharacterDialogue[]; // What the character says when no quest and no routine sets a dialogue
+  dialogueRules?: DialogueRule[]; // Editor source of `dialogues`; saving compiles the rules into it
+}
+
+/** One row of a character's dialogue table: the dialogue it says when every column it sets holds. */
+export interface DialogueRule {
+  dialogue: string; // Dialogue id
+  standing?: string; // A standing band id, optionally followed by + (or better) or - (or worse)
+  occupation?: string; // What the routine has the character busy with
+  weather?: string; // Weather id
+  condition?: string; // Extra read-only Lua expression
 }
 
 /** The first entry whose condition holds is said; an entry without a condition always matches. */

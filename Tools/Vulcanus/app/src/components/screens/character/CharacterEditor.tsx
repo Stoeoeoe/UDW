@@ -2,12 +2,20 @@ import { EditorFormSave } from '../../common/EditorFormSave';
 import React, { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import {
+  Badge,
   Box,
   Button,
   FormControl,
   GridItem,
   Input,
+  Select,
   SimpleGrid,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
   useDisclosure,
   VStack,
   HStack,
@@ -28,8 +36,15 @@ import {
   DEFAULT_SOCIAL_STANDING,
   DEFAULT_WALK_SPEED,
   type Character,
-  type CharacterDialogue,
+  type DialogueRule,
 } from '../../../types/schema';
+import { bandOf } from '../../../lib/socialStandingBands';
+import {
+  compileRules,
+  knownOccupations,
+  rulesOf,
+  standingOptions,
+} from '../../../lib/dialogueRules';
 import { DialogueSelect } from '../routine/DialogueSelect';
 import { ConditionEditor } from '../scripting/ConditionEditor';
 import { GhostIconButton } from '../../common/IconButtons';
@@ -281,6 +296,9 @@ const SocialStandingSection: React.FC<{
           }
         />
       </Box>
+      <Badge variant="editor" aria-label="Starting band">
+        {bandOf(character.startingSocialStanding ?? DEFAULT_SOCIAL_STANDING).name}
+      </Badge>
       <Text fontSize="xs" color="editorMutedText">
         0 to 100 in a new game. Empty uses {DEFAULT_SOCIAL_STANDING}.
       </Text>
@@ -289,89 +307,226 @@ const SocialStandingSection: React.FC<{
 );
 
 /**
- * What the character says when no quest objective and no routine sets a dialogue. The first entry whose condition
- * holds when the player starts talking is said, so the order matters; with no match the character cannot be talked to.
+ * What the character says when no quest objective and no routine sets a dialogue, as a decision table: each row says
+ * a dialogue when every column it sets holds when the player starts talking. The first matching row wins, so the order
+ * matters; with no match the character cannot be talked to. Saving compiles the rows into Lua conditions.
  */
 const DialoguesSection: React.FC<{
   character: Character;
   onUpdate: (updates: Partial<Character>) => void;
 }> = ({ character, onUpdate }) => {
-  const entries = character.dialogues ?? [];
-  const save = (next: CharacterDialogue[]) =>
-    onUpdate({ dialogues: next.length ? next : undefined });
-  const change = (index: number, entry: CharacterDialogue) =>
-    save(entries.map((e, i) => (i === index ? entry : e)));
+  const rules = rulesOf(character);
+  const [luaOpen, setLuaOpen] = useState<number | null>(null);
+  const occupations = knownOccupations(useEditorStore((state) => state.routines));
+  const save = (next: DialogueRule[]) =>
+    onUpdate({
+      dialogueRules: next.length ? next : undefined,
+      dialogues: next.length ? compileRules(character.id, next) : undefined,
+    });
+  const change = (index: number, rule: DialogueRule) =>
+    save(rules.map((r, i) => (i === index ? rule : r)));
   const move = (index: number, by: -1 | 1) => {
-    const next = [...entries];
+    const next = [...rules];
     [next[index], next[index + by]] = [next[index + by], next[index]];
     save(next);
+  };
+  /** Sets or clears one column of a row. */
+  const column = (
+    index: number,
+    key: 'standing' | 'occupation' | 'weather',
+    value: string | undefined,
+  ) => {
+    const { [key]: _old, ...rest } = rules[index];
+    change(index, value ? { ...rest, [key]: value } : rest);
   };
 
   return (
     <VStack align="stretch" spacing={3}>
-      <FieldLabel>Dialogues</FieldLabel>
       <Text fontSize="xs" color="editorMutedText">
-        Said when no quest or routine sets one. The first whose condition holds when the player
-        starts talking wins; without a match the character cannot be talked to.
+        Said when no quest or routine sets one. The first row that holds when the player starts
+        talking wins; a column left on "any" does not matter. Without a match the character cannot
+        be talked to.
       </Text>
-      {entries.map((entry, index) => (
-        <VStack
-          key={index}
-          align="stretch"
-          spacing={2}
-          p={3}
-          borderWidth="1px"
-          borderColor="editorShellBorder"
-          borderRadius="md"
-        >
-          <HStack spacing={1}>
-            <DialogueSelect
-              label={`Dialogue ${index + 1}`}
-              value={entry.dialogue}
-              inherited={null}
-              onChange={(id) => id && change(index, { ...entry, dialogue: id })}
-              newName={`${character.name} – dialogue ${index + 1}`}
-              newFolder={character.name}
-            />
-            <GhostIconButton
-              aria-label={`Move dialogue ${index + 1} up`}
-              icon={<FiArrowUp />}
-              size="xs"
-              isDisabled={index === 0}
-              onClick={() => move(index, -1)}
-            />
-            <GhostIconButton
-              aria-label={`Move dialogue ${index + 1} down`}
-              icon={<FiArrowDown />}
-              size="xs"
-              isDisabled={index === entries.length - 1}
-              onClick={() => move(index, 1)}
-            />
-            <Button
-              size="xs"
-              variant="ghost"
-              color="red.400"
-              aria-label={`Remove dialogue ${index + 1}`}
-              onClick={() => save(entries.filter((_, i) => i !== index))}
-            >
-              Remove
-            </Button>
-          </HStack>
-          <ConditionEditor
-            label="Said if (empty = always)"
-            value={entry.condition ?? ''}
-            onChange={(condition) => change(index, { ...entry, condition: condition || undefined })}
-          />
-        </VStack>
-      ))}
+      <Box
+        overflowX="auto"
+        borderWidth="1px"
+        borderColor="editorShellBorder"
+        borderRadius="md"
+        bg="editorPanelBg"
+      >
+        <Table size="sm" variant="unstyled" sx={{ 'td, th': { px: 3, py: 1.5 } }}>
+          <Thead
+            sx={{
+              th: {
+                fontSize: '10px',
+                letterSpacing: 'widest',
+                textTransform: 'uppercase',
+                color: 'editorMutedText',
+                fontWeight: 'bold',
+              },
+            }}
+          >
+            <Tr bg="editorSectionBg" borderBottomWidth="1px" borderColor="editorShellBorder">
+              <Th w="40px">#</Th>
+              <Th minW="220px">Says</Th>
+              <Th minW="150px">Standing</Th>
+              <Th minW="130px">Busy with</Th>
+              <Th minW="130px">Weather</Th>
+              <Th w="1%">Lua Condition</Th>
+              <Th w="1%" />
+            </Tr>
+          </Thead>
+          <Tbody>
+            {rules.length === 0 && (
+              <Tr>
+                <Td colSpan={7}>
+                  <Text fontSize="xs" color="editorMutedText">
+                    No rows yet: the character cannot be talked to.
+                  </Text>
+                </Td>
+              </Tr>
+            )}
+            {rules.map((rule, index) => (
+              <React.Fragment key={index}>
+                <Tr
+                  data-group
+                  borderBottomWidth="1px"
+                  borderColor="editorShellBorder"
+                  _hover={{ bg: 'editorHoverBg' }}
+                >
+                  <Td>
+                    <Text fontSize="xs" fontWeight="bold" color="editorMutedText">
+                      {index + 1}
+                    </Text>
+                  </Td>
+                  <Td>
+                    <DialogueSelect
+                      label={`Dialogue ${index + 1}`}
+                      value={rule.dialogue}
+                      inherited={null}
+                      onChange={(id) => id && change(index, { ...rule, dialogue: id })}
+                      newName={`${character.name} – dialogue ${index + 1}`}
+                      newFolder={character.name}
+                    />
+                  </Td>
+                  <Td>
+                    <Select
+                      size="xs"
+                      variant="compact"
+                      color={rule.standing ? 'editorText' : 'editorMutedText'}
+                      aria-label={`Standing ${index + 1}`}
+                      value={rule.standing ?? ''}
+                      onChange={(e) => column(index, 'standing', e.target.value || undefined)}
+                    >
+                      <option value="">any</option>
+                      {standingOptions().map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Td>
+                  <Td>
+                    <Select
+                      size="xs"
+                      variant="compact"
+                      color={rule.occupation ? 'editorText' : 'editorMutedText'}
+                      aria-label={`Busy with ${index + 1}`}
+                      value={rule.occupation ?? ''}
+                      onChange={(e) => column(index, 'occupation', e.target.value || undefined)}
+                    >
+                      <option value="">any</option>
+                      {rule.occupation && !occupations.includes(rule.occupation) && (
+                        <option value={rule.occupation}>Missing: {rule.occupation}</option>
+                      )}
+                      {occupations.map((occupation) => (
+                        <option key={occupation} value={occupation}>
+                          {occupation}
+                        </option>
+                      ))}
+                    </Select>
+                  </Td>
+                  <Td>
+                    <ManifestResourceSelect
+                      resourceType="weather"
+                      value={rule.weather}
+                      placeholder="any"
+                      onChange={(weather) => column(index, 'weather', weather)}
+                    />
+                  </Td>
+                  <Td>
+                    <Button
+                      size="xs"
+                      variant={rule.condition ? 'solid' : 'ghost'}
+                      colorScheme={rule.condition ? 'blue' : undefined}
+                      aria-label={`Lua condition ${index + 1}`}
+                      aria-expanded={luaOpen === index}
+                      onClick={() => setLuaOpen(luaOpen === index ? null : index)}
+                    >
+                      {rule.condition ? 'Lua •' : 'Lua'}
+                    </Button>
+                  </Td>
+                  <Td>
+                    <HStack
+                      spacing={0}
+                      justify="flex-end"
+                      opacity={0.35}
+                      transition="opacity 0.15s"
+                      _groupHover={{ opacity: 1 }}
+                      _focusWithin={{ opacity: 1 }}
+                    >
+                      <GhostIconButton
+                        aria-label={`Move dialogue ${index + 1} up`}
+                        icon={<FiArrowUp />}
+                        size="xs"
+                        isDisabled={index === 0}
+                        onClick={() => move(index, -1)}
+                      />
+                      <GhostIconButton
+                        aria-label={`Move dialogue ${index + 1} down`}
+                        icon={<FiArrowDown />}
+                        size="xs"
+                        isDisabled={index === rules.length - 1}
+                        onClick={() => move(index, 1)}
+                      />
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="red.400"
+                        aria-label={`Remove dialogue ${index + 1}`}
+                        onClick={() => save(rules.filter((_, i) => i !== index))}
+                      >
+                        Remove
+                      </Button>
+                    </HStack>
+                  </Td>
+                </Tr>
+                {luaOpen === index && (
+                  <Tr>
+                    <Td colSpan={7} bg="editorSectionBg">
+                      <ConditionEditor
+                        label="And also, if (Lua, optional)"
+                        value={rule.condition ?? ''}
+                        onChange={(condition) =>
+                          change(index, { ...rule, condition: condition || undefined })
+                        }
+                      />
+                    </Td>
+                  </Tr>
+                )}
+              </React.Fragment>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
       <Box maxW="320px">
         <DialogueSelect
           label="Add a dialogue"
           value={undefined}
           inherited={null}
           emptyLabel="Add a dialogue…"
-          onChange={(id) => id && save([...entries, { dialogue: id }])}
-          newName={`${character.name} – dialogue ${entries.length + 1}`}
+          onChange={(id) => id && save([...rules, { dialogue: id }])}
+          newName={`${character.name} – dialogue ${rules.length + 1}`}
           newFolder={character.name}
         />
       </Box>
