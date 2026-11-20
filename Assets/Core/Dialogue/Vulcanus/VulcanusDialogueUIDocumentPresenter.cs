@@ -39,6 +39,7 @@ namespace Core.Dialogue.Vulcanus
         private VisualElement _portrait;
         private Label _bodyLabel;
         private Label _hintLabel;
+        private Label _debugLabel;
         private VisualElement _choiceContainer;
         private ScrollView _content;
         private Button _continueButton;
@@ -64,6 +65,9 @@ namespace Core.Dialogue.Vulcanus
             SetHint(string.Empty);
             ClearChoices();
             SetContinueVisible(false);
+            // Development builds show where the dialogue came from, so authors can see which source decided it.
+            _debugLabel.text = Debug.isDebugBuild && !string.IsNullOrEmpty(context.DebugSource) ? context.DebugSource : string.Empty;
+            _debugLabel.style.display = _debugLabel.text.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public async Awaitable PresentLine(VulcanusDialogueLineNode node, string localizedText,
@@ -210,6 +214,13 @@ namespace Core.Dialogue.Vulcanus
                 evt.StopPropagation();
             });
             _continueButton.clicked += ContinueRequested;
+            _debugLabel = new Label { name = "dialogue-debug", pickingMode = PickingMode.Ignore };
+            _debugLabel.style.fontSize = 14;
+            _debugLabel.style.color = Color.white;
+            _debugLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _debugLabel.style.flexGrow = 1;
+            _debugLabel.style.marginRight = 8;
+            _hintLabel.parent.Insert(0, _debugLabel);
 
             RebindRoot(_overlay);
             _isBuilt = true;

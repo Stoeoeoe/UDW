@@ -30,7 +30,7 @@ namespace Interaction.Dialogue
         public bool Busy { get; set; }
 
         /// <summary>Without a dialogue there is nothing to say, so the character cannot be talked to; nor while busy.</summary>
-        public override bool CanInteract => !Busy && !string.IsNullOrWhiteSpace(DialogueToPlay(out _)) && base.CanInteract;
+        public override bool CanInteract => !Busy && !string.IsNullOrWhiteSpace(DialogueToPlay(out _, out _)) && base.CanInteract;
 
         /// <summary>
         /// What talking now plays: the dialogue of a quest objective for this character first, then the one its routine
@@ -40,15 +40,25 @@ namespace Interaction.Dialogue
         /// </summary>
         private bool _silent;
 
-        private string DialogueToPlay(out QuestConversation quest)
+        private string DialogueToPlay(out QuestConversation quest, out string source)
         {
             quest = Character ? _quests.FindConversation(Character.CharacterId) : null;
-            if (!string.IsNullOrEmpty(quest?.DialogueId)) return quest.DialogueId;
-            if (!string.IsNullOrEmpty(dialogueId)) return dialogueId;
-            if (_silent) return null;
-            return Character && Character.Definition
-                ? Character.Definition.DialogueFor(_lua.Conditions.EvaluateCondition)
-                : null;
+            source = null;
+            if (!string.IsNullOrEmpty(quest?.DialogueId))
+            {
+                source = $"Source: quest {quest.QuestId}, objective {quest.Objective.Id}";
+                return quest.DialogueId;
+            }
+            if (!string.IsNullOrEmpty(dialogueId))
+            {
+                source = "Source: routine or prefab";
+                return dialogueId;
+            }
+            if (_silent || !Character || !Character.Definition) return null;
+            var index = Character.Definition.DialogueIndexFor(_lua.Conditions.EvaluateCondition);
+            if (index < 0) return null;
+            source = $"Source: character dialogues, row {index + 1}";
+            return Character.Definition.Dialogues[index].Dialogue;
         }
 
         /// <summary>
@@ -93,9 +103,9 @@ namespace Interaction.Dialogue
 
             // The runner stops game time for every dialogue.
             var pause = options.CanMoveWhileTalking ? ScreenPauseMode.None : ScreenPauseMode.Character;
-            var id = DialogueToPlay(out var quest);
+            var id = DialogueToPlay(out var quest, out var source);
             // A quest objective is met only by a conversation that reaches its end.
-            if (!runner.StartDialogue(id, instigator, pause, quest == null ? null : () => _quests.CompleteConversation(quest)))
+            if (!runner.StartDialogue(id, instigator, pause, quest == null ? null : () => _quests.CompleteConversation(quest), source))
                 return false;
             _conversation = runner.ActiveContext;
 

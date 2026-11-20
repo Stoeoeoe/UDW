@@ -31,6 +31,28 @@ namespace Character.Editor
         }
 
         [Test]
+        public void TheSharedEngineFollowsStandingThatSwingsBetweenTheExtremes()
+        {
+            var baker = Baker(@"
+                { dialogue: 'test:wary', condition: ""SocialStanding.HasLessThan('test:baker', 40)"" },
+                { dialogue: 'test:friendly', condition: ""SocialStanding.HasMoreThan('test:baker', 59)"" },
+                { dialogue: 'test:plain' }");
+            Game.Catalog<CharacterCatalog>(baker);
+            var standing = Game.Get<SocialStandingService>();
+            string Shared() => baker.DialogueFor(Game.Lua.Conditions.EvaluateCondition);
+
+            Assert.That(Shared(), Is.EqualTo("test:plain"));
+            standing.Increase("test:baker", 50);
+            Assert.That(Shared(), Is.EqualTo("test:friendly"));
+            standing.Decrease("test:baker", 100);
+            Assert.That(Shared(), Is.EqualTo("test:wary"));
+            standing.Increase("test:baker", 100);
+            Assert.That(Shared(), Is.EqualTo("test:friendly"));
+            standing.Decrease("test:baker", 100);
+            Assert.That(Shared(), Is.EqualTo("test:wary"));
+        }
+
+        [Test]
         public void OrderDecidesWhenSeveralEntriesHold()
         {
             var baker = Baker("{ dialogue: 'test:first', condition: 'true' }, { dialogue: 'test:second' }");

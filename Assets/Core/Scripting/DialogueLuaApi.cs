@@ -39,7 +39,7 @@ namespace Core.Scripting
             public PlayDialogueAction(VulcanusDialogueRunner runner, GameCharacter player, string dialogue)
             {
                 _runner = runner;
-                runner.StartDialogue(dialogue, player, onCompleted: () => _completed = true);
+                runner.StartDialogue(dialogue, player, onCompleted: () => _completed = true, debugSource: "Source: Lua dialogue action");
             }
 
             public bool IsCompleted => _completed;

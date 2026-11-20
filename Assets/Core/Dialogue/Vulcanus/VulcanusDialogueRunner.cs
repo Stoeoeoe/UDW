@@ -51,14 +51,14 @@ namespace Core.Dialogue.Vulcanus
 
         /// <summary>Calls onCompleted after the dialogue reaches the end of its flow.</summary>
         public bool StartDialogue(string dialogueId, GameCharacter instigator = null, ScreenPauseMode? pauseWhileOpen = null,
-            Action onCompleted = null)
+            Action onCompleted = null, string debugSource = null)
         {
             var (dialogue, startNode) = ResolveDialogue(dialogueId);
             if (IsDialogueActive)
                 throw new InvalidOperationException("Finish the current dialogue before starting another.");
 
             _onCompleted = onCompleted;
-            Run(dialogue, startNode, instigator, pauseWhileOpen);
+            Run(dialogue, startNode, instigator, pauseWhileOpen, debugSource);
             return true;
         }
 
@@ -89,15 +89,15 @@ namespace Core.Dialogue.Vulcanus
 
         // Entry point of the flow: presenters and Lua failures are logged, and cancellation is an expected way to end.
         private async void Run(VulcanusDialogueAsset dialogue, VulcanusDialogueNode startNode, GameCharacter instigator,
-            ScreenPauseMode? pauseWhileOpen)
+            ScreenPauseMode? pauseWhileOpen, string debugSource)
         {
-            try { await RunDialogue(dialogue, startNode, instigator, pauseWhileOpen); }
+            try { await RunDialogue(dialogue, startNode, instigator, pauseWhileOpen, debugSource); }
             catch (OperationCanceledException) { }
             catch (Exception error) { Debug.LogException(error); }
         }
 
         private async Awaitable RunDialogue(VulcanusDialogueAsset startingDialogue, VulcanusDialogueNode currentNode,
-            GameCharacter instigator, ScreenPauseMode? pauseWhileOpen)
+            GameCharacter instigator, ScreenPauseMode? pauseWhileOpen, string debugSource)
         {
             using var cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
@@ -107,7 +107,8 @@ namespace Core.Dialogue.Vulcanus
                 CurrentDialogue = startingDialogue,
                 StepsExecuted = 0,
                 Instigator = instigator,
-                PauseWhileOpen = pauseWhileOpen
+                PauseWhileOpen = pauseWhileOpen,
+                DebugSource = debugSource
             };
             _clock.Pause(context);
 

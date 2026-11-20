@@ -36,13 +36,20 @@ namespace Character
         /// <summary>Walk speed when the Vulcanus character leaves it out; Vulcanus documents the same value.</summary>
         public const float DefaultWalkSpeed = 4f;
 
-        /// <summary>The ID of the first <see cref="Dialogues"/> entry whose condition holds, or null if none does.</summary>
+        /// <summary>The index in <see cref="Dialogues"/> of the first entry whose condition holds, or -1 if none does.</summary>
         /// <param name="holds">Evaluates a read-only Lua condition against the current game state.</param>
+        public int DialogueIndexFor(Func<string, bool> holds)
+        {
+            for (var i = 0; i < Dialogues.Length; i++)
+                if (string.IsNullOrWhiteSpace(Dialogues[i].Condition) || holds(Dialogues[i].Condition)) return i;
+            return -1;
+        }
+
+        /// <summary>The ID of the first <see cref="Dialogues"/> entry whose condition holds, or null if none does.</summary>
         public string DialogueFor(Func<string, bool> holds)
         {
-            foreach (var entry in Dialogues)
-                if (string.IsNullOrWhiteSpace(entry.Condition) || holds(entry.Condition)) return entry.Dialogue;
-            return null;
+            var index = DialogueIndexFor(holds);
+            return index < 0 ? null : Dialogues[index].Dialogue;
         }
 
         /// <summary>The portrait for a line with this emotion, else the default portrait; null when the character has none.</summary>

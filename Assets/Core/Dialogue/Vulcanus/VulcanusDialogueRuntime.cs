@@ -36,5 +36,7 @@ namespace Core.Dialogue.Vulcanus
         public int StepsExecuted { get; internal set; }
         public GameCharacter Instigator { get; internal set; }
         public ScreenPauseMode? PauseWhileOpen { get; internal set; }
+        /// <summary>Where the dialogue came from, such as a quest or a character's table row; shown in development builds.</summary>
+        public string DebugSource { get; internal set; }
     }
 }
