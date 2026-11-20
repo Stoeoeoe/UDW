@@ -103,6 +103,8 @@ export const MapViewportPixi: React.FC = () => {
           // Fast Refresh can already have torn down the Pixi tree.
         }
       }
+      // Only destroy() takes the viewport off Pixi's shared ticker; otherwise it updates forever.
+      if (oldViewport && !oldViewport.destroyed) oldViewport.destroy({ children: true });
       viewportRef.current = null;
       setViewport(null);
       setIsReady(false);

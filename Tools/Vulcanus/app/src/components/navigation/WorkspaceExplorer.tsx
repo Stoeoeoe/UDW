@@ -126,7 +126,7 @@ function getNodeAccentFromNode(node: WorkspaceTreeNode): NodeAccent | null {
   return getNodeAccent(resourceKind);
 }
 
-export const WorkspaceExplorer: React.FC<WorkspaceExplorerProps> = ({
+const WorkspaceExplorerView: React.FC<WorkspaceExplorerProps> = ({
   nodes,
   expandedNodeIds,
   activeTabId,
@@ -998,5 +998,8 @@ function getFallbackTabId(document: WorkspaceDocument): string | null {
       return null;
   }
 }
+
+/** Memoized: App re-renders for state the explorer does not show. */
+export const WorkspaceExplorer = React.memo(WorkspaceExplorerView);
 
 export default WorkspaceExplorer;

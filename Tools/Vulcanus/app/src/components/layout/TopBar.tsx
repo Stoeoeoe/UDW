@@ -25,7 +25,7 @@ import {
 } from '../../lib/workspaceSaveActions';
 import { useSaveStore } from '../../lib/saveManager';
 
-export const TopBar: React.FC = () => {
+const TopBarView: React.FC = () => {
   const closeProject = useEditorStore((state) => state.closeProject);
   const loadProject = useEditorStore((state) => state.loadProject);
   const loadProjectResources = useEditorStore((state) => state.loadProjectResources);
@@ -255,3 +255,6 @@ export const TopBar: React.FC = () => {
     </Flex>
   );
 };
+
+/** Memoized: the top bar reads its own state, so App re-renders never concern it. */
+export const TopBar = React.memo(TopBarView);

@@ -42,7 +42,7 @@ function createDragPreviewElement(label: string): HTMLDivElement {
   return preview;
 }
 
-export const WorkspaceTabs: React.FC<WorkspaceTabsProps> = ({
+const WorkspaceTabsView: React.FC<WorkspaceTabsProps> = ({
   tabs,
   activeTabId,
   onActivate,
@@ -183,5 +183,8 @@ export const WorkspaceTabs: React.FC<WorkspaceTabsProps> = ({
     </HStack>
   );
 };
+
+/** Memoized: App re-renders for state the tabs do not show. */
+export const WorkspaceTabs = React.memo(WorkspaceTabsView);
 
 export default WorkspaceTabs;

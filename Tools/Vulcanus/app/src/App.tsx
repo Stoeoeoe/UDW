@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { watchScriptingManifest } from './store/useScriptingManifestStore';
 import { TopBar } from './components/layout/TopBar';
@@ -72,6 +72,12 @@ function App() {
   } = useCommandPalette();
 
   const isMapFullscreen = mapFullscreen && activeTab?.document.kind === 'location';
+  // Stable props, so the memoized explorer and tabs skip App renders that don't concern them.
+  const paletteButton = React.useMemo(
+    () => <WorkspaceCommandPaletteButton onClick={openCommandPalette} />,
+    [openCommandPalette],
+  );
+  const closeTab = React.useCallback((tabId: string) => void handleCloseTab(tabId), [handleCloseTab]);
 
   if (!project) {
     return <LandingScreen />;
@@ -117,7 +123,7 @@ function App() {
                     onToggleNode={toggleNode}
                     onOpenNode={handleOpenNode}
                     onOpenDocument={handleOpenDocument}
-                    headerAction={<WorkspaceCommandPaletteButton onClick={openCommandPalette} />}
+                    headerAction={paletteButton}
                   />
                 </Box>
               </Panel>
@@ -130,7 +136,7 @@ function App() {
                     onActivate={activateTab}
                     onPin={pinTab}
                     onReorder={reorderTabs}
-                    onClose={(tabId) => void handleCloseTab(tabId)}
+                    onClose={closeTab}
                   />
                   <Box flex={1} overflow="hidden" minH={0}>
                     <ActiveWorkspaceDocument tab={activeTab} />

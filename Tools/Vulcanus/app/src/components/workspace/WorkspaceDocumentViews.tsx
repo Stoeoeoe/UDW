@@ -31,7 +31,12 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { useWorkspaceStore } from '../../store/useWorkspaceStore';
 import { WorkspaceTab } from '../../types/workspace';
 
-export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = ({ tab }) => {
+/** Memoized: the open editor re-renders for its own state, not for every App render. */
+export const ActiveWorkspaceDocument = React.memo(function ActiveWorkspaceDocument({
+  tab,
+}: {
+  tab: WorkspaceTab | null;
+}) {
   if (!tab) {
     return (
       <EmptyScreen
@@ -43,7 +48,7 @@ export const ActiveWorkspaceDocument: React.FC<{ tab: WorkspaceTab | null }> = (
   }
 
   return <WorkspaceDocumentFrame tab={tab} />;
-};
+});
 
 function WorkspaceDocumentFrame({ tab }: { tab: WorkspaceTab }) {
   const title = useEditorStore((state) => documentTitle(tab.document, state));
