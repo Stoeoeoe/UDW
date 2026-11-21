@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { allReferences, usedBy, usesOf, type ReferenceSources } from './resourceReferences';
 import type { Quest } from '../types/quest';
 import type { Routine } from '../types/routine';
+import { farmhouse } from './buildings/farmhouse.fixture';
 
 const sources: ReferenceSources = {
   characters: [
@@ -85,6 +86,10 @@ const sources: ReferenceSources = {
       offerings: [{ itemId: 'base:seeds', price: 1 }],
     },
   ],
+  buildings: [
+    { ...farmhouse(), interiorMapId: 'test:farmhouse_inside' },
+    { ...farmhouse(), id: 'test:barn', name: 'Barn' },
+  ],
 };
 
 describe('resource references', () => {
@@ -129,5 +134,16 @@ describe('resource references', () => {
       'quest',
       'shop',
     ]);
+  });
+
+  it('links buildings to their kit and interior map', () => {
+    expect(
+      usesOf(references, { type: 'building', id: 'test:farmhouse' }).map(
+        (r) => `${r.to.type}:${r.to.id} ${r.via}`,
+      ),
+    ).toEqual(['building-kit:test:kit Kit', 'location:test:farmhouse_inside Interior']);
+    expect(
+      usedBy(references, { type: 'building-kit', id: 'test:kit' }).map((r) => r.from.id),
+    ).toEqual(['test:farmhouse', 'test:barn']);
   });
 });

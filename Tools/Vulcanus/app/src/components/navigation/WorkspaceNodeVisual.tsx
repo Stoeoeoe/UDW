@@ -4,6 +4,7 @@ import { FiPackage } from 'react-icons/fi';
 import { WorkspaceTreeNode } from '../../types/workspace';
 import { GameIcon } from '../common/GameIcon';
 import { fileSystem } from '../../lib/fileSystem';
+import { BuildingThumbnail } from './BuildingThumbnail';
 
 export const WorkspaceNodeVisual: React.FC<{
   node: WorkspaceTreeNode;
@@ -55,7 +56,7 @@ export const WorkspaceNodeVisual: React.FC<{
     return <WorkspaceAssetIcon path={node.resourceIcon.value} />;
   }
 
-  return (
+  const iconBox = (
     <Box
       boxSize={boxSize}
       borderRadius="md"
@@ -73,6 +74,11 @@ export const WorkspaceNodeVisual: React.FC<{
     >
       <Icon as={icon} boxSize={iconSize} color={isActive ? 'blue.200' : 'inherit'} />
     </Box>
+  );
+  return node.document?.kind === 'building' ? (
+    <BuildingThumbnail buildingId={node.document.buildingId} fallback={iconBox} />
+  ) : (
+    iconBox
   );
 };
 

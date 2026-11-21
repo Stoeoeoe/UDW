@@ -61,6 +61,7 @@ import {
   canDeleteEditorResourceDocument,
   canEditMetadataForResourceDocument,
   deleteEditorResourceDocument,
+  editorResourceDeleteRefusal,
   getEditorResourceDocumentTabId,
   getNodeAccent,
   getDocumentResourceKind,
@@ -270,6 +271,8 @@ const WorkspaceExplorerView: React.FC<WorkspaceExplorerProps> = ({
   const handleDeleteResource = React.useCallback(async (node: WorkspaceTreeNode) => {
     if (!node.document) return;
     if (!canDeleteEditorResourceDocument(node.document)) return;
+    const refusal = editorResourceDeleteRefusal(node.document);
+    if (refusal) return alert(refusal);
     if (!confirm(`Delete "${node.label}"?`)) return;
     await deleteEditorResourceDocument(node.document);
   }, []);

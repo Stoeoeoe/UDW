@@ -317,12 +317,16 @@ the example renders.
 
 ## Phase 4 — Explorer and references polish
 
-- Thumbnails in the explorer and create dialog: exterior at 1× (cached per building revision).
+- Thumbnails: the explorer row's icon is the building's exterior in its base look (`BuildingThumbnail.tsx`, one image
+  per building revision and resolved kit), the plain icon until the kit is read. The create dialog has none: a new
+  building is always the same shell.
 - `lib/resourceReferences.ts`: building → kit, building → interior map; kit → buildings using it. `ResourceLinks` in
-  both editors' headers.
-- Deleting a kit used by buildings: blocked with the list of buildings (like other referenced resources).
-- Command palette: "New building", "Open kit".
-- Tests: references in `resourceReferences.test.ts`; delete blocked.
+  both editors' headers; buildings and kits are in the resource index, so the links open them.
+- Deleting a kit used by buildings is refused, naming them (`deleteRefusal` on the resource type, checked before the
+  delete confirmation in the explorer and its context menu). No other resource type refuses deletes yet.
+- Command palette: buildings and kits are opened from it since phase 0; it has no "New …" commands for any type, so
+  none were added.
+- Tests: references in `resourceReferences.test.ts`; delete refusal in `editorResourceDeleteRefusal.test.ts`.
 
 ---
 

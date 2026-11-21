@@ -397,6 +397,12 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     deleteResource: async (id) => {
       await useEditorStore.getState().deleteBuildingKit(id);
     },
+    deleteRefusal: (id) => {
+      const users = useEditorStore.getState().buildings.filter((building) => building.kit === id);
+      return users.length
+        ? `The kit is used by ${users.map((building) => building.name).join(', ')}. Choose another kit for them first.`
+        : null;
+    },
     getFolderPath: (id) =>
       useEditorStore.getState().buildingKits.find((kit) => kit.id === id)?.folderPath ?? '',
   },
@@ -685,6 +691,14 @@ export function renameEditorResourceDocument(
     return Promise.resolve();
   }
   return definition.renameResource(resourceId, nextName);
+}
+
+export function editorResourceDeleteRefusal(
+  document: WorkspaceDocument | undefined,
+): string | null {
+  const resourceId = getEditorResourceDocumentId(document);
+  const refusal = getEditorResourceTypeForDocument(document)?.deleteRefusal;
+  return refusal && resourceId ? refusal(resourceId) : null;
 }
 
 export function deleteEditorResourceDocument(

@@ -31,6 +31,7 @@ export const ResourceLinks: React.FC<{ resource: ResourceKey }> = ({ resource })
   const routines = useEditorStore((state) => state.routines);
   const shops = useEditorStore((state) => state.shops);
   const dialogues = useEditorStore((state) => state.dialogues);
+  const buildings = useEditorStore((state) => state.buildings);
   const byKey = useResourceIndex();
   const openDocument = useWorkspaceStore((state) => state.openDocument);
 
@@ -41,9 +42,10 @@ export const ResourceLinks: React.FC<{ resource: ResourceKey }> = ({ resource })
       routines,
       dialogues: Array.from(dialogues.values()),
       shops,
+      buildings,
     });
     return { uses: usesOf(references, resource), usedByList: usedBy(references, resource) };
-  }, [characters, dialogues, quests, resource, routines, shops]);
+  }, [buildings, characters, dialogues, quests, resource, routines, shops]);
 
   const count = uses.length + usedByList.length;
   const entry = (key: ResourceKey) => byKey.get(`${key.type}:${key.id}`);

@@ -2,6 +2,7 @@ import type { EditorResourceTypeId } from '../types/editorResource';
 import type { Character, DialogueDocument, Shop } from '../types/schema';
 import type { Quest } from '../types/quest';
 import type { Routine } from '../types/routine';
+import type { Building } from '../types/building';
 
 /** One resource pointing at another, such as a quest objective naming a character. */
 export interface ResourceReference {
@@ -23,6 +24,7 @@ export interface ReferenceSources {
   routines: readonly Routine[];
   dialogues: readonly DialogueDocument[];
   shops: readonly Shop[];
+  buildings: readonly Building[];
 }
 
 type Link = Pick<ResourceReference, 'to' | 'via'>;
@@ -90,6 +92,11 @@ const fromDialogue = (dialogue: DialogueDocument): Link[] =>
 const fromShop = (shop: Shop): Link[] =>
   shop.offerings.flatMap((offering) => link('item', offering.itemId, 'Sells'));
 
+const fromBuilding = (building: Building): Link[] => [
+  ...link('building-kit', building.kit, 'Kit'),
+  ...link('location', building.interiorMapId, 'Interior'),
+];
+
 /** Every reference between the known resources, without duplicates. */
 export function allReferences(sources: ReferenceSources): ResourceReference[] {
   const found: ResourceReference[] = [];
@@ -112,6 +119,7 @@ export function allReferences(sources: ReferenceSources): ResourceReference[] {
   collect('routine', sources.routines, fromRoutine);
   collect('dialogue', sources.dialogues, fromDialogue);
   collect('shop', sources.shops, fromShop);
+  collect('building', sources.buildings, fromBuilding);
   return found;
 }
 

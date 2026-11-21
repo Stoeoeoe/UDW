@@ -13,6 +13,7 @@ import {
   canRevealEditorResourceDocument,
   createEditorResourceDocument,
   deleteEditorResourceDocument,
+  editorResourceDeleteRefusal,
   getEditorResourceFolderPath,
   getEditorResourceFileExplorerPath,
   getEditorResourceDocumentId,
@@ -430,6 +431,8 @@ async function handleRename(
 
 async function handleDelete(node: WorkspaceTreeNode): Promise<void> {
   if (!node.document) return;
+  const refusal = editorResourceDeleteRefusal(node.document);
+  if (refusal) return alert(refusal);
   if (!confirm(`Delete "${node.label}"?`)) return;
   await deleteEditorResourceDocument(node.document);
 }

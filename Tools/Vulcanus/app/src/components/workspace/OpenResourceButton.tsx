@@ -19,6 +19,8 @@ export function useResourceIndex() {
   const routines = useEditorStore((state) => state.routines);
   const dialogues = useEditorStore((state) => state.dialogues);
   const cutscenes = useEditorStore((state) => state.cutscenes);
+  const buildingKits = useEditorStore((state) => state.buildingKits);
+  const buildings = useEditorStore((state) => state.buildings);
   return useMemo(
     () =>
       new Map(
@@ -33,9 +35,24 @@ export function useResourceIndex() {
           routines,
           dialogues: Array.from(dialogues.values()),
           cutscenes,
+          buildingKits,
+          buildings,
         }).map((resource) => [resource.key, resource]),
       ),
-    [characters, cutscenes, dialogues, entityTypes, items, maps, quests, routines, shops, tilesets],
+    [
+      buildingKits,
+      buildings,
+      characters,
+      cutscenes,
+      dialogues,
+      entityTypes,
+      items,
+      maps,
+      quests,
+      routines,
+      shops,
+      tilesets,
+    ],
   );
 }
 
