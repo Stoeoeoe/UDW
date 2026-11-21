@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Character;
 using Core.Events;
@@ -12,7 +13,7 @@ namespace UI.Containers
     [RequireComponent(typeof(UIDocument))]
     public sealed class ContainerScreen : ManagedUIScreen, IEventListener<InventoryChangedEvent>
     {
-        [Inject] private CharacterCatalog _characterCatalog;
+        [Inject] private DefinitionCatalog _characterCatalog;
 
         [SerializeField] private UIDocument document;
         private VisualElement _root, _bagGrid, _containerGrid;
@@ -80,7 +81,7 @@ namespace UI.Containers
             _character = character;
             _container.Changed += RequestRefresh;
             _title.text = container.DisplayName;
-            _owner.text = "Belongs to " + _characterCatalog.Require(container.Storage.State.OwnerCharacterId).Name;
+            _owner.text = "Belongs to " + _characterCatalog.Require<CharacterDefinition>(container.Storage.State.OwnerCharacterId).Name;
             _message.text = "";
             Refresh();
             OpenScreen(character);

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,16 +14,14 @@ namespace Core.Game
     public sealed class GameSaveService
     {
         private const string SlotPrefix = "slot-";
-        private readonly CharacterCatalog _characters;
-        private readonly ItemCatalog _items;
+        private readonly DefinitionCatalog _catalog;
         private Func<DateTime> _utcNow = () => DateTime.UtcNow;
-        public GameSaveService(CharacterCatalog characters, ItemCatalog items)
-        { _characters = characters; _items = items; }
+        public GameSaveService(DefinitionCatalog catalog) => _catalog = catalog;
 
         public void Save(string slot, GameSaveData data)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
-            data.Validate(_characters, _items);
+            data.Validate(_catalog);
 
             // Save data must not depend on scene or asset instance references.
             var bytes = SerializationUtility.SerializeValue(data, DataFormat.JSON, out var unityObjects);
@@ -44,7 +43,7 @@ namespace Core.Game
 
             data = SerializationUtility.DeserializeValue<GameSaveData>(File.ReadAllBytes(path), DataFormat.JSON);
             if (data == null) throw new FormatException("The save file is empty or invalid.");
-            data.Validate(_characters, _items);
+            data.Validate(_catalog);
             return true;
         }
 

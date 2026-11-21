@@ -1,3 +1,5 @@
+using Core.TimeAndWeather;
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -49,6 +51,7 @@ namespace Core.TimeAndWeather.Editor
             _spring.weatherData.GetRandomItem().waterRainIntensity = 0.35f;
             _spring.weatherData.GetRandomItem().waterSeaState = 0.6f;
             _summer = CreateSeason(Season.Summer, Color.yellow);
+            Game.Catalog<WeatherData>(_spring.weatherData.GetRandomItem(), _summer.weatherData.GetRandomItem());
             Game.Use(new ClockSettings { seasons = new[] { _spring, _summer } });
             _sound = Game.RegisterManager<WeatherSoundManagerProbe>();
             var volumeObject = new GameObject("Weather volume");
@@ -130,8 +133,8 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             var selected = _summer.weatherData.GetRandomItem();
-            selected.id = "test:dry";
-            var catalog = Game.Asset<WeatherCatalog>();
+            selected.SetId("test:dry");
+            var catalog = Game.Asset<DefinitionCatalog>();
             catalog.Synchronize(new[] { selected });
             var api = new WeatherLuaApi(_weather, catalog);
             var minutes = Game.State.Time.TotalMinutes;
@@ -152,10 +155,10 @@ namespace Core.TimeAndWeather.Editor
         {
             _clock.Start();
             var dry = _summer.weatherData.GetRandomItem();
-            dry.id = "test:dry";
+            dry.SetId("test:dry");
             var other = Game.Asset<WeatherData>();
-            other.id = "test:other";
-            var catalog = Game.Asset<WeatherCatalog>();
+            other.SetId("test:other");
+            var catalog = Game.Asset<DefinitionCatalog>();
             catalog.Synchronize(new[] { dry, other });
             var lua = new VulcanusLuaEngine(Game.Bind(new WeatherLuaApi(_weather, catalog)));
 
@@ -171,8 +174,8 @@ namespace Core.TimeAndWeather.Editor
             _clock.Start();
             var previous = _weather.CurrentWeather;
             var selected = _summer.weatherData.GetRandomItem();
-            selected.id = "test:dry";
-            var catalog = Game.Asset<WeatherCatalog>();
+            selected.SetId("test:dry");
+            var catalog = Game.Asset<DefinitionCatalog>();
             catalog.Synchronize(new[] { selected });
             var api = new WeatherLuaApi(_weather, catalog);
             CutsceneSequenceCompiler.Compile(JArray.Parse(
@@ -214,6 +217,8 @@ namespace Core.TimeAndWeather.Editor
             Game.State.Time.season = Season.Summer;
             Game.State.Time.dayOfSeason = 7;
             Game.State.Time.hour = 15;
+            Game.State.Session.WeatherId = _summer.weatherData.GetRandomItem().Id;
+            Game.State.Session.WeatherDay = Game.State.Time.daysSinceStart;
             var minutes = Game.State.Time.TotalMinutes;
             _clock.ApplySavedTime();
             Assert.That(_clock.CurrentSeason, Is.SameAs(_summer));
@@ -227,10 +232,10 @@ namespace Core.TimeAndWeather.Editor
         public void LoadingResumesTheSavedWeatherOfTheSameDayAndANewDayRollsAgain()
         {
             var rain = _spring.weatherData.GetRandomItem();
-            rain.id = "test:rain";
+            rain.SetId("test:rain");
             var dry = Game.Asset<WeatherData>();
-            dry.id = "test:dry";
-            var catalog = Game.Asset<WeatherCatalog>();
+            dry.SetId("test:dry");
+            var catalog = Game.Asset<DefinitionCatalog>();
             catalog.Synchronize(new[] { rain, dry });
             Set(_weather, "_catalog", catalog);
             _clock.Start();
@@ -280,6 +285,7 @@ namespace Core.TimeAndWeather.Editor
             _clock.Start();
             var previous = _weather.CurrentWeather;
             var invalid = Game.Asset<WeatherData>();
+            invalid.SetId("test:invalid-weather");
             invalid.waterRainIntensity = intensity;
             Assert.That(invalid.ValidateConfiguration()[0].Setting, Is.EqualTo(nameof(WeatherData.waterRainIntensity)));
             Assert.Throws<ArgumentException>(() => _weather.SetWeather(invalid));
@@ -434,7 +440,7 @@ namespace Core.TimeAndWeather.Editor
         private LocationData Location(LocationType type)
         {
             var location = Game.Asset<LocationData>();
-            location.id = type == LocationType.Indoor ? "test:room" : "test:outside";
+            location.SetId(type == LocationType.Indoor ? "test:room" : "test:outside");
             location.locationType = type;
             return location;
         }
@@ -459,7 +465,9 @@ namespace Core.TimeAndWeather.Editor
             data.season = season;
             data.daylightColorGradient = CreateGradient(color);
             data.weatherData = new WeightedList<WeatherData>();
-            data.weatherData.Add(Game.Asset<WeatherData>());
+            var weather = Game.Asset<WeatherData>();
+            weather.SetId("test:" + season.ToString().ToLowerInvariant());
+            data.weatherData.Add(weather);
             return data;
         }
 

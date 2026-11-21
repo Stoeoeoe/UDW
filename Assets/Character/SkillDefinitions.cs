@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 
@@ -7,13 +8,13 @@ namespace Character
     public sealed class SkillDefinitions
     {
         private readonly Dictionary<string, SkillDefinition> Mods = new(StringComparer.Ordinal);
-        private readonly SkillCatalog _catalog;
-        public SkillDefinitions(SkillCatalog catalog) => _catalog = catalog;
+        private readonly DefinitionCatalog _catalog;
+        public SkillDefinitions(DefinitionCatalog catalog) => _catalog = catalog;
 
         public SkillDefinition Get(string skillId)
         {
             if (Mods.TryGetValue(skillId, out var result)) return result;
-            result = _catalog.Get(skillId);
+            result = _catalog.Get<SkillDefinition>(skillId);
             if (result) return result;
             throw new InvalidOperationException($"No skill definition registered for '{skillId}'.");
         }
@@ -30,9 +31,9 @@ namespace Character
                 throw new ArgumentNullException(nameof(definition));
 
             definition.RequireValidConfiguration(); // New mod content enters the validated configuration boundary here.
-            var id = definition.SkillId;
+            var id = definition.Id;
 
-            if (_catalog.Get(id) || Mods.ContainsKey(id))
+            if (_catalog.Get<SkillDefinition>(id) || Mods.ContainsKey(id))
                 throw new InvalidOperationException($"Duplicate skill ID '{id}'.");
 
             Mods.Add(id, definition);

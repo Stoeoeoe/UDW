@@ -2,7 +2,7 @@
 
 A quest is a story questline: steps that run in order, each with objectives the game checks. Quests are authored in
 the Vulcanus project as `quests/*.quest.json` (schema: `Schemas/quest.schema.json` at the repository root); the
-Vulcanus importer turns each into a `QuestDefinition`, and `QuestCatalog` lists them. The spec and build order are
+Vulcanus importer turns each into a `QuestDefinition`, and the shared `DefinitionCatalog` lists them. The spec and build order are
 Linear STO-89.
 
 ```json

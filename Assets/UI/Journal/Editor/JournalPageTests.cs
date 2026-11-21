@@ -23,8 +23,8 @@ namespace UI.Journal.Editor
         {
             _wine = Game.Asset<InventoryTestItem>();
             ConfigurationTestData.Set(_wine, "Id", "test:wine");
-            Game.Catalog<ItemCatalog>(_wine);
-            Game.Catalog<QuestCatalog>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(), @"{
+            Game.Catalog<ItemDefinition>(_wine);
+            Game.Catalog<QuestDefinition>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(), @"{
                 id: 'test:wine', title: 'Wine for the festival', description: 'The priestess needs wine.',
                 steps: [
                     { id: 'buy', journal: 'Buy wine.', deadline: { days: 1, at: '18:00' },

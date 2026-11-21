@@ -127,10 +127,9 @@ namespace Core.Routines
 
     /// <summary>An NPC's daily routine authored in Vulcanus (*.routine.json). Plan a day with <see cref="RoutinePlanner"/>.</summary>
     [ImportedData]
-    public sealed class RoutineDefinition : ValidatedScriptableObject<RoutineValidator>
+    [Core.Catalogs.DefinitionResource]
+    public sealed class RoutineDefinition : Core.Catalogs.DefinitionScriptableObject<RoutineValidator>
     {
-        [field: SerializeField, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
-        public string Id { get; private set; }
         [field: SerializeField, Validation.NamespacedId("The source requires the character's namespace:name ID.", Lowercase = true),
                 Validation.Reference(typeof(global::Character.CharacterDefinition))]
         public string Character { get; private set; }

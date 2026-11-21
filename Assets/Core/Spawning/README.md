@@ -2,7 +2,7 @@
 
 Open **Tools > Spawning > Catalog** to edit the catalog in a dedicated Odin window. It inspects the asset directly, reusing its prefab list and validation rather than keeping separate window data.
 
-1. `WorldObjectSpawner` is a plain service registered by `GameServices` over `Assets/Resources/SpawnableCatalog.asset`, a default catalog like the others. SystemRoot connects it to location entry before the managers' own callbacks; map initialization happens before reconstruction. Spawned views live under one persistent "World objects" root that the service owns and destroys.
+1. `WorldObjectSpawner` is a plain service registered by `GameServices` over the `SpawnedObject` family in `Assets/Resources/DefinitionCatalog.asset`. SystemRoot connects it to location entry before the managers' own callbacks; map initialization happens before reconstruction. Spawned views live under one persistent "World objects" root that the service owns and destroys.
 2. Add `SpawnedObject` to the root of an active prefab (or derive it for specific gameplay). The first child `AbstractInteractable`, if present, has its uses and saved cooldowns bound automatically.
 3. Put the prefab under `Assets/Content/Spawnables` and manually assign its stable lowercase `namespace:name` ID, such as `base:chest`. Never change an ID once used in saves. The catalog holds explicit prefab references; runtime does not scan folders. The folder is only an editor authoring convention. Renaming or moving a prefab does not change its ID, but moving it outside the authoring folder removes it from the next catalog refresh. Prefabs loaded by mods must be registered through `WorldObjectSpawner.Register` before spawning or restoring them.
 
@@ -29,7 +29,7 @@ This version supports spawning into the entered location and one interactable pe
 
 ## Map-authored persistent entities
 
-Entity types whose prefab root has `SpawnedObject` use the same runtime state and spawning path. The map's `typeId` can resolve directly to a registered `PrefabId`; Vulcanus mappings remain available for nonpersistent entities and existing type aliases. Persistent mapped prefabs must also be in `SpawnableCatalog`.
+Entity types whose prefab root has `SpawnedObject` use the same runtime state and spawning path. The map's `typeId` can resolve directly to a registered `SpawnedObject.Id`; Vulcanus mappings remain available for nonpersistent entities and existing type aliases. Persistent mapped prefabs must also be enabled in the shared catalog's `SpawnedObject` family.
 
 The importer keeps these placements as inactive configured templates, not live gameplay instances. This preserves imported JSON property overrides without runtime reflection. Missing or duplicate persistent instance IDs fail import; no random fallback is allowed for persistent entities. The importer revision ensures existing maps are reimported with this representation.
 

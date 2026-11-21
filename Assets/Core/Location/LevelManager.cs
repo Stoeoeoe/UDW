@@ -58,7 +58,7 @@ namespace Core.Location
 
         // - Location lookup ---------------------------------------------------------
 
-        [Inject] private LocationCatalog _locations;
+        [Inject] private DefinitionCatalog _locations;
         Dictionary<string, LocationData> _locationByScenePath = new(StringComparer.OrdinalIgnoreCase);
 
         // - Lifecycle callbacks ---------------------------------------------------
@@ -70,7 +70,7 @@ namespace Core.Location
         protected override void OnAwake()
         {
             base.OnAwake();
-            _locationByScenePath = IdIndex.FirstWins(_locations.EnabledDefinitions,
+            _locationByScenePath = IdIndex.FirstWins(_locations.All<LocationData>(),
                 location => location ? location.ScenePath : null, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -130,7 +130,7 @@ namespace Core.Location
         }
 
         private static bool IsOpen(LocationData open, LocationData location) =>
-            open != null && location.id == open.id;
+            open != null && location.Id == open.Id;
 
         // A loaded save resumes where it was made. The screen is still covered from startup (ScreenFader.Awake),
         // so a different scene can replace the open one without the player seeing it.
@@ -153,7 +153,7 @@ namespace Core.Location
         }
 
         private LocationData RequireSavedLocation(string locationId) =>
-            _locations.Get(locationId)
+            _locations.Get<LocationData>(locationId)
             ?? throw new InvalidOperationException($"The saved location '{locationId}' is not a registered, enabled location.");
 
         // Loads a fresh copy of the scene and unloads the active one, even when they are the same scene.
@@ -275,7 +275,7 @@ namespace Core.Location
             Debug.LogWarning(
                 $"[LevelManager] No LocationData found for scene '{activeScene.name}'. Running in test mode with a transient location.");
             var testLocation = ScriptableObject.CreateInstance<LocationData>();
-            testLocation.id = activeScene.name;
+            testLocation.SetId(activeScene.name);
             testLocation.label = activeScene.name;
             return testLocation;
         }
@@ -327,7 +327,7 @@ namespace Core.Location
         public IEnumerator ReturnHome(MainCharacter character)
         {
             var home = _gameState.Player.Home;
-            if (CurrentLocationData.id == home.LocationId)
+            if (CurrentLocationData.Id == home.LocationId)
                 PlaceAtHome(character, home.BedId);
             else
                 yield return LoadLocationCovered(GetLocationDataById(home.LocationId),
@@ -354,14 +354,14 @@ namespace Core.Location
             var placed = TryPlaceCharacterAtEntry(character, entryKey, ResolveFacingDirection(facingDirection));
 
             if (!placed)
-                throw new InvalidOperationException($"[LevelManager] Missing entry '{entryKey}' in '{CurrentLocationData.id}'.");
+                throw new InvalidOperationException($"[LevelManager] Missing entry '{entryKey}' in '{CurrentLocationData.Id}'.");
 
             character.EnsureRuntimeInitialized();
             return true;
         }
 
         public LocationData GetLocationDataById(string id) =>
-            _locations.Get(id);
+            _locations.Get<LocationData>(id);
 
         public void RegisterLifecycle(ILocationLifecycle component)
         {
@@ -385,7 +385,7 @@ namespace Core.Location
             var sceneLocation = GetLocationForScene(behaviour.gameObject.scene);
             // Objects in a location scene only receive that location. Managers in the
             // persistent systems scene receive every location.
-            return sceneLocation == null || sceneLocation.id == location.id;
+            return sceneLocation == null || sceneLocation.Id == location.Id;
         }
 
         private LocationData GetLocationForScene(Scene scene)
@@ -485,7 +485,7 @@ namespace Core.Location
                 ? Array.Find(spawnPoints, sp => sp.Key == entryKey)
                 : null;
             if (!string.IsNullOrWhiteSpace(entryKey) && target == null)
-                throw new InvalidOperationException($"[LevelManager] Missing entry '{entryKey}' in '{CurrentLocationData.id}'.");
+                throw new InvalidOperationException($"[LevelManager] Missing entry '{entryKey}' in '{CurrentLocationData.Id}'.");
             if (string.IsNullOrWhiteSpace(entryKey))
             {
                 target = Array.Find(spawnPoints, sp => sp.Key == _defaultSpawnKey);

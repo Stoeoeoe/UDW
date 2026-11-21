@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e83292becbf4b62989836e0932b3ca8, type: 3}
   m_Name: LightRainWeatherEffect
   m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.WeatherEffect
-  id: LightRainSpring
+  <Id>k__BackingField: LightRainSpring
   label: LightRainSpring
   weatherEffectPrefab: {fileID: 0}
   outdoorAmbience: {fileID: 8300000, guid: f11975fa18e549b4c8e90f5239a4bc2e, type: 3}

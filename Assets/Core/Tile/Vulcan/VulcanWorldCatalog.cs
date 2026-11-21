@@ -7,8 +7,11 @@ using UnityEngine;
 namespace Core.Tile.Vulcanus
 {
     [CreateAssetMenu(fileName = "VulcanusWorldCatalog", menuName = "Game/Vulcanus/World Catalog")]
-    public class VulcanusWorldCatalog : ScriptableObject
+    [Core.Catalogs.DefinitionResource]
+    public class VulcanusWorldCatalog : ScriptableObject, Core.Catalogs.IDefinition
     {
+        public string Id => name;
+
         [Serializable]
         public class MapBinding
         {
@@ -119,7 +122,7 @@ namespace Core.Tile.Vulcanus
 
             EnsureCaches();
 
-            if (!string.IsNullOrWhiteSpace(location.id) && _bindingByLocationId != null && _bindingByLocationId.TryGetValue(location.id, out var byIdBinding))
+            if (!string.IsNullOrWhiteSpace(location.Id) && _bindingByLocationId != null && _bindingByLocationId.TryGetValue(location.Id, out var byIdBinding))
             {
                 mapPrefab = byIdBinding.MapPrefab;
                 if (mapPrefab != null)
@@ -139,7 +142,7 @@ namespace Core.Tile.Vulcanus
                 }
             }
 
-            return TryGetMapPrefabByMapId(location.id, out mapPrefab);
+            return TryGetMapPrefabByMapId(location.Id, out mapPrefab);
         }
 
         public LocationData[] GetMappedLocations()
@@ -183,7 +186,7 @@ namespace Core.Tile.Vulcanus
                 StringComparer.Ordinal);
             _bindingByLocationId = IdIndex.FirstWins(mapBindings, binding =>
                 binding != null && !string.IsNullOrWhiteSpace(binding.MapId) && binding.LocationData
-                    ? binding.LocationData.id : null, StringComparer.Ordinal);
+                    ? binding.LocationData.Id : null, StringComparer.Ordinal);
         }
     }
 }

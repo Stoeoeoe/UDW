@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eef382cf69e179842be21e5ad52f563b, type: 3}
   m_Name: PrototypeComplete
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.SoundDefinition
-  soundId: base:prototype-complete
+  <Id>k__BackingField: base:prototype-complete
   clip: {fileID: 8300000, guid: d1a2e4156202722488318f4231504946, type: 3}

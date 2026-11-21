@@ -19,7 +19,7 @@ namespace Core.SocialStanding.Editor
         [SetUp]
         public void SetUp()
         {
-            Game.Catalog<CharacterCatalog>(
+            Game.Catalog<CharacterDefinition>(
                 VulcanusJson.Populate(Game.Asset<CharacterDefinition>(), "{ id: 'test:baker', name: 'Baker', startingSocialStanding: 80 }"),
                 VulcanusJson.Populate(Game.Asset<CharacterDefinition>(), "{ id: 'test:plain', name: 'Plain' }"));
             _standing = Game.Get<SocialStandingService>();

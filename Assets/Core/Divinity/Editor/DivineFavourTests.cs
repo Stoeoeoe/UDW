@@ -283,7 +283,7 @@ namespace Core.Divinity.Editor
             var deity = ScriptableObject.CreateInstance<DeityDefinition>();
             _objects.Add(deity);
             var serialized = new SerializedObject(deity);
-            serialized.FindProperty("_id").stringValue = id;
+            serialized.FindProperty("<Id>k__BackingField").stringValue = id;
             serialized.FindProperty("_codeName").stringValue = codeName;
             serialized.FindProperty("_dailyDecay").intValue = dailyDecay;
             serialized.ApplyModifiedPropertiesWithoutUndo();

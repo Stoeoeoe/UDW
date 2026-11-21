@@ -1,3 +1,5 @@
+using Plants;
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +23,7 @@ namespace Plants.Editor
         IEventListener<PlantConditionChangedEvent>, IEventListener<FarmlandDriedEvent>
     {
         private PlantManager _plants;
-        private PlantCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private PlantData _data;
         private Action<PlantGrowthEvent> _onGrowth;
         private readonly List<PlantGrowthEvent> _growth = new();
@@ -39,9 +41,9 @@ namespace Plants.Editor
             _dried.Clear();
             _onGrowth = null;
             _data = Game.Asset<PlantData>();
-            TestConfiguration.Set(_data, "plantId", "test:crop");
+            TestConfiguration.Set(_data, "Id", "test:crop");
             Set(_data, "growthStages", PlantDataTests.Stages(0, 2, 5));
-            _catalog = Game.Catalog<PlantCatalog>(_data);
+            _catalog = Game.Catalog<PlantData>(_data);
             _plants = Game.Get<PlantManager>();
             EventBus<PlantGrowthEvent>.Subscribe(this);
             EventBus<SowPlantEvent>.Subscribe(this);
@@ -63,13 +65,13 @@ namespace Plants.Editor
         public void SowingIsLocationScopedAndDoesNotReplaceOrAnnounceAnExistingPlant()
         {
             var position = new Vector2Int(-7, 4);
-            Sow("farm", position, _data.plantId);
+            Sow("farm", position, _data.Id);
             var first = _plants.GetPlantState("farm", position);
             first.daysPassedSincePlanting = 3;
             Sow("farm", position, "other:crop");
-            Sow("village", position, _data.plantId);
+            Sow("village", position, _data.Id);
             Assert.That(_plants.GetPlantState("farm", position), Is.SameAs(first));
-            Assert.That(first.plantID, Is.EqualTo(_data.plantId));
+            Assert.That(first.plantID, Is.EqualTo(_data.Id));
             Assert.That(first.daysPassedSincePlanting, Is.EqualTo(3));
             Assert.That(_plants.GetPlantState("village", position), Is.Not.SameAs(first));
             Assert.That(_plants.GetPlantState("village", position).daysPassedSincePlanting, Is.Zero);
@@ -80,14 +82,14 @@ namespace Plants.Editor
             Assert.That(_sown.Count, Is.EqualTo(2));
             Assert.That(_sown[0].LocationId, Is.EqualTo("farm"));
             Assert.That(_sown[0].Position, Is.EqualTo(position));
-            Assert.That(_sown[0].PlantId, Is.EqualTo(_data.plantId));
+            Assert.That(_sown[0].PlantId, Is.EqualTo(_data.Id));
         }
 
         [Test]
         public void AdvancingGrowthMovesAHealthyCropToTheStartOfItsNextStageUntilFullyGrown()
         {
             var position = new Vector2Int(2, 3);
-            Sow("farm", position, _data.plantId);
+            Sow("farm", position, _data.Id);
             var crop = _plants.GetPlantState("farm", position);
             crop.daysPassedSincePlanting = 1; // Part-way through the first stage.
 
@@ -108,7 +110,7 @@ namespace Plants.Editor
         public void WiltedOrMissingCropsCannotBeAdvanced()
         {
             var position = new Vector2Int(2, 3);
-            Sow("farm", position, _data.plantId);
+            Sow("farm", position, _data.Id);
             _plants.GetPlantState("farm", position).condition = PlantCondition.Wilted;
 
             Assert.That(_plants.TryAdvanceGrowthStage("farm", position), Is.False);
@@ -124,7 +126,7 @@ namespace Plants.Editor
         public void WiltedCropsExpireAfterTheConfiguredNumberOfFurtherDaysInUnloadedLocations(int threshold)
         {
             Set(_data, "_daysWiltedUntilRemoval", threshold);
-            var crop = new PlantState(_data.plantId) { condition = PlantCondition.Wilted };
+            var crop = new PlantState(_data.Id) { condition = PlantCondition.Wilted };
             Game.State.World.Set("unloaded", "plant:1,2", crop);
             for (var day = 1; day <= threshold; day++)
             {
@@ -137,7 +139,7 @@ namespace Plants.Editor
         [Test]
         public void TheDayACropWiltsDoesNotCountTowardsItsRemovalDelay()
         {
-            var crop = new PlantState(_data.plantId) { consecutiveDaysWithoutWater = 4 };
+            var crop = new PlantState(_data.Id) { consecutiveDaysWithoutWater = 4 };
             Game.State.World.Set("farm", "plant:1,2", crop);
             _plants.OnEvent(new NewDayEvent());
             Assert.That(crop.condition, Is.EqualTo(PlantCondition.Wilted));
@@ -179,7 +181,7 @@ namespace Plants.Editor
             Assert.That(disabled.daysPassedSincePlanting, Is.EqualTo(1));
             Assert.That(_plants.HasPlantAt("farm", Vector2Int.one), Is.True);
             Assert.That(_growth, Is.Empty);
-            Assert.That(_plants.TryGetPlantData(_data.plantId, out _), Is.False);
+            Assert.That(_plants.TryGetPlantData(_data.Id, out _), Is.False);
             _catalog.SetEnabled(_data, true);
             Game.State.World.Set("farm", "farmland:2,2", new FarmlandState { plowed = true, irrigated = true });
             _plants.OnEvent(new NewDayEvent());
@@ -196,7 +198,7 @@ namespace Plants.Editor
             _onGrowth = e =>
             {
                 Game.State.World.Remove(e.LocationId, $"plant:{e.Position.x},{e.Position.y}");
-                Sow("new-location", Vector2Int.zero, _data.plantId);
+                Sow("new-location", Vector2Int.zero, _data.Id);
             };
             Assert.DoesNotThrow(() => _plants.OnEvent(new NewDayEvent()));
             Assert.That(_growth.Count, Is.EqualTo(3));
@@ -209,14 +211,14 @@ namespace Plants.Editor
         public void SaveRoundTripRestoresPlantAgeAndFarmlandWithoutAssetReferences()
         {
             var root = new GameSaveData();
-            root.world.Set("farm", "plant:-1,2", new PlantState(_data.plantId) { daysPassedSincePlanting = 4 });
+            root.world.Set("farm", "plant:-1,2", new PlantState(_data.Id) { daysPassedSincePlanting = 4 });
             root.world.Set("farm", "farmland:-1,2", new FarmlandState { plowed = true, irrigated = true });
             root.world.Set("village", "plant:-1,2", new PlantState("missing:crop"));
-            root.world.Set("farm", "plant:3,4", new PlantState(_data.plantId)
+            root.world.Set("farm", "plant:3,4", new PlantState(_data.Id)
             {
                 daysPassedSincePlanting = 2, consecutiveDaysWithoutWater = 5, condition = PlantCondition.Wilted
             });
-            root.world.Set("farm", "plant:5,6", new PlantState(_data.plantId) { consecutiveDaysWithoutWater = 3 });
+            root.world.Set("farm", "plant:5,6", new PlantState(_data.Id) { consecutiveDaysWithoutWater = 3 });
             var bytes = SerializationUtility.SerializeValue(root, DataFormat.JSON, out var references);
             Assert.That(references, Is.Empty);
             var loaded = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.JSON);
@@ -325,7 +327,7 @@ namespace Plants.Editor
 
         private PlantState Store(string location, string id, int age, bool irrigated = true)
         {
-            var state = new PlantState(_data.plantId) { daysPassedSincePlanting = age };
+            var state = new PlantState(_data.Id) { daysPassedSincePlanting = age };
             Game.State.World.Set(location, id, state);
             if (irrigated)
                 Game.State.World.Set(location, id.Replace("plant:", "farmland:"),
@@ -340,7 +342,7 @@ namespace Plants.Editor
         {
             Set(_data, "growingSeasons", new[] { Season.Spring });
             Game.State.Time.season = Season.Winter;
-            Sow("unloaded-farm", Vector2Int.zero, _data.plantId);
+            Sow("unloaded-farm", Vector2Int.zero, _data.Id);
             var plant = _plants.GetPlantState("unloaded-farm", Vector2Int.zero);
             plant.daysPassedSincePlanting = 1;
             plant.consecutiveDaysWithoutWater = 4;

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Core.Catalogs.Editor;
 using Core.Scripting;
@@ -43,7 +44,7 @@ namespace Core.Tile.Editor.Vulcanus
                     if (triggers != null) foreach (var trigger in triggers)
                     {
                         if (trigger.Type != "cutscene") continue;
-                        var definition = Resources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName).Get(trigger.CutsceneId);
+                        var definition = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).Get<CutsceneDefinition>(trigger.CutsceneId);
                         if (!definition || definition.MapId != map.Id)
                             throw new InvalidOperationException($"{path}: trigger '{trigger.Id}' requires its enabled cutscene '{trigger.CutsceneId}' on this map.");
                     }

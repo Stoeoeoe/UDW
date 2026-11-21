@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8d61a3f9aea4642a1c71059c208839a, type: 3}
   m_Name: FabiaHappyTypewriter
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Dialog.TypewriterSound
-  _soundId: base:fabia_happy
+  <Id>k__BackingField: base:fabia_happy
   _audioClips:
   - {fileID: 8300000, guid: 4ee785fade5498a4caa385642ed25eef, type: 3}
   _pitchMin: 0.95

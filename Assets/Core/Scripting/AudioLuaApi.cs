@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Core.Tile.Vulcanus;
 using MoreMountains.Tools;
@@ -11,18 +12,18 @@ namespace Core.Scripting
     {
         private readonly MMSoundManager _manager;
         private readonly VulcanusImportedMap _map;
-        private readonly SoundCatalog _sounds;
+        private readonly DefinitionCatalog _sounds;
 
-        public AudioLuaApi(MMSoundManager manager, VulcanusImportedMap map, SoundCatalog sounds)
+        public AudioLuaApi(MMSoundManager manager, VulcanusImportedMap map, DefinitionCatalog sounds)
         {
             _manager = manager ? manager : throw new InvalidOperationException("Sound actions require the initialized MMSoundManager.");
             _map = map ? map : throw new InvalidOperationException("Sound actions require the initialized map.");
-            _sounds = sounds ? sounds : throw new InvalidOperationException("The required SoundCatalog is missing.");
+            _sounds = sounds ? sounds : throw new InvalidOperationException("The required DefinitionCatalog is missing.");
         }
 
         private SoundDefinition RequireSound(string sound)
         {
-            var definition = _sounds.Get(sound);
+            var definition = _sounds.Get<SoundDefinition>(sound);
             if (!definition) throw new InvalidOperationException($"Sound '{sound}' is not registered and enabled.");
             definition.RequireValidConfiguration();
             return definition;

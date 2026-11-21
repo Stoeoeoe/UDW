@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a0a485f742f4553884da6ca441525ba, type: 3}
   m_Name: RavenFlowerPlantData
   m_EditorClassIdentifier: Assembly-CSharp::Items.Plants.PlantData
-  _plantId: RavenFlower
+  <Id>k__BackingField: RavenFlower
   _label: Raven Flower
   _description: A blue flower, mysterious
   growingSeasons: 00000000010000000200000003000000i

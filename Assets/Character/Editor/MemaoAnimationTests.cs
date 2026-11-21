@@ -21,7 +21,7 @@ namespace Character.Editor
             _library = AssetDatabase.LoadAssetAtPath<MemaoAnimationLibrary>(LibraryPath);
             Assert.That(_library, Is.Not.Null, "The imported character library is required by these fixtures.");
             _animation = ScriptableObject.CreateInstance<CharacterAnimation>();
-            Set("animationId", "test:memao-action");
+            Set("Id", "test:memao-action");
         }
 
         [TearDown]
@@ -142,8 +142,7 @@ namespace Character.Editor
         private void Set(string field, object value)
         {
             // Assemble the complete fixture before validating it, as the other animation tests do.
-            var owner = field == "animationId" ? typeof(CharacterAnimationDefinition) : typeof(CharacterAnimation);
-            owner.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_animation, value);
+            Core.Common.Editor.Reflect.Set(_animation, field, value);
         }
     }
 }

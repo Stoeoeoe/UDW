@@ -37,7 +37,7 @@ namespace Core.Music.Editor
                 stems[stem] = new MusicStem { id = StemNames[stem], clip = clip };
             }
             var cue = ScriptableObject.CreateInstance<MusicCue>();
-            cue.id = id; cue.bpm = bpm; cue.beatsPerBar = 4; cue.loopBars = 4; cue.stems = stems;
+            cue.SetId(id); cue.bpm = bpm; cue.beatsPerBar = 4; cue.loopBars = 4; cue.stems = stems;
             cue.presets = new[]
             {
                 Preset("calm", new[] { 0.6f, 0.4f, 0f, 0f }),

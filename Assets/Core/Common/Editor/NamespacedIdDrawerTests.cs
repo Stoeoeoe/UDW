@@ -29,13 +29,13 @@ namespace Core.Common.Editor
                 SetId(first, "base:one");
                 SetId(second, "mymod:two");
                 var targets = new Object[] { first, second };
-                NamespacedIdDrawer.AssignParts(targets, "_skillId", null, "three");
-                Assert.That(first.SkillId, Is.EqualTo("base:three"));
-                Assert.That(second.SkillId, Is.EqualTo("mymod:three"));
+                NamespacedIdDrawer.AssignParts(targets, "<Id>k__BackingField", null, "three");
+                Assert.That(first.Id, Is.EqualTo("base:three"));
+                Assert.That(second.Id, Is.EqualTo("mymod:three"));
                 SetId(second, "mymod:two");
-                NamespacedIdDrawer.AssignParts(targets, "_skillId", "other", null);
-                Assert.That(first.SkillId, Is.EqualTo("other:three"));
-                Assert.That(second.SkillId, Is.EqualTo("other:two"));
+                NamespacedIdDrawer.AssignParts(targets, "<Id>k__BackingField", "other", null);
+                Assert.That(first.Id, Is.EqualTo("other:three"));
+                Assert.That(second.Id, Is.EqualTo("other:two"));
             }
             finally
             {
@@ -50,10 +50,10 @@ namespace Core.Common.Editor
             var skill = ScriptableObject.CreateInstance<SkillDefinition>();
             try
             {
-                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "_skillId", null, "chest");
-                Assert.That(skill.SkillId, Is.EqualTo("base:chest"));
-                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "_skillId", "my:mod", "cr:ate");
-                Assert.That(skill.SkillId, Is.EqualTo("mymod:crate"));
+                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "<Id>k__BackingField", null, "chest");
+                Assert.That(skill.Id, Is.EqualTo("base:chest"));
+                NamespacedIdDrawer.AssignParts(new Object[] { skill }, "<Id>k__BackingField", "my:mod", "cr:ate");
+                Assert.That(skill.Id, Is.EqualTo("mymod:crate"));
             }
             finally { Object.DestroyImmediate(skill); }
         }
@@ -61,7 +61,7 @@ namespace Core.Common.Editor
         private static void SetId(SkillDefinition skill, string id)
         {
             var serialized = new SerializedObject(skill);
-            serialized.FindProperty("_skillId").stringValue = id;
+            serialized.FindProperty("<Id>k__BackingField").stringValue = id;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
     }

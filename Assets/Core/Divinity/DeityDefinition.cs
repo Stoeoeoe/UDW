@@ -6,11 +6,10 @@ using UnityEngine;
 namespace Core.Divinity
 {
     [CreateAssetMenu(fileName = "Deity", menuName = "Game/Divine Favour/Deity")]
-    public sealed class DeityDefinition : ValidatedScriptableObject<DeityDefinitionValidator>
+    [Core.Catalogs.DefinitionResource("Assets/Resources/Deities", IdFormat = Core.Catalogs.DefinitionIdFormat.Any)]
+    [Core.Scripting.LuaResource("deity", DescriptionMember = nameof(DeityDefinition.DisplayName))]
+    public sealed class DeityDefinition : Core.Catalogs.DefinitionScriptableObject<DeityDefinitionValidator>
     {
-        [Tooltip("Stable save ID, independent of the display name.")]
-        [NamespacedId, SerializeField, Validation.Id("Assign a stable, nonblank deity ID.")]
-        private string _id;
 
         [Tooltip("C# member generated for this deity, for example Mars. Leave empty to derive it from the ID.")]
         [SerializeField]
@@ -31,8 +30,6 @@ namespace Core.Divinity
 
         [SerializeField, Validation.Required("Must not be null; an empty array grants no boons."), Validation.RequiredElements("Level must not be null."), Validation.Nested]
         private FavourLevel[] levels = Array.Empty<FavourLevel>();
-
-        public string Id => _id;
         public string CodeName => _codeName;
         public string DisplayName => _displayName;
         public string Description => _description;

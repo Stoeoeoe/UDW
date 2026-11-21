@@ -14,24 +14,40 @@ namespace Core.Catalogs.Editor
     {
         private static bool _scheduled;
         public int callbackOrder => 0;
-        public static DefinitionCatalog[] FindCatalogs() => AssetDatabase.FindAssets("t:DefinitionCatalog")
-            .Select(AssetDatabase.GUIDToAssetPath).OrderBy(path => path, StringComparer.Ordinal)
-            .Select(AssetDatabase.LoadAssetAtPath<DefinitionCatalog>).Where(catalog => catalog).ToArray();
 
-        public static Object[] Discover(DefinitionCatalog catalog)
+        public static string DependencyName<T>() where T : Object => DependencyName(typeof(T));
+        private static string DependencyName(Type type) => "UrdewValley.Catalog." + DefinitionCatalog.FamilyOf(type).FullName;
+
+        private static void RegisterDependencies(DefinitionCatalog catalog)
         {
-            var definitions = CatalogAssetDiscovery.Find(catalog.Path, catalog.DefinitionType);
-            CatalogValidation.Validate(catalog, definitions);
-            return definitions;
+            foreach (var type in DefinitionCatalog.DefinitionTypes)
+            {
+                var choices = catalog.All(type).OrderBy(DefinitionCatalog.GetId, StringComparer.Ordinal)
+                    .Select(definition => new { id = DefinitionCatalog.GetId(definition), asset = GlobalObjectId.GetGlobalObjectIdSlow(definition).ToString() });
+                AssetDatabase.RegisterCustomDependency(DependencyName(type),
+                    Hash128.Compute(Newtonsoft.Json.JsonConvert.SerializeObject(choices)));
+            }
+        }
+
+        public static Object[] Discover(Type type, string folder = null)
+        {
+            if (!typeof(Object).IsAssignableFrom(type) || !typeof(IDefinition).IsAssignableFrom(type))
+                throw new InvalidOperationException($"Definition resource '{type.FullName}' must be a Unity object implementing IDefinition.");
+            return CatalogAssetDiscovery.Find(folder ?? DefinitionCatalog.DiscoveryPath(type), type);
         }
 
         public static void Refresh(DefinitionCatalog catalog)
         {
-            var definitions = Discover(catalog); // Check before changing the previous catalog.
+            var definitions = DefinitionCatalog.DefinitionTypes.SelectMany(type => Discover(type)).Distinct().ToArray();
+            CatalogValidation.Validate(catalog, definitions); // Check before changing the previous catalog.
             Undo.RecordObject(catalog, "Refresh catalog");
-            if (!catalog.Synchronize(definitions)) { catalog.InvalidateLookup(); return; }
-            EditorUtility.SetDirty(catalog);
-            AssetDatabase.SaveAssetIfDirty(catalog);
+            if (catalog.Synchronize(definitions))
+            {
+                EditorUtility.SetDirty(catalog);
+                AssetDatabase.SaveAssetIfDirty(catalog);
+            }
+            else catalog.InvalidateLookup();
+            RegisterDependencies(catalog);
         }
 
         [InitializeOnLoadMethod]
@@ -41,7 +57,7 @@ namespace Core.Catalogs.Editor
             EditorApplication.playModeStateChanged += state =>
             {
                 if (state == PlayModeStateChange.EnteredEditMode)
-                    foreach (var catalog in FindCatalogs()) catalog.UseTestContent(Array.Empty<Object>());
+                    DefaultCatalogAssets.Load().UseTestContent(Array.Empty<Object>());
                 if (state != PlayModeStateChange.ExitingEditMode) return;
                 try
                 {
@@ -61,9 +77,9 @@ namespace Core.Catalogs.Editor
                 _scheduled = false;
                 if (EditorApplication.isPlayingOrWillChangePlaymode) return;
                 DefaultCatalogAssets.CreateMissingCatalogs();
-                foreach (var catalog in FindCatalogs())
-                    try { Refresh(catalog); }
-                    catch (Exception exception) { Debug.LogError(exception.Message, catalog); }
+                var catalog = DefaultCatalogAssets.Load();
+                try { Refresh(catalog); }
+                catch (Exception exception) { Debug.LogError(exception.Message, catalog); }
             };
         }
 
@@ -78,8 +94,7 @@ namespace Core.Catalogs.Editor
                  path.EndsWith(".runtime.cutscene.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".runtime.dialogue.json", StringComparison.OrdinalIgnoreCase) ||
                  path.EndsWith(".vitm", StringComparison.OrdinalIgnoreCase) ||
-                 path.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase)) &&
-                !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) Schedule();
+                 path.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase)))) Schedule();
         }
 
         public void OnPreprocessBuild(BuildReport report)
@@ -94,13 +109,14 @@ namespace Core.Catalogs.Editor
         /// </summary>
         private static void UseTestContent()
         {
-            foreach (var catalog in FindCatalogs()) catalog.UseTestContent(CatalogAssetDiscovery.FindTestContent(catalog.DefinitionType));
+            var definitions = DefinitionCatalog.DefinitionTypes.SelectMany(CatalogAssetDiscovery.FindTestContent).Distinct().ToArray();
+            DefaultCatalogAssets.Load().UseTestContent(definitions);
         }
 
         internal static void RefreshAll()
         {
             DefaultCatalogAssets.CreateMissingCatalogs();
-            foreach (var catalog in FindCatalogs()) Refresh(catalog);
+            Refresh(DefaultCatalogAssets.Load());
             Core.Tile.Editor.Vulcanus.DialogueImporter.ValidateSources();
         }
     }
@@ -109,7 +125,7 @@ namespace Core.Catalogs.Editor
     {
         private static string[] OnWillSaveAssets(string[] paths)
         {
-            if (paths.Any(path => !AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(path))) CatalogDiscovery.Schedule();
+            if (paths.Length > 0) CatalogDiscovery.Schedule();
             return paths;
         }
     }

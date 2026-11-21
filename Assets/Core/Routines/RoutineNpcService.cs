@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -87,12 +88,9 @@ namespace Core.Routines
         private readonly ClockSettings _clockSettings;
         private readonly RoutineSettings _settings;
         private readonly MapManager _maps;
-        private readonly RoutineCatalog _routines;
-        private readonly CharacterCatalog _characters;
-        private readonly CharacterAnimationCatalog _animations;
+        private readonly DefinitionCatalog _catalog;
         private readonly WorldObjectSpawner _spawner;
         private readonly LuaRuntime _lua;
-        private readonly WorldCatalog _worlds;
 
         private readonly List<Day> _days = new();
         private WorldNavigation _world;
@@ -102,8 +100,8 @@ namespace Core.Routines
         private string _mapId;
 
         public RoutineNpcService(IObjectResolver resolver, GameState state, GameClock clock, ClockSettings clockSettings, RoutineSettings settings,
-            MapManager maps, RoutineCatalog routines, CharacterCatalog characters, CharacterAnimationCatalog animations,
-            WorldObjectSpawner spawner, LuaRuntime lua, WorldCatalog worlds)
+            MapManager maps, DefinitionCatalog catalog,
+            WorldObjectSpawner spawner, LuaRuntime lua)
         {
             _resolver = resolver;
             _state = state;
@@ -112,12 +110,9 @@ namespace Core.Routines
             settings.Validate();
             _settings = settings;
             _maps = maps;
-            _routines = routines;
-            _characters = characters;
-            _animations = animations;
+            _catalog = catalog;
             _spawner = spawner;
             _lua = lua;
-            _worlds = worlds;
             _state.Restored += PlanDay;
             EventBus<NewDayEvent>.Subscribe(this);
             // The first game is started before this service exists, so plan its current day now.
@@ -219,11 +214,11 @@ namespace Core.Routines
         {
             var day = _state.Time.daysSinceStart;
             _days.Clear();
-            _world ??= WorldNavigation.Build(_worlds.EnabledDefinitions.ToArray());
+            _world ??= WorldNavigation.Build(_catalog.All<VulcanusWorldCatalog>().ToArray());
             var planner = new RoutinePlanner(_lua.CreateEngine(), _state.Seed);
             var dayStart = _clockSettings.startOfDay * 60;
             var dayEnd = _clockSettings.endOfDay * 60;
-            foreach (var routine in _routines.EnabledDefinitions)
+            foreach (var routine in _catalog.All<RoutineDefinition>())
             {
                 var plan = planner.PlanDay(routine, day);
                 foreach (var goal in plan.Goals)
@@ -231,7 +226,7 @@ namespace Core.Routines
                         throw new InvalidOperationException($"Routine '{routine.Id}': goal '{goal.Id}' departs at " +
                             $"{goal.DepartMinute / 60:00}:{goal.DepartMinute % 60:00}, outside the day ({_clockSettings.startOfDay:00}:00-{_clockSettings.endOfDay:00}:00).");
                 // The timetable uses the authored walk speed; boons change only how fast the character walks in sight.
-                var timetable = RoutineTimetablePlanner.Plan(plan, _world, _characters.Require(routine.Character).WalkSpeed,
+                var timetable = RoutineTimetablePlanner.Plan(plan, _world, _catalog.Require<CharacterDefinition>(routine.Character).WalkSpeed,
                     _clockSettings.SecondsPerMinute);
                 foreach (var warning in timetable.Warnings) Debug.LogWarning(warning);
                 _days.Add(new Day { Timetable = timetable });
@@ -257,7 +252,7 @@ namespace Core.Routines
         private void Spawn(Day day, int index, float minute, bool fadeIn)
         {
             var routine = day.Timetable.Plan.Routine;
-            _prefabs ??= ActorSpawnDefinitions.Find(_spawner.RegisteredPrefabs, _characters);
+            _prefabs ??= ActorSpawnDefinitions.Find(_spawner.RegisteredPrefabs, _catalog);
             if (!_prefabs.TryGetValue(routine.Character, out var prefab))
                 throw new InvalidOperationException($"Routine '{routine.Id}' needs a spawnable prefab for character '{routine.Character}'.");
             var instance = _resolver.Instantiate(prefab.gameObject, prefab.transform.position, prefab.transform.rotation, _root);
@@ -472,7 +467,7 @@ namespace Core.Routines
             var goalIndex = npc.Segment.GoalIndex;
             var id = goalIndex < 0 ? null : npc.Day.Timetable.Plan.Goals[goalIndex].ActivityAnimationId;
             return string.IsNullOrEmpty(id) ? null
-                : _animations.Get(id) ?? throw new InvalidOperationException($"Animation '{id}' is not registered and enabled.");
+                : _catalog.Get<CharacterAnimationDefinition>(id) ?? throw new InvalidOperationException($"Animation '{id}' is not registered and enabled.");
         }
 
         private VulcanusMapAnchor Anchor(RoutinePlace place) =>

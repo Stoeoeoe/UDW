@@ -8,9 +8,10 @@ using UnityEngine.Rendering.Universal;
 namespace Core.TimeAndWeather
 {
     [CreateAssetMenu(fileName = "WeatherEffect", menuName = "Game/Weather Effect")]
-    public class WeatherData : ValidatedScriptableObject
+    [Core.Catalogs.DefinitionResource(IdFormat = Core.Catalogs.DefinitionIdFormat.Any)]
+    [Core.Scripting.LuaResource("weather", DescriptionMember = nameof(WeatherData.label))]
+    public class WeatherData : Core.Catalogs.DefinitionScriptableObject
     {
-        public string id;
         public string label;
         public GameObject weatherEffectPrefab;
         [Header("Weather ambience")]
@@ -48,7 +49,7 @@ namespace Core.TimeAndWeather
 
         public override IReadOnlyList<ConfigurationError> ValidateConfiguration()
         {
-            var errors = new List<ConfigurationError>();
+            var errors = new List<ConfigurationError>(base.ValidateConfiguration());
             if (!float.IsFinite(ambienceVolume) || ambienceVolume < 0 || ambienceVolume > 1)
                 errors.Add(new ConfigurationError(this, nameof(ambienceVolume), "Ambience volume must be finite and in [0,1]."));
             if (!float.IsFinite(indoorAmbienceVolumeMultiplier) || indoorAmbienceVolumeMultiplier < 0 || indoorAmbienceVolumeMultiplier > 1)

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -145,9 +146,9 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Health = null;
-            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>()));
             data.player.Health = new HealthState { Initialized = true, Current = -1 };
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("health"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("health"));
         }
 
         [Test]
@@ -155,9 +156,9 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Stamina = null;
-            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>()));
             data.player.Stamina = new StaminaState { Initialized = true, Current = -1 };
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("stamina"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("stamina"));
         }
 
         [Test]
@@ -165,13 +166,13 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Boosts = null;
-            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>()));
             data.player.Boosts = new CharacterBoostState();
             data.player.Boosts.Active["sleep:well-rested"] = new ActiveAttributeBoost { ExpiresAtMinute = -1, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f } } };
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("boost"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("boost"));
             data.player.Boosts.Active.Clear();
             data.player.Boosts.Active[""] = new ActiveAttributeBoost { ExpiresAtMinute = 60, Bonuses = new[] { new AppliedAttributeBonus { Attribute = CharacterAttributeType.MaxStamina, Percent = 0.25f } } };
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("boost"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("boost"));
         }
 
         [TestCase("missing")]
@@ -197,7 +198,7 @@ namespace Core.Game.Editor
             if (fault == "missing") boost.Bonuses = null;
             if (fault == "empty") boost.Bonuses = Array.Empty<AppliedAttributeBonus>();
             data.player.Boosts.Active["item:test:tonic"] = boost;
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("boost"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("boost"));
         }
 
         [TestCase(-1)]
@@ -206,10 +207,10 @@ namespace Core.Game.Editor
         {
             var data = new GameSaveData();
             data.player.Health = new HealthState { Initialized = true, Current = 100, Overcharge = surplus };
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("health"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("health"));
             data.player.Health.Overcharge = 0;
             data.player.Stamina = new StaminaState { Initialized = true, Current = 100, Overcharge = surplus };
-            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>())).Message, Does.Contain("stamina"));
+            Assert.That(Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>())).Message, Does.Contain("stamina"));
         }
 
         [Test]
@@ -257,7 +258,7 @@ namespace Core.Game.Editor
                 case "blank-weather": data.session.WeatherId = ""; break;
                 case "negative-weather-day": data.session.WeatherDay = -1; break;
             }
-            Assert.Throws<FormatException>(() => data.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>()));
+            Assert.Throws<FormatException>(() => data.Validate(Game.Get<DefinitionCatalog>()));
         }
 
         [Test]
@@ -270,7 +271,7 @@ namespace Core.Game.Editor
             Game.State.Time.dayOfSeason = 1;
             Game.State.Time.hour = 6;
             var location = Game.Asset<LocationData>();
-            location.id = "test:farm";
+            location.SetId("test:farm");
             Game.Location = location;
             Game.Ready = true;
             var player = Game.CreatePlayer();

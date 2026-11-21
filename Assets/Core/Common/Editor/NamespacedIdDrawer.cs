@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Reflection;
+using Core.Catalogs;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
@@ -16,6 +18,20 @@ namespace Core.Common.Editor
             if (property.propertyType != SerializedPropertyType.String)
             {
                 EditorGUI.LabelField(position, label.text, "NamespacedId requires a string.");
+                return;
+            }
+
+            // Weather/location IDs can be plain names; the shared definition field must keep them editable as such.
+            if (property.propertyPath == "<Id>k__BackingField" && property.serializedObject.targetObject is DefinitionScriptableObject definition &&
+                DefinitionCatalog.FamilyOf(definition.GetType()).GetCustomAttribute<DefinitionResourceAttribute>().IdFormat == DefinitionIdFormat.Any &&
+                !property.stringValue.Contains(':'))
+            {
+                using (new EditorGUI.PropertyScope(position, label, property))
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var value = EditorGUI.TextField(position, label, property.stringValue);
+                    if (EditorGUI.EndChangeCheck()) property.stringValue = value;
+                }
                 return;
             }
 

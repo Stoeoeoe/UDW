@@ -26,7 +26,7 @@ namespace Core.Tile.Overlay
             PlayerInteractionContextSnapshot snapshot)
         {
             if (snapshot.TileUnderCharacter == null) yield break;
-            var locationId = _levelManager.CurrentLocationData.id;
+            var locationId = _levelManager.CurrentLocationData.Id;
             foreach (var tile in tiles)
             {
                 var crop = _plantManager.GetPlantState(locationId, tile.Coordinates);

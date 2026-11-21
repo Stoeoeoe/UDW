@@ -729,7 +729,7 @@ namespace Interaction.Editor
         }
 
         private static void SetAnimationId(CharacterAnimationDefinition animation, string id) =>
-            Set(animation, "animationId", id);
+            Set(animation, "Id", id);
 
         private static T Read<T>(object owner, string field) =>
             (T)owner.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(owner);

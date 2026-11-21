@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 
@@ -7,8 +8,8 @@ namespace Core.Divinity
     public sealed class DeityDefinitions
     {
         private readonly Dictionary<string, DeityDefinition> Mods = new(StringComparer.Ordinal);
-        private readonly DeityCatalog _catalog;
-        public DeityDefinitions(DeityCatalog catalog) => _catalog = catalog;
+        private readonly DefinitionCatalog _catalog;
+        public DeityDefinitions(DefinitionCatalog catalog) => _catalog = catalog;
 
         public DeityDefinition Get(string id)
         {
@@ -19,7 +20,7 @@ namespace Core.Divinity
         public bool TryGet(string id, out DeityDefinition deity)
         {
             if (Mods.TryGetValue(id, out deity)) return true;
-            deity = _catalog.Get(id);
+            deity = _catalog.Get<DeityDefinition>(id);
             return deity;
         }
 
@@ -27,7 +28,7 @@ namespace Core.Divinity
         {
             if (!deity) throw new ArgumentNullException(nameof(deity));
             deity.RequireValidConfiguration(); // Validate mod content once before registration.
-            if (_catalog.Get(deity.Id) || !Mods.TryAdd(deity.Id, deity))
+            if (_catalog.Get<DeityDefinition>(deity.Id) || !Mods.TryAdd(deity.Id, deity))
                 throw new InvalidOperationException($"Duplicate deity ID '{deity.Id}'.");
         }
 

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -16,28 +15,20 @@ namespace Core.Catalogs.Editor
             if (!AssetDatabase.IsValidFolder(folder))
                 AssetDatabase.CreateFolder(Path.GetDirectoryName(folder)?.Replace('\\', '/'), Path.GetFileName(folder));
             var created = new List<DefinitionCatalog>();
-            var types = TypeCache.GetTypesWithAttribute<DefaultCatalogAttribute>()
-                .OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var type in types)
-            {
-                if (!typeof(DefinitionCatalog).IsAssignableFrom(type) || type.IsAbstract || type.ContainsGenericParameters)
-                    throw new InvalidOperationException($"Default catalog {type.FullName} must be a concrete DefinitionCatalog.");
-                if (!names.Add(type.GetCustomAttribute<DefaultCatalogAttribute>().ResourceName))
-                    throw new InvalidOperationException($"Duplicate default catalog resource name on {type.FullName}.");
-            }
-            foreach (var type in types)
-                Create(folder, type, type.GetCustomAttribute<DefaultCatalogAttribute>().ResourceName, created);
+            var path = folder + "/" + DefinitionCatalog.ResourceName + ".asset";
+            var existing = AssetDatabase.LoadMainAssetAtPath(path);
+            if (existing is DefinitionCatalog) return created;
+            if (existing) throw new InvalidOperationException($"Cannot create DefinitionCatalog: '{path}' is occupied by another asset.");
+            var catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
+            AssetDatabase.CreateAsset(catalog, path);
+            created.Add(catalog);
             return created.AsReadOnly();
         }
 
-        internal static DefinitionCatalog Load(Type type)
+        internal static DefinitionCatalog Load()
         {
-            var declaration = type.GetCustomAttribute<DefaultCatalogAttribute>()
-                ?? throw new InvalidOperationException($"{type.Name} has no default catalog declaration.");
-            var path = $"Assets/Resources/{declaration.ResourceName}.asset";
-            var catalog = (DefinitionCatalog)AssetDatabase.LoadAssetAtPath(path, type);
-            if (!catalog) throw new InvalidOperationException($"The required {type.Name} is missing at '{path}'.");
+            var catalog = AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(DefinitionCatalog.AssetPath);
+            if (!catalog) throw new InvalidOperationException($"The required catalog is missing at '{DefinitionCatalog.AssetPath}'.");
             return catalog;
         }
 
@@ -50,15 +41,5 @@ namespace Core.Catalogs.Editor
                 : "Created catalogs:\n" + string.Join("\n", created.Select(AssetDatabase.GetAssetPath)));
         }
 
-        private static void Create(string folder, Type type, string name, List<DefinitionCatalog> created)
-        {
-            var path = folder + "/" + name + ".asset";
-            var existing = AssetDatabase.LoadMainAssetAtPath(path);
-            if (existing && existing.GetType() == type) return;
-            if (existing) throw new InvalidOperationException($"Cannot create {type.Name}: '{path}' is occupied by another asset.");
-            var catalog = (DefinitionCatalog)ScriptableObject.CreateInstance(type);
-            AssetDatabase.CreateAsset(catalog, path);
-            created.Add(catalog);
-        }
     }
 }

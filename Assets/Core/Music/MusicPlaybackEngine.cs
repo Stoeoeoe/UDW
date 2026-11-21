@@ -15,8 +15,8 @@ namespace Core.Music
         private double _transitionStart, _transitionEnd;
         private bool _transitioning;
         public int GroupCount => (_current == null ? 0 : 1) + (_incoming == null ? 0 : 1);
-        public string CurrentCue => _current?.Cue.id;
-        public string IncomingCue => _incoming?.Cue.id;
+        public string CurrentCue => _current?.Cue.Id;
+        public string IncomingCue => _incoming?.Cue.Id;
         public double TransitionDspTime => _transitioning ? _transitionStart : 0;
         public double Beat(double now) => _current?.Transport.BeatAt(now) ?? 0;
 

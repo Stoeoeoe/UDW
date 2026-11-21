@@ -103,11 +103,14 @@ namespace Core.Common.Editor
             return value;
         }
 
-        public T Catalog<T>(params Object[] definitions) where T : DefinitionCatalog
+        private DefinitionCatalog _catalog;
+        public DefinitionCatalog Catalog<T>(params Object[] definitions) where T : Object
         {
-            var catalog = Asset<T>();
-            catalog.Synchronize(definitions);
-            return Use(catalog);
+            Assert.That(_container, Is.Null, "Configure test definitions before resolving services.");
+            if (!_catalog) _catalog = Use(Own(Object.Instantiate(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName))));
+            _catalog.Synchronize(_catalog.Entries.Where(entry => !typeof(T).IsInstanceOfType(entry.Definition))
+                .Select(entry => entry.Definition).Concat(definitions));
+            return _catalog;
         }
 
         private IObjectResolver Build()
@@ -175,7 +178,7 @@ namespace Core.Common.Editor
         /// <summary>Builds a spawner over exactly these prefabs instead of the authored catalog; it is disposed with the fixture.</summary>
         public WorldObjectSpawner CreateSpawner(params SpawnedObject[] prefabs)
         {
-            var catalog = Asset<SpawnableCatalog>();
+            var catalog = Asset<DefinitionCatalog>();
             catalog.Synchronize(prefabs);
             var spawner = new WorldObjectSpawner(Get<IObjectResolver>(), State, Get<MapManager>(), catalog);
             _disposables.Add(spawner);

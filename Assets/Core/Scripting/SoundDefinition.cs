@@ -5,11 +5,11 @@ using UnityEngine;
 namespace Core.Scripting
 {
     [CreateAssetMenu(menuName = "Game/Audio/Sound")]
-    public sealed class SoundDefinition : ValidatedScriptableObject<SoundDefinitionValidator>
+    [Core.Catalogs.DefinitionResource]
+    [Core.Scripting.LuaResource("sound")]
+    public sealed class SoundDefinition : Core.Catalogs.DefinitionScriptableObject<SoundDefinitionValidator>
     {
-        [SerializeField, Validation.NamespacedId(Lowercase = true)] private string soundId;
         [SerializeField, Validation.Required("Assign the sound's audio clip.")] private AudioClip clip;
-        public string Id => soundId;
         public AudioClip Clip => clip;
     }
 

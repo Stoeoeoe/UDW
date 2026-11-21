@@ -1,3 +1,4 @@
+using Character;
 using Core.Common.Editor;
 using Core.SocialStanding;
 using Core.Tile.Editor.Vulcanus;
@@ -20,7 +21,7 @@ namespace Character.Editor
                 { dialogue: 'test:hostile', condition: ""SocialStanding.HasLessThan('test:baker', 20)"" },
                 { dialogue: 'test:friendly', condition: ""SocialStanding.HasMoreThan('test:baker', 70)"" },
                 { dialogue: 'test:plain' }");
-            Game.Catalog<CharacterCatalog>(baker);
+            Game.Catalog<CharacterDefinition>(baker);
             var standing = Game.Get<SocialStandingService>();
 
             Assert.That(Say(baker), Is.EqualTo("test:plain"), "At 50 neither condition holds, so the entry without one applies.");
@@ -37,7 +38,7 @@ namespace Character.Editor
                 { dialogue: 'test:wary', condition: ""SocialStanding.HasLessThan('test:baker', 40)"" },
                 { dialogue: 'test:friendly', condition: ""SocialStanding.HasMoreThan('test:baker', 59)"" },
                 { dialogue: 'test:plain' }");
-            Game.Catalog<CharacterCatalog>(baker);
+            Game.Catalog<CharacterDefinition>(baker);
             var standing = Game.Get<SocialStandingService>();
             string Shared() => baker.DialogueFor(Game.Lua.Conditions.EvaluateCondition);
 

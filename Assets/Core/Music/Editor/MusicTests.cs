@@ -23,7 +23,7 @@ namespace Core.Music.Editor
         private MusicCue Cue(string id)
         {
             var cue = ScriptableObject.CreateInstance<MusicCue>();
-            cue.id = id; cue.bpm = 120; cue.beatsPerBar = 4; cue.loopBars = 2;
+            cue.SetId(id); cue.bpm = 120; cue.beatsPerBar = 4; cue.loopBars = 2;
             cue.stems = new[] { new MusicStem { id = "pulse", clip = _clip }, new MusicStem { id = "pad", clip = _clip } };
             cue.presets = new[] { new MusicMixPreset { id = "calm", gains = new[] { new MusicStemGain { stem = "pulse", gain = 0 }, new MusicStemGain { stem = "pad", gain = 1 } } },
                 new MusicMixPreset { id = "busy", gains = new[] { new MusicStemGain { stem = "pulse", gain = 1 }, new MusicStemGain { stem = "pad", gain = 0.5f } } } };

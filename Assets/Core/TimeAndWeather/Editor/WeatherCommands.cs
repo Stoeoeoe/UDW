@@ -12,7 +12,7 @@ namespace Core.TimeAndWeather.Editor
         private static WeatherData[] FindWeather() => AssetDatabase.FindAssets("t:WeatherData", new[] { "Assets" })
             .Select(guid => AssetDatabase.LoadAssetAtPath<WeatherData>(AssetDatabase.GUIDToAssetPath(guid)))
             .Where(weather => weather)
-            .OrderBy(weather => weather.id, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(weather => weather.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         [CliCommand("list_weather", "List authored weather IDs and the active Play mode weather", MainThreadRequired = true)]
@@ -22,10 +22,10 @@ namespace Core.TimeAndWeather.Editor
             return new
             {
                 playing = EditorApplication.isPlaying,
-                current = manager && manager.CurrentWeather ? manager.CurrentWeather.id : null,
+                current = manager && manager.CurrentWeather ? manager.CurrentWeather.Id : null,
                 available = FindWeather().Select(weather => new
                 {
-                    id = weather.id, label = weather.label, asset = AssetDatabase.GetAssetPath(weather)
+                    id = weather.Id, label = weather.label, asset = AssetDatabase.GetAssetPath(weather)
                 }).ToArray()
             };
         }
@@ -41,7 +41,7 @@ namespace Core.TimeAndWeather.Editor
 
             var key = weather.Trim();
             var matches = FindWeather().Where(candidate =>
-                candidate.id == key ||
+                candidate.Id == key ||
                 string.Equals(candidate.label, key, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(candidate.name, key, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (matches.Length != 1)
@@ -49,9 +49,9 @@ namespace Core.TimeAndWeather.Editor
                     ? $"Unknown weather '{key}'. Use list_weather to see available IDs."
                     : $"Weather '{key}' matches multiple assets. Give each weather a unique ID and use that ID.");
 
-            var previous = manager.CurrentWeather ? manager.CurrentWeather.id : null;
+            var previous = manager.CurrentWeather ? manager.CurrentWeather.Id : null;
             manager.SetWeather(matches[0]);
-            return new { previous, current = manager.CurrentWeather.id, presentation = "Weather notifications and daylight refresh on the next frame." };
+            return new { previous, current = manager.CurrentWeather.Id, presentation = "Weather notifications and daylight refresh on the next frame." };
         }
     }
 }

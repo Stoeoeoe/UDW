@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Core.Music;
 using UnityEngine.Scripting;
@@ -12,8 +13,8 @@ namespace Core.Scripting
         [Inject] private CutsceneRunner _cutsceneRunner;
         [Inject] private MusicDirector _musicDirector;
 
-        private readonly MusicCatalog _catalog;
-        public MusicLuaApi(MusicCatalog catalog) => _catalog = catalog ? catalog : throw new InvalidOperationException("MusicCatalog is required.");
+        private readonly DefinitionCatalog _catalog;
+        public MusicLuaApi(DefinitionCatalog catalog) => _catalog = catalog ? catalog : throw new InvalidOperationException("DefinitionCatalog is required.");
         [Preserve]
         public void ValidateOverride(string cue, string preset, string quantization = "NextBar", double fadeSeconds = 1)
         {
@@ -22,7 +23,7 @@ namespace Core.Scripting
             Quantization(quantization);
             if (!double.IsFinite(fadeSeconds) || fadeSeconds < 0) throw new ArgumentOutOfRangeException(nameof(fadeSeconds));
         }
-        private MusicCue RequireCue(string id) => _catalog.Get(id) ?? throw new InvalidOperationException($"Music cue '{id}' is not registered and enabled.");
+        private MusicCue RequireCue(string id) => _catalog.Get<MusicCue>(id) ?? throw new InvalidOperationException($"Music cue '{id}' is not registered and enabled.");
         private static MusicQuantization Quantization(string value) =>
             Enum.TryParse<MusicQuantization>(value, false, out var result) && Enum.IsDefined(typeof(MusicQuantization), result)
                 ? result : throw new ArgumentException("Use Immediate, NextBeat or NextBar.");

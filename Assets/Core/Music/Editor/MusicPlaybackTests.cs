@@ -133,11 +133,11 @@ namespace Core.Music.Editor
             using (var cutscene = _resolver.Request(_second, "intense", 1000, MusicQuantization.NextBeat, 0.1))
             {
                 yield return Advance(1.5, false);
-                Assert.That(_engine.CurrentCue, Is.EqualTo(_second.id));
+                Assert.That(_engine.CurrentCue, Is.EqualTo(_second.Id));
                 _request.Update(_first, "calm", MusicQuantization.Immediate, 0.1);
             }
             yield return Advance(0.7, false);
-            Assert.That(_engine.CurrentCue, Is.EqualTo(_first.id));
+            Assert.That(_engine.CurrentCue, Is.EqualTo(_first.Id));
             _request.Dispose();
             yield return Advance(1.5, false);
             Assert.That(_engine.GroupCount, Is.Zero);

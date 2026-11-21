@@ -1,3 +1,4 @@
+using Core.Quests;
 using Core.Common.Editor;
 using Core.Divinity;
 using Core.Events;
@@ -17,7 +18,7 @@ namespace Core.Quests.Editor
 
         private void Quest(string start)
         {
-            Game.Catalog<QuestCatalog>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
+            Game.Catalog<QuestDefinition>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
                 $"{{ id: 'test:quest', start: {start}, steps: [{{ id: 'first', objectives: [{{ id: 'x', kind: 'condition', condition: 'false' }}] }}] }}"));
             Game.CreatePlayer();
             _quests = Game.Get<QuestService>();
@@ -26,7 +27,7 @@ namespace Core.Quests.Editor
         private LocationData Location(string mapId)
         {
             var location = Game.Asset<LocationData>();
-            location.id = mapId;
+            location.SetId(mapId);
             return location;
         }
 

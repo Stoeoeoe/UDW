@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using Character;
@@ -16,9 +17,7 @@ namespace Core.Scripting
     [LuaModule("Characters")]
     public sealed class MapActorLuaApi
     {
-        [Inject] private CharacterCatalog _characterCatalog;
-        [Inject] private CharacterAnimationCatalog _characterAnimationCatalog;
-        [Inject] private EmoteCatalog _emoteCatalog;
+        [Inject] private DefinitionCatalog _catalog;
 
         [Inject] private WorldObjectSpawner _worldObjectSpawner;
         [Inject] private LevelManager _levelManager;
@@ -55,8 +54,8 @@ namespace Core.Scripting
             RequireCurrentMap();
             if (string.IsNullOrWhiteSpace(character) || _actors.ContainsKey(character) || _run == null && _plannedActors.ContainsKey(character))
                 throw new InvalidOperationException($"Spawn character name '{character}' must be nonempty and unique in this cutscene/map.");
-            _characterCatalog.Require(definition);
-            var prefabs = ActorSpawnDefinitions.Find(_worldObjectSpawner.RegisteredPrefabs, _characterCatalog);
+            _catalog.Require<CharacterDefinition>(definition);
+            var prefabs = ActorSpawnDefinitions.Find(_worldObjectSpawner.RegisteredPrefabs, _catalog);
             if (!prefabs.TryGetValue(definition, out var prefab))
                 throw new InvalidOperationException($"Character '{definition}' has no registered spawnable NPC prefab.");
             position.ToWorld(_map);
@@ -261,7 +260,7 @@ namespace Core.Scripting
         public void ValidatePlayAnimation(string character, string animation, bool holdLastFrame = false)
         {
             RequireCurrentMap();
-            RequireKnownActor(character).Animator.ValidateOneShot(_characterAnimationCatalog.RequireOneShot(animation));
+            RequireKnownActor(character).Animator.ValidateOneShot(_catalog.RequireOneShot(animation));
         }
 
         [LuaAction("characters.playAnimation", "Play animation", "Animation", "Play a finite animation and wait for completion. Hold last frame keeps the final pose until another animation starts or movement resumes.",
@@ -271,7 +270,7 @@ namespace Core.Scripting
             [LuaResource("animation")] string animation, bool holdLastFrame = false)
         {
             RequireCurrentMap();
-            return new PlayAnimationAction(ResolveActor(character), _characterAnimationCatalog.RequireOneShot(animation), holdLastFrame);
+            return new PlayAnimationAction(ResolveActor(character), _catalog.RequireOneShot(animation), holdLastFrame);
         }
 
         [UnityEngine.Scripting.Preserve]
@@ -279,7 +278,7 @@ namespace Core.Scripting
         {
             RequireCurrentMap();
             RequireKnownActor(character);
-            _emoteCatalog.Require(emote);
+            _catalog.Require<EmoteDefinition>(emote);
             EmoteAction.ValidateDuration(durationSeconds);
             CutsceneLuaApi.ValidateWait(pauseAfterSeconds);
         }
@@ -291,7 +290,7 @@ namespace Core.Scripting
             [LuaResource("emote")] string emote, double durationSeconds = 0, double pauseAfterSeconds = 1)
         {
             RequireCurrentMap();
-            return new EmoteAction(ResolveActor(character), _emoteCatalog.Require(emote), durationSeconds, pauseAfterSeconds);
+            return new EmoteAction(ResolveActor(character), _catalog.Require<EmoteDefinition>(emote), durationSeconds, pauseAfterSeconds);
         }
 
         private void RequireCurrentMap()

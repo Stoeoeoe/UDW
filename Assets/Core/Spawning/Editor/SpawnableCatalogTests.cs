@@ -1,3 +1,5 @@
+using Core.Spawning;
+using Core.Catalogs;
 using System;
 using System.Linq;
 using Core.Catalogs.Editor;
@@ -10,13 +12,13 @@ namespace Core.Spawning.Editor
 {
     public sealed class SpawnableCatalogTests
     {
-        private SpawnableCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private GameObject _holder;
 
         [SetUp]
         public void SetUp()
         {
-            _catalog = ScriptableObject.CreateInstance<SpawnableCatalog>();
+            _catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
             _holder = new GameObject("Catalog test prefabs");
             _holder.SetActive(false);
         }
@@ -63,7 +65,7 @@ namespace Core.Spawning.Editor
             var prefab = CreatePrefab("base:chest");
             SetPrefabs(prefab);
             _catalog.SetEnabled(prefab, false);
-            Assert.That(_catalog.Prefabs, Is.Empty);
+            Assert.That(_catalog.All<SpawnedObject>(), Is.Empty);
         }
 
         private void Validate() => CatalogValidation.Validate(_catalog,

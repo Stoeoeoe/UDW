@@ -1,3 +1,4 @@
+using Core.Dialogue.Vulcanus;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +33,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         private VulcanusDialogueRunner Runner()
         {
             Game.Use<IDialoguePresenter>(_presenter);
-            Game.Catalog<DialogueCatalog>(_dialogues.ToArray<Object>());
+            Game.Catalog<VulcanusDialogueAsset>(_dialogues.ToArray<Object>());
             return _runner = Game.Get<VulcanusDialogueRunner>();
         }
 

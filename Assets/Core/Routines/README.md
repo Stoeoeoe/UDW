@@ -3,7 +3,7 @@
 A routine describes an NPC's day: where they start, when they set off, where
 they go and what they do there. Routines are authored as `*.routine.json`
 files in the Vulcanus project (schema: `schemas/routine.schema.json`); the
-Vulcanus importer turns each into a `RoutineDefinition`, and `RoutineCatalog`
+Vulcanus importer turns each into a `RoutineDefinition`, and the shared `DefinitionCatalog`
 lists them. Each character has at most one routine.
 
 ```json
@@ -53,7 +53,7 @@ comes from (home or the goal before).
 `RoutineTimetablePlanner.Plan(dayPlan, world, walkSpeed, secondsPerMinute)` turns a day plan into a
 `RoutineTimetable`: stays and the walks between them, minute by minute and split at every door crossed. It reads only
 `WorldNavigation` (each map's baked navigation grid and anchors, plus the links, built once from the map prefabs of the
-worlds in `WorldCatalog`), so
+worlds in `DefinitionCatalog.All<VulcanusWorldCatalog>()`), so
 it answers for maps that aren't loaded. `At(minute)` gives the segment, `PositionAt(minute)` the feet position in that
 map's local space.
 

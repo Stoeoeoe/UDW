@@ -344,7 +344,7 @@ namespace Core.Tile
 
         private void UpdateFarmlandState(Vector2Int coords, bool? plowed = null, bool? irrigated = null)
         {
-            var locationId = _locationContext.Location?.id;
+            var locationId = _locationContext.Location?.Id;
             if (locationId == null) return;
 
             var objectId = FarmlandObjectId(coords);
@@ -417,7 +417,7 @@ namespace Core.Tile
 
         public void OnEvent(SowPlantEvent sowPlantEvent)
         {
-            if (sowPlantEvent.LocationId != _locationContext.Location?.id) return;
+            if (sowPlantEvent.LocationId != _locationContext.Location?.Id) return;
 
             var tileData = GetTileDataAtCoordinates(sowPlantEvent.Position);
             if (tileData == null)
@@ -428,7 +428,7 @@ namespace Core.Tile
 
         public void OnEvent(FarmlandDriedEvent e)
         {
-            if (e.LocationId != _locationContext.Location?.id) return;
+            if (e.LocationId != _locationContext.Location?.Id) return;
             // WorldState also permits farmland records that do not identify a map cell.
             if (!e.ObjectId.StartsWith(FarmlandObjectPrefix, StringComparison.Ordinal)) return;
             var position = ParseFarmlandObjectId(e.ObjectId);
@@ -582,7 +582,7 @@ namespace Core.Tile
             if (FindFirstObjectByType<VulcanusImportedMap>() != null)
                 return;
 
-            Debug.LogWarning($"[MapManager] No VulcanusImportedMap found in scene for location '{location?.id}'. Scene may be missing its map prefab.");
+            Debug.LogWarning($"[MapManager] No VulcanusImportedMap found in scene for location '{location?.Id}'. Scene may be missing its map prefab.");
         }
 
         #endregion
@@ -597,7 +597,7 @@ namespace Core.Tile
 
         private void RestorePlants()
         {
-            var locationId = _locationContext.Location?.id;
+            var locationId = _locationContext.Location?.Id;
             if (locationId == null) return;
 
             foreach (var (pos, state) in _plantManager.GetPlantStatesInLocation(locationId))
@@ -618,7 +618,7 @@ namespace Core.Tile
             go.transform.SetParent(_plantParentGameObject.transform);
             go.transform.position = tileData.WorldPosition;
 
-            var locationId = _locationContext.Location.id;
+            var locationId = _locationContext.Location.Id;
             var crop = go.AddComponent<FarmablePlant>();
             _resolver.InjectGameObject(go);
             crop.Bind(locationId, pos, plantData, manager.GetPlantState(locationId, pos));
@@ -631,7 +631,7 @@ namespace Core.Tile
 
         private void RestoreFarmlandState()
         {
-            var locationId = _locationContext.Location?.id;
+            var locationId = _locationContext.Location?.Id;
             if (locationId == null) return;
 
             foreach (var pair in _gameState.World.GetStates<FarmlandState>(locationId))

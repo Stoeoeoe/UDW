@@ -90,7 +90,7 @@ namespace Core.Music.Editor
             {
                 var director = (MusicDirector)target;
                 var winner = director.Requests.Winner;
-                status.text = $"Requests: {director.Requests.Count}\nWinner: {winner?.Cue.id} / {winner?.Preset} (priority {winner?.Priority})\n" +
+                status.text = $"Requests: {director.Requests.Count}\nWinner: {winner?.Cue.Id} / {winner?.Preset} (priority {winner?.Priority})\n" +
                     $"Current: {director.CurrentCue}\nIncoming: {director.IncomingCue}\nGroups: {director.GroupCount}\nBeat: {director.Beat:F2}\nScheduled DSP: {director.TransitionDspTime:F3}";
             }).Every(100);
             return root;

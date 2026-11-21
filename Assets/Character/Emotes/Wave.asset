@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 051f4b7d258f4b94982057c8ff13b6f9, type: 3}
   m_Name: Wave
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.EmoteDefinition
-  emoteId: base:wave
+  <Id>k__BackingField: base:wave
   duration: 1
   playbackSpeed: 0.5
   animation: {fileID: 11400000, guid: 0cc5e43b3fe81844781716bfa6fe807e, type: 2}

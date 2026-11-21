@@ -33,7 +33,7 @@ namespace Interaction.Tools.Editor
             var player = LiveGame.Player;
             var plants = LiveGame.Get<PlantManager>();
             var map = LiveGame.Get<MapManager>();
-            var locationId = LiveGame.Get<LevelManager>().CurrentLocationData.id;
+            var locationId = LiveGame.Get<LevelManager>().CurrentLocationData.Id;
             var characterTile = map.GetTileDataAtWorldPosition(player.transform.position);
             var cropTile = map.GetTileDataAtCoordinates(characterTile.Coordinates + Vector2Int.right);
             plants.SowPlantOnCurrentMap(cropTile.Coordinates, BeanId);

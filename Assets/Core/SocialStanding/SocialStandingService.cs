@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Character;
 using Core.Common;
@@ -18,9 +19,9 @@ namespace Core.SocialStanding
         public const int DefaultStanding = 50;
 
         private readonly GameState _state;
-        private readonly CharacterCatalog _characters;
+        private readonly DefinitionCatalog _characters;
 
-        public SocialStandingService(GameState state, CharacterCatalog characters)
+        public SocialStandingService(GameState state, DefinitionCatalog characters)
         {
             _state = state;
             _characters = characters;
@@ -56,7 +57,7 @@ namespace Core.SocialStanding
 
         private int Current(string subjectId) => _state.SocialStanding.TryGet(subjectId, out var standing)
             ? standing
-            : _characters.Get(subjectId)?.StartingSocialStanding ?? DefaultStanding;
+            : _characters.Get<CharacterDefinition>(subjectId)?.StartingSocialStanding ?? DefaultStanding;
 
         private static void RequireSubject(string subjectId)
         {

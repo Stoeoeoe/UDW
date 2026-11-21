@@ -28,7 +28,7 @@ namespace Core.Items.Editor
             Game.State.Time.hour = 6;
             var level = Game.Get<LevelManager>();
             var location = Game.Asset<LocationData>();
-            location.id = "test:pickup";
+            location.SetId("test:pickup");
             Game.Location = location;
             _character = Game.CreateCharacter();
             _item = AssetDatabase.LoadAssetAtPath<ItemDefinition>("Assets/Resources/Items/HarvestItem/RavenFlowerProduce.asset");

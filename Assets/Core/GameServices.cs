@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Reflection;
 using Character;
 using Core.Catalogs;
 using Core.Context;
@@ -65,15 +63,11 @@ namespace Core
             builder.Register<SkillDefinitions>(Lifetime.Singleton);
             builder.Register<DeityDefinitions>(Lifetime.Singleton);
 
-            foreach (var type in typeof(DefinitionCatalog).Assembly.GetTypes()
-                         .Where(type => type.IsDefined(typeof(DefaultCatalogAttribute), false)))
+            if (!builder.Exists(typeof(DefinitionCatalog)))
             {
-                // Authored defaults fill registrations not supplied by the composing caller.
-                if (builder.Exists(type)) continue;
-                var declaration = type.GetCustomAttribute<DefaultCatalogAttribute>();
-                var catalog = Resources.Load(declaration.ResourceName, type);
-                if (!catalog) throw new InvalidOperationException($"Required catalog '{declaration.ResourceName}' is missing.");
-                builder.RegisterInstance(catalog, type);
+                var catalog = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName);
+                if (!catalog) throw new InvalidOperationException("The required DefinitionCatalog is missing.");
+                builder.RegisterInstance(catalog);
             }
         }
     }

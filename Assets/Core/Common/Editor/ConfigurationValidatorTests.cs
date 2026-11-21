@@ -42,9 +42,9 @@ namespace Core.Common.Editor
             _objects.Add(asset);
             if (asset is ItemDefinition item) Set(item, "Id", "test:item");
             if (asset is EquipmentSlotDefinition slot) TestConfiguration.Set(slot, "_id", "test:head");
-            if (asset is SkillDefinition skill) Set(skill, "_skillId", "test:skill");
-            if (asset is DeityDefinition deity) Set(deity, "_id", "legacy-deity");
-            if (asset is TypewriterSound sound) TestConfiguration.Set(sound, "_soundId", "test:sound");
+            if (asset is SkillDefinition skill) Set(skill, "Id", "test:skill");
+            if (asset is DeityDefinition deity) Set(deity, "Id", "legacy-deity");
+            if (asset is TypewriterSound sound) TestConfiguration.Set(sound, "Id", "test:sound");
             if (asset is ToolData tool) TestConfiguration.Set(tool, "ToolEffectConfiguration", new ToolEffectConfiguration { AffectedTileOffsets = new[] { Vector2Int.up } });
             if (asset is SeedItem seed) TestConfiguration.Set(seed, "PlantData", AssetDatabase.LoadAssetAtPath<PlantData>("Assets/Plants/Lentils/LentilsPlantData.asset"));
             return asset;
@@ -134,8 +134,8 @@ namespace Core.Common.Editor
         [Test]
         public void TypewriterPitchAndIdAreValidatedButSilenceIsAllowed()
         {
-            var sound = Asset<TypewriterSound>(); TestConfiguration.Set(sound, "_pitchMin", 2); TestConfiguration.Set(sound, "_pitchMax", 1); TestConfiguration.Set(sound, "_soundId", "Actor");
-            AssertError(sound, "_soundId"); AssertError(sound, "pitchMin/pitchMax");
+            var sound = Asset<TypewriterSound>(); TestConfiguration.Set(sound, "_pitchMin", 2); TestConfiguration.Set(sound, "_pitchMax", 1); TestConfiguration.Set(sound, "Id", "Actor");
+            AssertError(sound, "Id"); AssertError(sound, "pitchMin/pitchMax");
         }
 
         [Test]

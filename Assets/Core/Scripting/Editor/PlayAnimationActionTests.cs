@@ -1,3 +1,5 @@
+using Core.Scripting;
+using Core.Catalogs;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -215,14 +217,14 @@ namespace Core.Scripting.Editor
         [Test]
         public void ChoicesIncludeOnlyEnabledFiniteSinglesInStableIdOrder()
         {
-            var catalog = Game.Asset<CharacterAnimationCatalog>();
+            var catalog = Game.Asset<DefinitionCatalog>();
             var other = CreateAnimation("test:another");
             var loop = CreateAnimation("test:loop");
             var settings = AnimationUtility.GetAnimationClipSettings(loop.Clip);
             settings.loopTime = true;
             AnimationUtility.SetAnimationClipSettings(loop.Clip, settings);
             var set = Game.Asset<CharacterAnimationSet>();
-            Set(set, "animationId", "test:set");
+            Set(set, "Id", "test:set");
             Set(set, "baseAnimation", _animation);
             catalog.Synchronize(new CharacterAnimationDefinition[] { _animation, loop, set, other, _actor.PassOutAnimation });
             var libraries = new[] { _actor.Animator.AnimationLibrary };
@@ -238,8 +240,8 @@ namespace Core.Scripting.Editor
         [Test]
         public void CatalogResolvesTheAuthoredIdAndRejectsMissingIds()
         {
-            Assert.That(Game.Get<CharacterAnimationCatalog>().RequireOneShot("base:pass-out"), Is.SameAs(_actor.PassOutAnimation));
-            Assert.That(() => Game.Get<CharacterAnimationCatalog>().RequireOneShot("test:missing"), Throws.InvalidOperationException.With.Message.Contains("not registered and enabled"));
+            Assert.That(Game.Get<DefinitionCatalog>().RequireOneShot("base:pass-out"), Is.SameAs(_actor.PassOutAnimation));
+            Assert.That(() => Game.Get<DefinitionCatalog>().RequireOneShot("test:missing"), Throws.InvalidOperationException.With.Message.Contains("not registered and enabled"));
         }
 
         private CharacterAnimation CreateAnimation(string id)
@@ -248,7 +250,7 @@ namespace Core.Scripting.Editor
             AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalScale.z"), AnimationCurve.Linear(0, 1, 1, 2));
             var animation = Game.Asset<CharacterAnimation>();
             animation.name = id;
-            Set(animation, "animationId", id);
+            Set(animation, "Id", id);
             Set(animation, "clip", clip);
             return animation;
         }
@@ -373,7 +375,7 @@ namespace Core.Scripting.Editor
             var manager = Game.Start<AudioTestSoundManager>();
             var sound = Game.Asset<SoundDefinition>();
             var clip = Game.Own(AudioClip.Create("Emote sound", 4410, 1, 44100, false));
-            Set(sound, "soundId", "test:emote-sound");
+            Set(sound, "Id", "test:emote-sound");
             Set(sound, "clip", clip);
             var emote = CreateEmote();
             Set(emote, "sound", sound);
@@ -402,7 +404,7 @@ namespace Core.Scripting.Editor
         {
             var emote = CreateEmote();
             var sound = Game.Asset<SoundDefinition>();
-            Set(sound, "soundId", "test:emote-sound");
+            Set(sound, "Id", "test:emote-sound");
             Set(emote, "sound", sound);
             Assert.That(emote.ValidateConfiguration().Any(error => error.Setting == "sound.clip"), Is.True);
         }
@@ -448,7 +450,7 @@ namespace Core.Scripting.Editor
         private EmoteDefinition CreateEmote()
         {
             var emote = Game.Asset<EmoteDefinition>();
-            Set(emote, "emoteId", "test:reaction");
+            Set(emote, "Id", "test:reaction");
             Set(emote, "duration", 1f);
             Set(emote, "animation", _animation);
             return emote;

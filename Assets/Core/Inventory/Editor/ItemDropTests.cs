@@ -17,7 +17,7 @@ namespace Core.Inventory.Editor
         {
             var item = Game.Asset<DropTestItem>();
             var flags = BindingFlags.Instance | BindingFlags.NonPublic;
-            typeof(ItemDefinition).GetField("<Id>k__BackingField", flags).SetValue(item, "test:grain");
+            typeof(Core.Catalogs.DefinitionScriptableObject).GetField("<Id>k__BackingField", flags).SetValue(item, "test:grain");
             typeof(ItemDefinition).GetField("<PreventDropping>k__BackingField", flags).SetValue(item, true);
             var bag = Game.Inventory(1);
             var manager = Game.Get<ItemManager>();

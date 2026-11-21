@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using Character;
@@ -23,18 +24,16 @@ namespace Core.Shops
     /// <summary>Resolves shops and runs trades. Static shops keep no saved state.</summary>
     public sealed class ShopService
     {
-        private readonly ShopCatalog _shops;
-        private readonly ItemCatalog _items;
+        private readonly DefinitionCatalog _catalog;
         private readonly GameState _gameState;
 
-        public ShopService(ShopCatalog shops, ItemCatalog items, GameState gameState)
+        public ShopService(DefinitionCatalog catalog, GameState gameState)
         {
-            _shops = shops;
-            _items = items;
+            _catalog = catalog;
             _gameState = gameState;
         }
 
-        public Shop Require(string shopId) => _shops.Require(shopId);
+        public Shop Require(string shopId) => _catalog.Require<Shop>(shopId);
 
         public IReadOnlyList<ShopEntry> GetOfferings(Shop shop)
         {
@@ -95,7 +94,7 @@ namespace Core.Shops
             return ShopTradeResult.Success;
         }
 
-        private ItemDefinition RequireItem(Shop shop, string itemId) => _items.Find(itemId) ??
+        private ItemDefinition RequireItem(Shop shop, string itemId) => _catalog.Get<ItemDefinition>(itemId) ??
             throw new InvalidOperationException($"Shop '{shop.Id}' offers the unknown item '{itemId}'.");
     }
 }

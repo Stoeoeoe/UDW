@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Linq;
 using Core.Camera;
@@ -35,9 +36,9 @@ namespace Core.Scripting
             new LuaBindingRegistry(VulcanusLuaEngine.DefaultModules.Select(module => Inject(module.Create())).ToArray()) { Runtime = this }, variables);
 
         public MapActorLuaApi CreateActors() => Inject(MapActorLuaApi.BindCurrentMap(Level, Maps, _container.Resolve<WorldObjectSpawner>(), Characters.MainCharacter));
-        internal AudioLuaApi CreateAudio() => new(MMSoundManager.Current, Maps.CurrentMap, _container.Resolve<SoundCatalog>());
-        internal WeatherLuaApi CreateWeather() => new(_container.Resolve<WeatherManager>(), _container.Resolve<WeatherCatalog>());
+        internal AudioLuaApi CreateAudio() => new(MMSoundManager.Current, Maps.CurrentMap, _container.Resolve<DefinitionCatalog>());
+        internal WeatherLuaApi CreateWeather() => new(_container.Resolve<WeatherManager>(), _container.Resolve<DefinitionCatalog>());
         internal CameraLuaApi CreateCamera() => new(_container.Resolve<CameraManager>());
-        internal MusicLuaApi CreateMusic() => Inject(new MusicLuaApi(_container.Resolve<MusicCatalog>()));
+        internal MusicLuaApi CreateMusic() => Inject(new MusicLuaApi(_container.Resolve<DefinitionCatalog>()));
     }
 }

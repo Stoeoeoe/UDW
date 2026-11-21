@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 051f4b7d258f4b94982057c8ff13b6f9, type: 3}
   m_Name: Laugh
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.EmoteDefinition
-  emoteId: base:laugh
+  <Id>k__BackingField: base:laugh
   duration: 0.75
   playbackSpeed: 0.5
   animation: {fileID: 11400000, guid: d15b74f53a72ffb44a4b9727a144c5e9, type: 2}

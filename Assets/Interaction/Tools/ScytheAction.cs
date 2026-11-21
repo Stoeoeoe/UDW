@@ -18,12 +18,12 @@ namespace Interaction.Tools
             snapshot.SceneReady && GetAffectedTiles(snapshot).Count > 0;
 
         public override bool CanBeUsedOnTile(TileData tile) => tile != null &&
-            _plantManager.CanHarvest(_levelManager.CurrentLocationData.id, tile.Coordinates, HarvestMethod.Scythe);
+            _plantManager.CanHarvest(_levelManager.CurrentLocationData.Id, tile.Coordinates, HarvestMethod.Scythe);
 
         public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
             // Cache the location before any harvest callback can start a transition.
-            var locationId = _levelManager.CurrentLocationData.id;
+            var locationId = _levelManager.CurrentLocationData.Id;
             await ForEachAffectedTile(snapshot, cancellation, tile =>
                 _plantManager.TryHarvestWithScythe(locationId, tile.Coordinates, tile.WorldPosition, out _), 0f);
         }

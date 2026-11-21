@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Core.Music.Editor
 {
-    [ScriptedImporter(3, "apollocue", 6100)]
+    [ScriptedImporter(4, "apollocue", 6100)]
     public sealed class ApolloCueImporter : ScriptedImporter
     {
         private sealed class Manifest
@@ -79,7 +79,7 @@ namespace Core.Music.Editor
             try
             {
                 cue.name = manifest.id.Split(':')[1];
-                cue.id = manifest.id;
+                cue.SetId(manifest.id);
                 cue.theme = manifest.theme;
                 cue.bpm = manifest.bpm;
                 cue.beatsPerBar = manifest.beatsPerBar;

@@ -14,7 +14,7 @@ namespace Character
 
         public int GetLevel(string skillId) => _levels.TryGetValue(skillId, out var level) ? level : 0;
 
-        public int GetLevel(SkillDefinition skill) => GetLevel(skill.SkillId);
+        public int GetLevel(SkillDefinition skill) => GetLevel(skill.Id);
 
         public bool HasUnlocked(string skillId) => GetLevel(skillId) > 0;
 
@@ -24,7 +24,7 @@ namespace Character
 
         public bool TryLevelUp(SkillDefinition definition)
         {
-            var skillId = definition.SkillId;
+            var skillId = definition.Id;
             var currentLevel = GetLevel(skillId);
             if (currentLevel >= definition.MaxLevel) return false;
 

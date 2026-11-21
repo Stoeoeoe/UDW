@@ -51,7 +51,7 @@ Missing/disabled cues and missing/unknown presets fail at import. Apollo exports
 `Assets/Content/Music/<namespace>/<name>/cue.apollocue`, which imports its aligned
 PCM stems and presets into a catalog-discovered `MusicCue` automatically.
 
-`LocationCatalog` automatically discovers `LocationData` assets and imported map
+The shared `DefinitionCatalog` automatically discovers `LocationData` assets and imported map
 subassets throughout `Assets`, including other content projects. It refreshes after
 map imports, moves and deletions and before play/build. `LevelManager` loads this
 generated Resources catalog; no world-catalog assignment on `SystemRoot` or manual

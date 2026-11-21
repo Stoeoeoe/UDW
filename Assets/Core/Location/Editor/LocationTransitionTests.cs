@@ -38,7 +38,7 @@ namespace Core.Location.Editor
             _other = Game.CreateCharacter("Other actor");
             _player = Game.CreatePlayer();
             _location = Game.Asset<LocationData>();
-            _location.id = "test:location";
+            _location.SetId("test:location");
             Game.Location = _location;
             SetReady(true);
         }

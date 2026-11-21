@@ -50,7 +50,7 @@ namespace Core.Items
         protected override void OnStateBound()
         {
             _state = (ForagingSpotState)State;
-            _locationId = _levelManager.CurrentLocationData.id;
+            _locationId = _levelManager.CurrentLocationData.Id;
         }
 
         private void OnEnable()

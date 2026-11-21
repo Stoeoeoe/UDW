@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Character;
 using Core.Tile.Vulcanus;
@@ -26,8 +27,8 @@ namespace Core.Inventory.Editor
                 }
             foreach (var container in root.GetComponentsInChildren<PersistentContainer>(true))
             {
-                container.ValidateConfiguration(Resources.Load<ItemCatalog>(ItemCatalog.ResourceName));
-                if (Resources.Load<CharacterCatalog>(CharacterCatalog.ResourceName).Require(container.Owner.Id) != container.Owner)
+                container.ValidateConfiguration(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName));
+                if (Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).Require<CharacterDefinition>(container.Owner.Id) != container.Owner)
                     throw new InvalidOperationException($"Container '{container.name}' requires an enabled, registered owner.");
                 var interactable = container.GetComponent<ContainerInteractable>();
                 if (!interactable) throw new InvalidOperationException($"Container '{container.name}' requires its interaction component.");

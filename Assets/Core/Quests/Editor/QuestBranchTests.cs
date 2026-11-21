@@ -1,3 +1,4 @@
+using Core.Quests;
 using System.Linq;
 using Core.Common.Editor;
 using Core.Tile.Editor.Vulcanus;
@@ -15,7 +16,7 @@ namespace Core.Quests.Editor
 
         private void Start(string steps)
         {
-            Game.Catalog<QuestCatalog>(Quest(steps));
+            Game.Catalog<QuestDefinition>(Quest(steps));
             _quests = Game.Get<QuestService>();
             _quests.Start("test:quest");
         }

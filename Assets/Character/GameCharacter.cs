@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using Character.Abilities;
@@ -24,7 +25,7 @@ namespace Character
     {
         [Inject] internal SkillDefinitions SkillDefinitions { get; private set; }
         [Inject] private UrGUIManager _urGUIManager;
-        [Inject] private CharacterCatalog _characterCatalog;
+        [Inject] private DefinitionCatalog _characterCatalog;
 
         [Inject] private LevelManager _levelManager;
         [Inject] private MapManager _mapManager;
@@ -146,7 +147,7 @@ namespace Character
         public void EnsureRuntimeInitialized()
         {
             if (IsRuntimeInitialized) return;
-            if (_characterCatalog.Require(CharacterId) != definition)
+            if (_characterCatalog.Require<CharacterDefinition>(CharacterId) != definition)
                 throw new InvalidOperationException($"Character '{name}' must use its registered character definition.");
             MainInventory.EnsureInitialized();
             toolActionRegistry.Initialize(this);

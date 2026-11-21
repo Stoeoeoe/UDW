@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Linq;
 using Character;
@@ -34,7 +35,7 @@ namespace Core.Game
         public WorldState world = new();
         public SessionState session = new();
 
-        public void Validate(CharacterCatalog characters, ItemCatalog items)
+        public void Validate(DefinitionCatalog catalog)
         {
             if (schemaVersion != CurrentVersion)
                 throw new NotSupportedException($"Save schema version {schemaVersion} is not supported (expected {CurrentVersion}).");
@@ -108,7 +109,7 @@ namespace Core.Game
                     if (string.IsNullOrWhiteSpace(obj.Key) || obj.Value == null)
                         throw new FormatException("The save contains an invalid world object.");
                     if (obj.Value is ContainerState container)
-                        ContainerStorage.ValidateState(container, characters.Require, items.Find);
+                        ContainerStorage.ValidateState(container, catalog.Require<CharacterDefinition>, catalog.Get<ItemDefinition>);
                     if (obj.Value is ForagingSpotState forageSpot) forageSpot.Validate();
                     if (obj.Value is ForagePickupState foragePickup) foragePickup.Validate();
                 }

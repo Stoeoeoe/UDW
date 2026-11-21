@@ -1,16 +1,9 @@
 using System;
 using System.Linq;
-using Character;
-using Character.Editor;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
+using UnityEditor;
 using Core.Common;
-using Core.Music;
-using Core.Music.Editor;
-using Core.Quests;
-using Core.Quests.Editor;
-using Core.Routines;
-using Core.Routines.Editor;
-using Core.Spawning;
-using Core.Spawning.Editor;
 using Object = UnityEngine.Object;
 
 namespace Core.Catalogs.Editor
@@ -27,23 +20,30 @@ namespace Core.Catalogs.Editor
             foreach (var definition in definitions)
             {
                 if (!definition) throw new InvalidOperationException($"Catalog '{catalog.name}' has a missing reference.");
-                if (!DefinitionIdRules.IsPresent(catalog.GetId(definition)))
+                var family = DefinitionCatalog.FamilyOf(definition.GetType());
+                if (definition is not IDefinition)
+                    throw new InvalidOperationException($"Definition family '{family.Name}' must implement IDefinition.");
+                if (!DefinitionIdRules.IsPresent(DefinitionCatalog.GetId(definition)))
                     throw new InvalidOperationException($"Catalog '{catalog.name}': '{definition.name}' needs an ID.");
                 if (definition is not ValidatedScriptableObject asset) continue;
                 ValidateConfiguration(asset);
                 var problem = references.Problems(asset).FirstOrDefault();
                 if (problem != null) throw new InvalidOperationException(problem);
             }
-            var duplicate = definitions.GroupBy(catalog.GetId, StringComparer.Ordinal).FirstOrDefault(group => group.Count() > 1);
-            if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key}'.");
+            var duplicate = definitions.GroupBy(definition =>
+                (DefinitionCatalog.FamilyOf(definition.GetType()), DefinitionCatalog.GetId(definition)))
+                .FirstOrDefault(group => group.Count() > 1);
+            if (duplicate != null) throw new InvalidOperationException($"Catalog '{catalog.name}' has duplicate ID '{duplicate.Key.Item2}' in {duplicate.Key.Item1.Name}.");
 
-            switch (catalog)
+            foreach (var method in TypeCache.GetMethodsWithAttribute<DefinitionValidationAttribute>())
             {
-                case SpawnableCatalog: SpawnableCatalogValidation.Validate(definitions.Cast<SpawnedObject>()); break;
-                case CharacterCatalog: CharacterCatalogValidation.Validate(definitions.Cast<CharacterDefinition>()); break;
-                case MusicCatalog: MusicCatalogValidation.Validate(definitions.Cast<MusicCue>()); break;
-                case RoutineCatalog: RoutineCatalogValidation.Validate(definitions.Cast<RoutineDefinition>().ToArray()); break;
-                case QuestCatalog: QuestCatalogValidation.Validate(definitions.Cast<QuestDefinition>()); break;
+                var type = method.GetCustomAttribute<DefinitionValidationAttribute>().Type;
+                var matching = definitions.Where(type.IsInstanceOfType).ToArray();
+                if (matching.Length == 0) continue;
+                var typed = Array.CreateInstance(type, matching.Length);
+                Array.Copy(matching, typed, matching.Length);
+                try { method.Invoke(null, new object[] { typed }); }
+                catch (TargetInvocationException exception) { ExceptionDispatchInfo.Capture(exception.InnerException).Throw(); }
             }
         }
 

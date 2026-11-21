@@ -1,3 +1,5 @@
+using Core.Scripting;
+using Core.Catalogs;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -15,7 +17,7 @@ namespace Core.Scripting.Editor
 
         private GameObject _root;
         private AudioTestSoundManager _manager;
-        private SoundCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private SoundDefinition _sound;
         private AudioClip _clip;
         private AudioLuaApi _api;
@@ -37,9 +39,9 @@ namespace Core.Scripting.Editor
             _clip = AudioClip.Create("Bell", 4410, 1, 44100, false);
             _sound = ScriptableObject.CreateInstance<SoundDefinition>();
             _sound.name = "Bell";
-            typeof(SoundDefinition).GetField("soundId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(_sound, "test:bell");
+            _sound.SetId("test:bell");
             typeof(SoundDefinition).GetField("clip", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(_sound, _clip);
-            _catalog = ScriptableObject.CreateInstance<SoundCatalog>();
+            _catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
             _catalog.Synchronize(new Object[] { _sound });
             _api = new AudioLuaApi(_manager, map, _catalog);
         }
@@ -106,7 +108,7 @@ namespace Core.Scripting.Editor
         public void SoundResourcesAndOneActionAreExportedWithoutInvalidatingSpatialPreview()
         {
             var manifest = LuaBindingRegistry.DescribeTypes(typeof(AudioLuaApi));
-            manifest.resources.Add("sound", LuaBindingManifestExporter.DescribeCatalog(_catalog));
+            manifest.resources.Add("sound", LuaBindingManifestExporter.DescribeCatalog(_catalog, typeof(SoundDefinition)));
             Assert.That(manifest.resources["sound"].Single().id, Is.EqualTo("test:bell"));
             Assert.That(manifest.resources["sound"].Single().description, Is.EqualTo("Bell"));
             Assert.That(manifest.modules.Single().methods.Length, Is.EqualTo(1));
@@ -129,15 +131,15 @@ namespace Core.Scripting.Editor
         {
             var other = ScriptableObject.CreateInstance<SoundDefinition>();
             other.name = "Another bell";
-            typeof(SoundDefinition).GetField("soundId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(other, "test:another-bell");
+            other.SetId("test:another-bell");
             typeof(SoundDefinition).GetField("clip", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(other, _clip);
             try
             {
                 _catalog.Synchronize(new[] { _sound, other });
-                Assert.That(LuaBindingManifestExporter.DescribeCatalog(_catalog).Select(choice => choice.id),
+                Assert.That(LuaBindingManifestExporter.DescribeCatalog(_catalog, typeof(SoundDefinition)).Select(choice => choice.id),
                     Is.EqualTo(new[] { "test:another-bell", "test:bell" }));
                 _catalog.SetEnabled(_sound, false);
-                var choices = LuaBindingManifestExporter.DescribeCatalog(_catalog);
+                var choices = LuaBindingManifestExporter.DescribeCatalog(_catalog, typeof(SoundDefinition));
                 Assert.That(choices.Single().id, Is.EqualTo("test:another-bell"));
                 Assert.That(choices.Single().description, Is.EqualTo("Another bell"));
             }

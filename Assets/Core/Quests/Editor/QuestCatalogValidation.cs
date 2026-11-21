@@ -12,6 +12,7 @@ namespace Core.Quests.Editor
     /// </summary>
     internal static class QuestCatalogValidation
     {
+        [Core.Catalogs.Editor.DefinitionValidation(typeof(QuestDefinition))]
         public static void Validate(IEnumerable<QuestDefinition> quests)
         {
             var triggersByMap = FindTriggersByMap();
