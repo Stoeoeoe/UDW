@@ -15,7 +15,7 @@ These were settled while designing; each is cheap to revisit before its phase st
 | # | Decision | Why |
 |---|---|---|
 | D1 | A building is stored as a **plan** (size, inner walls, rooms, openings, roof). The exterior and interior images are always *composed* from the plan and the kit; nothing generated is edited by hand. | One source of truth: the inside and outside can never disagree. |
-| D2 | A **kit** is an Aseprite file plus a small descriptor JSON that gives it a namespaced ID. Pieces are slices; variations are layers in the group `variations`. | Artists keep working in Aseprite; IDs stay stable and mod-friendly. |
+| D2 | A **kit** is a sheet image (PNG or Aseprite, flattened) in the **standard kit layout** — every piece at a fixed position — plus a descriptor JSON with a namespaced ID. A variation is an optional extra sheet in the same layout, drawn over the base (for example only the snow). Aseprite slices and variation layers are a later addition. | Works with any image editor; no slices to maintain; IDs stay stable and mod-friendly. |
 | D3 | Walls are whole cells; storey 3 tiles; 45° gable roof, ridge parallel to the front; interior on the same grid. | Fixed in building-editor.md. |
 | D4 | Placed buildings and interiors **produce ordinary map data** at save: collisions, triggers, anchors and location links, marked as generated. | Unity already imports these; doors and collision work without new Unity code. |
 | D5 | Vulcanus **bakes** the composed images (exterior per variation, interior) next to the building at save. | Unity places images instead of re-implementing the composition rules. |
@@ -32,13 +32,16 @@ These were settled while designing; each is cheap to revisit before its phase st
   "formatVersion": 1,
   "id": "base:roman_basic",
   "name": "Roman basic",
-  "source": "assets/kits/kit_roman_basic.aseprite",
+  "source": "assets/kits/kit_roman_basic.png",
+  "variations": { "winter": "assets/kits/kit_roman_basic_winter.png" },
   "folderPath": ""
 }
 ```
 
-`source` is a path relative to the project folder, like tileset sprite sheets. The piece list and the variations come
-from the Aseprite file itself, never duplicated in the JSON.
+`source` and the variation sheets are paths relative to the project folder, like tileset sprite sheets; `.png`,
+`.aseprite` and `.ase` are accepted (Aseprite files are flattened as tilesets already are). Every sheet uses the
+standard kit layout (`lib/buildings/kitLayout.ts`, the layout of `docs/building-kit/kit_roman_basic.aseprite`), so a
+piece's position is known from its name. A variation sheet only needs pixels where something changes.
 
 ### Building — `buildings/<name>.building.json`
 
@@ -104,7 +107,7 @@ placeholders.
 ### Schemas (`Schemas/`)
 
 - `building-kit.schema.json`: `formatVersion` (1), `id` (resource ID pattern), `name`, `source` (non-empty string),
-  `folderPath`; `additionalProperties: false`.
+  `variations` (object of variation ID → sheet path), `folderPath`; `additionalProperties: false`.
 - `building.schema.json`: the shape above. Use `enum` (not `const`; NJsonSchema ignores `const`) for `roof.kind`,
   `opening.kind`, `direction`. Integers with minimums: `width ≥ 3`, `depth ≥ 5`, `length ≥ 1`, coordinates ≥ 0.
   Structural rules the schema cannot express are phase 2 validation.
@@ -147,57 +150,45 @@ tabs show them.
 
 ---
 
-## Phase 1 — Reading kits from Aseprite
+## Phase 1 — Reading kits
 
-Goal: a kit resolves to pieces with images per variation, and the kit editor shows them and what is missing.
-
-### Why a reader of our own
-
-`@pixelation/aseprite` composes pixels but skips slice chunks and exposes no layer names or nesting. A small reader
-that walks the file's chunks for **layer** (0x2004: flags, type, child level, name) and **slice** (0x2022: name and
-the first key's bounds) chunks fills that gap; pixels still come from the library. Layer index *n* in our reader is
-layer *n* in the library's `frame.layers` (both follow chunk order) — assert this in a test.
+Goal: a kit resolves to pieces with images per variation, and the kit editor shows them and which are empty.
 
 ### Files
 
-- `lib/buildings/asepriteStructure.ts`
-  - `readAsepriteStructure(buffer: ArrayBuffer): { layers: { name; type: 'normal' | 'group'; level; visible; path: string[] }[]; slices: { name; x; y; width; height }[] }`.
-    `path` is the chain of group names, built from `level` (the format's flat list with child levels).
-  - Unknown chunks are skipped by their size; a malformed file throws with the byte offset.
-- `lib/buildings/kitPieces.ts`
-  - `KIT_PIECES`: every piece name from building-editor.md with its role (`opaque` | `overlay`) and group
-    (roof, wall, opening, interior wall, interior opening, floor). `wall_cap_00…15` and `floor_*` are patterns;
-    a kit needs at least one `floor_*`.
+- `lib/buildings/kitLayout.ts`
+  - `KIT_LAYOUT`: every piece name from building-editor.md with its cell in the sheet (column, row), its role
+    (`opaque` | `overlay`) and its group (roof, wall, opening, interior wall, interior opening, floor). The layout is the
+    prototype kit's: 16 × 14 cells of 16 px. Floors take the cells of row 11 (`floor_boards`, `floor_tiles`, and the
+    rest of the row for further floors named `floor_<n>` until a name field exists).
 - `lib/buildings/resolveKit.ts`
-  - `resolveKit(kit, buffer): ResolvedKit` with `pieces: Map<name, { base: ImageData; variations: Map<variationId, ImageData> }>`,
-    `floors: string[]`, `variationIds: string[]`, `missing: string[]`, `unknownSlices: string[]`.
-  - Base image of a piece: all visible layers **outside** `variations`, composed (blend and opacity as in
-    `asepriteUtils.renderAsepriteToPng`, which gets a `layerFilter` parameter instead of a copy).
-  - Variation image: the layer `variations/<id>` alone, cropped to the slice; empty crops are dropped, so a piece
-    "has" a variation only if it draws something in it.
-  - Slices must be 16 × 16 at tile-aligned positions; others are reported as problems.
-- `store/slices/buildingKitSlice.ts`: `resolvedKits: Map<kitId, ResolvedKit | { error }>`, resolved on load and when
-  the source file changes (subscribe to the existing asset file watcher used for tilesets).
+  - `resolveKit(kit, sheets): ResolvedKit` with `pieces: Map<name, { base: ImageData; variations: Map<variationId, ImageData> }>`,
+    `variationIds`, `empty: string[]` (required pieces with no pixels in the base sheet), `problems: string[]`
+    (sheet smaller than the layout, unreadable file).
+  - Sheets are loaded with `resolveSpriteAsset` (PNG as is, Aseprite flattened), then cropped per piece; variation
+    crops without pixels are dropped, so a piece "has" a variation only where its variation sheet draws something.
+- `store/slices/buildingKitSlice.ts`: `resolvedKits: Map<kitId, ResolvedKit>`, resolved on load and when a sheet file
+  changes (subscribe to the asset file watcher used for tilesets).
 - `components/screens/building/BuildingKitEditor.tsx`
-  - `EditorDocumentFrame` + `ResizableEditorLayout`; centre: the pieces in their groups at 3× with names; a variation
-    selector (`base`, then each variation ID) re-renders every piece with that variation over its base.
-  - Inspector (`InspectorShell`): name, source path (asset picker as for tilesets, `.aseprite`/`.ase` only), status
-    lists for missing pieces, unknown slices and size problems.
-- Fixture: copy `docs/building-kit/kit_roman_basic.aseprite` to `lib/__fixtures__/kit_roman_basic.aseprite`.
+  - `EditorDocumentFrame` + `ResizableEditorLayout`; centre: the pieces by group at 3× with names; a variation selector
+    (`base`, then each variation) re-renders every piece with that variation over its base.
+  - Inspector (`InspectorShell`): name, base sheet and variation sheets (asset pickers as for tilesets; add/remove a
+    variation with its ID), lists of empty pieces and problems.
+- `docs/building-kit/`: add the prototype kit as `kit_roman_basic.png` and `kit_roman_basic_winter.png` beside the
+  Aseprite file, as templates for either tool.
+- Fixtures: the two prototype PNGs under `lib/__fixtures__/`.
 
 ### Tests
 
-- `asepriteStructure.test.ts`: the fixture has layers `kit`, `variations` (group), `winter` with path
-  `['variations']`, and 53 slices including `roof_ridge_l` at (0, 0, 16, 16).
-- `resolveKit.test.ts`: no missing pieces; `variationIds = ['winter']`; `roof_slope_m` has a winter image,
-  `wall_mid_m` does not; a kit with a renamed slice reports it missing; a layer `sketch` outside `variations` is part of
-  the base and a hidden one is not.
-- Layer index alignment with the library (see above).
+- `kitLayout.test.ts`: names are unique; no two pieces share a cell; every piece in building-editor.md is listed.
+- `resolveKit.test.ts` (sheets as `ImageData` fixtures, no canvas needed): the prototype kit has no empty pieces;
+  `variationIds = ['winter']`; `roof_slope_m` has a winter image, `wall_mid_m` does not; clearing a cell reports that
+  piece as empty; a too small sheet is a problem.
 
 ### Done when
 
-Opening the prototype kit shows all 53 pieces, switching to `winter` shows snow on the roof pieces only, and deleting a
-slice in Aseprite makes it appear under "Missing" after the file watcher fires.
+The prototype kit as PNG and as Aseprite both show all pieces; switching to `winter` shows snow on the roof pieces only;
+painting a piece transparent in the sheet makes it appear under "Empty" after the file watcher fires.
 
 ---
 
@@ -482,7 +473,8 @@ the generated links goes outside → inside → outside (checked in phase 6's da
 - Unity importer for buildings (needs the unified catalogs; consumes phase 6's map data and phase 8's images).
 - Hip roofs, L/U shapes, more storeys, the domus atrium, columns and porticos.
 - Props, terrain overlays and the project-wide variation list (separate plans; this plan uses map variation IDs as they
-  are and the kit's variation layer names must match them).
+  are, and a kit's variation IDs must match them).
+- Aseprite slices and variation layers inside one Aseprite file (a later addition on top of the standard layout).
 - AI furnishing by room function (rooms get a `function` field when that work starts).
 
 ## Open questions to settle before the phases that need them

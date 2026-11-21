@@ -74,7 +74,8 @@ The interior map uses the same grid as the plan, cell for cell.
 
 ## Kit pieces
 
-Each piece is a 16×16 slice named as above. Most pieces are opaque; **overlay** pieces (the chimney) are transparent
+Each piece is a 16×16 cell of the kit sheet at a fixed position (the **standard kit layout**, the prototype's layout),
+so its name says where it is; the prototype Aseprite file also carries matching slices for the artist's convenience. Most pieces are opaque; **overlay** pieces (the chimney) are transparent
 around what they show and are drawn over the piece below them, so that piece's own variations, such as snow on the
 roof, show around them. Anything that sits on a surface should be an overlay.
 
@@ -90,11 +91,12 @@ roof, show around them. Anything that sits on a surface should be an overlay.
 
 ## Variations in the kit
 
-A variation (`winter`, later perhaps `festival`) is a layer inside the group `variations` of the kit file, drawn on
-top of the base pieces. Only pieces that change need it: in the prototype, snow on the roof, the chimney, the door
-lintel and the window sills. Layers outside `variations` are the artist's own and are ignored. When a map shows a
-variation, every piece uses its variation layer over its base, so every building built from the kit gets its winter
-look for free.
+A kit sheet is a PNG or an Aseprite file (flattened). A variation (`winter`, later perhaps `festival`) is an extra
+sheet in the same layout, drawn over the base: it only needs pixels where something changes — in the prototype, snow
+on the roof, the chimney, the door lintel and the window sills. When a map shows a variation, every piece uses its
+variation pixels over its base, so every building built from the kit gets its winter look for free. (In the prototype
+Aseprite file the snow is the layer `variations/winter`; reading variations from Aseprite layers directly is a later
+addition.)
 
 ## Open questions
 
