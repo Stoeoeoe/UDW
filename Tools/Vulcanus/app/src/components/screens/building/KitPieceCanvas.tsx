@@ -1,19 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { KitPiece, PixelSheet } from '../../../lib/buildings/resolveKit';
-
-function toCanvas(sheet: PixelSheet): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = sheet.width;
-  canvas.height = sheet.height;
-  canvas
-    .getContext('2d')!
-    .putImageData(
-      new ImageData(new Uint8ClampedArray(sheet.data), sheet.width, sheet.height),
-      0,
-      0,
-    );
-  return canvas;
-}
+import { canvasOf } from '../../../lib/buildings/render';
 
 /** One kit piece at an integer scale: its base, then the variation's pixels over it when there are any. */
 export function KitPieceCanvas({
@@ -32,7 +19,7 @@ export function KitPieceCanvas({
     context.imageSmoothingEnabled = false;
     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     const draw = (sheet: PixelSheet) =>
-      context.drawImage(toCanvas(sheet), 0, 0, sheet.width * scale, sheet.height * scale);
+      context.drawImage(canvasOf(sheet), 0, 0, sheet.width * scale, sheet.height * scale);
     draw(piece.base);
     const over = variation ? piece.variations.get(variation) : undefined;
     if (over) draw(over);

@@ -201,37 +201,27 @@ heart of the feature, so it is tested hardest.
 
 ### Files (`lib/buildings/`)
 
-- `grid.ts`
-  - `buildGrid(building): Grid` — `cells[y][x]: 'wall' | 'floor'`, outer border and inner walls as wall.
-  - `wallNeighbourMask(grid, x, y)` — N 1, E 2, S 4, W 8.
-- `rooms.ts`
-  - `findRegions(grid)` — 4-connected floor regions with bounding boxes.
-  - `resolveRooms(building, grid)` — pairs regions with `rooms` by `at`; returns regions without a room and rooms
-    whose `at` is not on a floor cell.
-- `validate.ts` — `validateBuilding(building, kit?: ResolvedKit): string[]` (errors block saving), each message naming
-  the element (`Opening window-2: …`):
-  1. `width ≥ 3`, `depth ≥ 5`; inner walls inside the outer walls, not on the border, at least one cell long.
-  2. Every floor region is a rectangle with exactly one room; every room's `at` is on a floor cell of its own region.
-  3. Every room is at least 3 rows deep (2 rows of back wall + 1 walkable).
-  4. Openings sit on wall cells, no two on one cell, none on a corner of the outer wall.
-  5. Windows only in the south outer wall (`y = depth − 1`).
-  6. Exactly one door in the south outer wall (the entrance); none in the other outer walls.
-  7. A door in an inner wall connects two different rooms (floor on both sides along its axis).
-  8. `chimney.column` in `1 … width − 2`.
-  9. With a resolved kit: `kit` exists, no missing pieces, every room's `floor` is one of the kit's floors.
-  10. Unique room and opening IDs.
-- `exteriorLayout.ts` — `layoutExterior(building): Placement[]`, `Placement = { piece; col; row; overlay: boolean }`,
-  following the exterior table: rows `0 … depth + 2`, columns `0 … width − 1`, `_l/_m/_r` by column, door and window
-  replacements, chimney overlays last.
-- `interiorLayout.ts` — `layoutInterior(building, grid): { placements: Placement[]; blocked: boolean[][]; entrance: { x; y } }`
-  following the interior rules: wall caps with neighbour masks; `threshold`, `entrance_mat`, `window_cap`; the two face
-  rows under every wall cell with floor south of it (`_l/_r` by the side walls); `door_face_upper/lower` below a door in
-  a horizontal inner wall; floors by room. `blocked` marks walls and face rows (except where a door cuts the face);
-  phase 6 turns it into collisions.
-- `render.ts` — `renderPlacements(placements, kit, variationChain, target: CanvasRenderingContext2D, scale)`: opaque
-  pieces first, then overlays; each piece draws its base, then the first variation in `variationChain` it has.
-  `variationChain` is the active map variation followed by its `parentId`s.
-- `index.ts` re-exports the public functions.
+- `grid.ts` — `buildGrid(building)`: `wall[y][x]` for the border and inner walls; `wallNeighbourMask` (N 1, E 2, S 4,
+  W 8).
+- `rooms.ts` — `findRegions(grid)` (4-connected floor areas with bounds), `isRectangle`, `roomsByRegion` (rooms paired
+  with areas by their `at` cell).
+- `validate.ts` — `validateBuildingPlan(building, kit?)`: the errors that block saving, each naming what it concerns:
+  1. at least 3 × 5 tiles; inner walls inside the outer walls;
+  2. every floor area a rectangle with exactly one room; every room's `at` on a floor cell;
+  3. every room at least 3 rows deep (2 rows of back wall + 1 walkable);
+  4. openings on wall cells, not on corners, one per cell;
+  5. windows only in the south wall;
+  6. exactly one door in the south wall (the entrance), none in the other outer walls;
+  7. a door in an inner wall leads from one room to another;
+  8. the chimney on a column between the outer walls;
+  9. a kit chosen; with the resolved kit, no empty pieces and every room's floor drawn in it;
+  10. unique room and opening IDs.
+- `layout.ts` — `layoutExterior(building)` and `layoutInterior(building)` → `Placement[]` (`piece`, `column`, `row`,
+  `overlay`) by the rules of building-editor.md; the interior also gives `blocked[y][x]` (walls, windows and back-wall
+  faces, not doors) and the entrance cell, for phase 6's collisions and links.
+- `render.ts` — `drawList(placements, kit, variationChain)`: what to draw in order (opaque pieces, then overlays; each
+  base, then the first variation in the chain the piece has); `renderDraws` draws it on a canvas without smoothing.
+- `farmhouse.fixture.ts` — the example farmhouse, shared by the tests.
 
 ### Tests (`lib/buildings/*.test.ts`)
 
