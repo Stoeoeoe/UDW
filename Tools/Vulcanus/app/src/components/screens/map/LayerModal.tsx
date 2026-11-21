@@ -47,6 +47,7 @@ const ALL_KIND_OPTIONS: { value: LayerKind; label: string }[] = [
   { value: 'water', label: 'Water (Drawn)' },
   { value: 'visual', label: 'Tile Layer' },
   { value: 'object', label: 'Object Layer' },
+  { value: 'building', label: 'Buildings' },
   { value: 'entity', label: 'Entity (Objects)' },
   { value: 'collision', label: 'Collision' },
   { value: 'navigation', label: 'Navigation' },
@@ -153,6 +154,7 @@ export const LayerModal: React.FC<LayerModalProps> = ({
               <form.Subscribe selector={(state) => state.values.kind}>
                 {(kind) =>
                   kind !== 'object' &&
+                  kind !== 'building' &&
                   kind !== 'entity' &&
                   kind !== 'terrain' &&
                   kind !== 'water' &&

@@ -18,6 +18,7 @@ export function kindToCategory(kind: LayerKind): LayerCategory {
     case 'terrain':
     case 'visual':
     case 'object':
+    case 'building':
       return 'visual';
     case 'collision':
       return 'collision';
@@ -50,7 +51,7 @@ export const LAYER_CATEGORIES: LayerCategoryConfig[] = [
   {
     id: 'visual',
     label: 'Visual',
-    kinds: ['visual', 'terrain', 'object'],
+    kinds: ['visual', 'terrain', 'object', 'building'],
     color: 'blue.700',
   },
   {

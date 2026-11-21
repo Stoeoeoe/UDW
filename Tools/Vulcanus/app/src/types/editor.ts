@@ -163,6 +163,8 @@ export type ToolType =
   | 'objectSelect' // Select & move placed map objects
   | 'objectPlace' // Place reusable tileset objects as map instances
   | 'objectDelete' // Delete placed map objects
+  | 'buildingSelect' // Select & move placed buildings
+  | 'buildingPlace' // Place the palette's building
   | 'entitySelect' // Select & move entities
   | 'entityPlace'
   | 'entityDelete' // Delete entities

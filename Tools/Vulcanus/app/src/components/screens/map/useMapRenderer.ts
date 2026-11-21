@@ -33,6 +33,13 @@ import {
   getObjectInstanceBounds,
 } from '../../../lib/mapObjects';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
+import { buildingGhost, buildingLayerView } from './mapBuildingSprites';
+import {
+  footprintCollisionCells,
+  kitVariationChain,
+  placementOrigin,
+  placementRefusal,
+} from '../../../lib/buildings/mapPlacement';
 import type { ToolType } from '../../../types/editor';
 
 interface UseMapRendererProps {
@@ -383,6 +390,26 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
     [...currentMap.layers]
       .sort((a, b) => a.zOrder - b.zOrder)
       .forEach((layer) => {
+        if (layer.visible && layer.kind === 'building') {
+          const { buildings } = useEditorStore.getState();
+          for (const instance of layer.buildings ?? []) {
+            const building = buildings.find((entry) => entry.id === instance.buildingId);
+            if (!building) continue;
+            for (const cell of footprintCollisionCells(building, instance)) {
+              const x = cell.x * tileSize;
+              const y = cell.y * tileSize;
+              const polygon = [
+                quantizeOverlayPoint(x, y),
+                quantizeOverlayPoint(x + tileSize, y),
+                quantizeOverlayPoint(x + tileSize, y + tileSize),
+                quantizeOverlayPoint(x, y + tileSize),
+              ];
+              fillPolygons.push(polygon);
+              addPolygonSegments(mergedSegments, polygon);
+            }
+          }
+          return;
+        }
         if (
           !layer.visible ||
           (layer.kind !== 'visual' && layer.kind !== 'terrain' && layer.kind !== 'object')
@@ -777,8 +804,13 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
   // Render tiles
   const renderTiles = useCallback(() => {
     const tileContainer = tileContainerRef.current;
-    const { currentMap, activeVariationId, tilesets, selectedObjectInstanceId } =
-      useEditorStore.getState();
+    const {
+      currentMap,
+      activeVariationId,
+      tilesets,
+      selectedObjectInstanceId,
+      selectedBuildingInstanceId,
+    } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!tileContainer || !currentMap) return;
 
@@ -789,6 +821,17 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
     [...currentMap.layers]
       .sort((a, b) => a.zOrder - b.zOrder)
       .forEach((layer) => {
+        if (layer.visible && layer.kind === 'building') {
+          tileContainer.addChild(
+            buildingLayerView(
+              layer,
+              kitVariationChain(currentMap, activeVariationId),
+              selectedBuildingInstanceId,
+              tileSize,
+            ),
+          );
+          return;
+        }
         if (
           !layer.visible ||
           (layer.kind !== 'visual' && layer.kind !== 'terrain' && layer.kind !== 'object')
@@ -1386,6 +1429,23 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
 
     const selectedLayer = currentMap?.layers.find((layer) => layer.id === selectedLayerId);
     const isObjectLayer = selectedLayer?.kind === 'object';
+
+    if (selectedLayer?.kind === 'building') {
+      previewContainer.alpha = 1;
+      const { buildings, paletteBuildingId, maps } = useEditorStore.getState();
+      const building = buildings.find((entry) => entry.id === paletteBuildingId);
+      if (activeTool !== 'buildingPlace' || !building || !hoveredTile || !currentMap) return;
+      previewContainer.addChild(
+        buildingGhost(
+          building,
+          placementOrigin(building, hoveredTile),
+          kitVariationChain(currentMap, activeVariationId),
+          !!activeVariationId || !!placementRefusal(maps, currentMap, building),
+          tileSize,
+        ),
+      );
+      return;
+    }
 
     if (
       activeTool === 'anchorPlace' ||

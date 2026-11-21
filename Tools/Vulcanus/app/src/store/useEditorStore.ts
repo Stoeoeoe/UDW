@@ -42,6 +42,7 @@ import { createEntityTypeSlice, EntityTypeSlice } from './slices/entityTypeSlice
 import { createLayerDefinitionSlice, LayerDefinitionSlice } from './slices/layerDefinitionSlice';
 import { createToolSlice, ToolSlice } from './slices/toolSlice';
 import { createTilePaintSlice, TilePaintSlice } from './slices/tilePaintSlice';
+import { createMapBuildingSlice, MapBuildingSlice } from './slices/mapBuildingSlice';
 import { createWaterSlice, WaterSlice } from './slices/waterSlice';
 import { createTilesetSlice, TilesetSlice } from './slices/tilesetSlice';
 import { createEntityInstanceSlice, EntityInstanceSlice } from './slices/entityInstanceSlice';
@@ -76,6 +77,7 @@ export interface EditorStore
     LayerDefinitionSlice,
     ToolSlice,
     TilePaintSlice,
+    MapBuildingSlice,
     WaterSlice,
     TilesetSlice,
     EntityInstanceSlice,
@@ -352,6 +354,7 @@ export const useEditorStore = create<EditorStore>()(
           ...createLayerDefinitionSlice(set, get, {} as never),
           ...createToolSlice(set, get, {} as never),
           ...createTilePaintSlice(set, get, {} as never),
+          ...createMapBuildingSlice(set, get, {} as never),
           ...createWaterSlice(set, get, {} as never),
           ...createTilesetSlice(set, get, {} as never),
           ...createEntityInstanceSlice(set, get, {} as never),

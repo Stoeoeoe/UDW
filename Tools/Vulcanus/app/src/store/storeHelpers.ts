@@ -206,6 +206,7 @@ export const DEFAULT_TOOL_BY_KIND: Record<Layer['kind'], ToolType> = {
   metadata: 'stamp',
   entity: 'entitySelect',
   water: 'waterBrush',
+  building: 'buildingSelect',
 };
 
 export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
@@ -217,6 +218,7 @@ export const VALID_TOOLS_BY_KIND: Record<Layer['kind'], ToolType[]> = {
   metadata: ['stamp', 'erase', 'fill', 'select'],
   entity: ['entitySelect', 'entityPlace', 'entityDelete'],
   water: ['waterBrush', 'waterErase', 'waterFlow', 'waterFlowErase'],
+  building: ['buildingSelect', 'buildingPlace'],
 };
 
 export function getPreferredSelectedLayerId(map: GameMap | null): string | null {

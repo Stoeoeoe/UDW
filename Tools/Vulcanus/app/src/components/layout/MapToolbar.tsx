@@ -30,6 +30,7 @@ import {
   FiMinimize2,
   FiWind,
   FiXCircle,
+  FiHome,
 } from 'react-icons/fi';
 import { FaMountain } from 'react-icons/fa';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -59,6 +60,15 @@ const TOOLS_BY_KIND: Record<LayerKind, ToolItem[]> = {
     },
     { id: 'objectPlace', icon: FiEdit2, label: 'Place Object (N)', group: 'objects' },
     { id: 'objectDelete', icon: FiTrash2, label: 'Delete Object (X)', group: 'objects' },
+  ],
+  building: [
+    {
+      id: 'buildingSelect',
+      icon: FiMousePointer,
+      label: 'Select / Move Building (M)',
+      group: 'buildings',
+    },
+    { id: 'buildingPlace', icon: FiHome, label: 'Place Building (N)', group: 'buildings' },
   ],
   collision: [
     { id: 'collisionSelect', icon: FiMousePointer, label: 'Select / Move (V)', group: 'collision' },

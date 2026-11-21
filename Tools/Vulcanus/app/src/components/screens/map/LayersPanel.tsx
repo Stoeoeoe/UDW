@@ -202,7 +202,15 @@ export const LayersPanel: React.FC = () => {
 
     if (editingLayer) {
       const nextLayerShape =
-        data.kind === 'water'
+        data.kind === 'building'
+          ? {
+              data: undefined,
+              terrainData: undefined,
+              entities: undefined,
+              objectInstances: undefined,
+              buildings: editingLayer.buildings ?? [],
+            }
+          : data.kind === 'water'
           ? {
               data: undefined,
               terrainData: undefined,
@@ -294,6 +302,8 @@ export const LayersPanel: React.FC = () => {
         base.entities = [];
       } else if (data.kind === 'object') {
         base.objectInstances = [];
+      } else if (data.kind === 'building') {
+        base.buildings = [];
       } else {
         base.data = Array(currentMap.height)
           .fill(null)

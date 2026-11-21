@@ -342,21 +342,28 @@ Goal: buildings appear on exterior maps, can be placed, moved and removed, and l
 
 ### Map editor
 
-- Tool `building` in `toolSlice` (shortcut [U]); palette in the map inspector: buildings with thumbnails and a search
-  field.
-- Placement: ghost exterior snapped to tiles under the cursor (footprint outlined); click places; drag moves; Delete
-  removes; the selected instance shows its footprint, its door and an "Open building" button (`OpenResourceButton`).
-- Placing a building that has an interior map a second time is refused with the reason (D6).
-- `useMapRenderer.renderBuildings()`: one container per building layer; each instance is a sprite of its exterior
-  rendered by `renderPlacements` into an offscreen canvas, cached by `(buildingId, building revision, variation chain)`;
-  the sprite's origin is 3 rows above the footprint. Called from the store subscription when the layer, the building
-  or the active variation changes (on-demand rendering requests the frame).
-- Collision overlay (`renderCollisionOverlay`) draws placed footprints as the generated collision will be.
+- Tools follow the object layer's: **Select / Move Building** [M] (click a building's footprint or roof to select it,
+  drag to move it) and **Place Building** [N]; Delete removes the selected building. The bottom panel
+  (`BuildingBottomPanel.tsx`) lists the buildings with thumbnails and a search field; picking one switches to Place.
+  The panel also shows the selected building with "Open building" and "Remove from map".
+- Placement: the building's door goes under the pointer; the ghost is the exterior, faded and outlined red when it
+  cannot be placed. Placing, moving and removing edit the base map only, like objects.
+- Placing a building that has an interior map a second time is refused (D6); the panel says why as soon as that
+  building is picked.
+- Drawing (`mapBuildingSprites.ts`): a building layer is drawn in its layer order inside `renderTiles`, each building a
+  sprite of its exterior (`exteriorCanvas` in `lib/buildings/render.ts`, cached per building revision, kit and variation
+  chain), 3 rows above its footprint, back to front by footprint bottom. The variation chain is the map's active
+  variation and its parents, matched to kit variations by ID. A building whose kit is not read yet is drawn as its
+  footprint's outline; the map redraws when kits are read.
+- The collision overlay draws each footprint except the doors in its south wall (`footprintCollisionCells`, which
+  phase 6 generates from).
 
 ### Tests
 
-- `mapSlice` / layer tests: add/move/remove instances; refusal for a second placement of a building with an interior.
-- `useMapRenderer` unit test: an instance's sprite is placed at `(x·16, (y − 3)·16)`.
+- `lib/buildings/mapPlacement.test.ts`: variation chain, door under the pointer, hit test by roof and footprint, the
+  D6 refusal, footprint collision.
+- `store/slices/mapBuildingSlice.test.ts`: place/move/remove; refusals for a second placement and in a variation.
+- `mapBuildingSprites.test.ts`: an instance is drawn at `(x·16, (y − 3)·16)`, back to front.
 
 ### Done when
 

@@ -1,3 +1,4 @@
+import { buildingInstanceAt, placementOrigin } from '../../../lib/buildings/mapPlacement';
 import { useCallback, useRef, useEffect } from 'react';
 import { Viewport } from 'pixi-viewport';
 import {
@@ -98,6 +99,10 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
   const entitySnapMode = useEditorStore((state) => state.entitySnapMode);
 
+  // Building being dragged: its layer and the tile offset from its origin to the grabbed tile.
+  const buildingDragRef = useRef<{ layerId: string; id: string; dx: number; dy: number } | null>(
+    null,
+  );
   const isDrawingRef = useRef(false);
   const drawStartRef = useRef<{ x: number; y: number } | null>(null);
   const lineAnchorRef = useRef<{ x: number; y: number } | null>(null);
@@ -548,6 +553,32 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         worldPos.x < currentMap.width * projectTileSize &&
         worldPos.y >= 0 &&
         worldPos.y < currentMap.height * projectTileSize;
+
+      // ── Building tools — place the palette's building, or select and drag a placed one ──
+      if ((activeTool === 'buildingPlace' || activeTool === 'buildingSelect') && e.button === 0) {
+        const layer = currentMap.layers.find((entry) => entry.id === selectedLayerId);
+        if (layer?.kind !== 'building' || !tile) return;
+        const state = useEditorStore.getState();
+        if (activeTool === 'buildingPlace') {
+          const building = state.buildings.find((entry) => entry.id === state.paletteBuildingId);
+          if (!building) return;
+          const origin = placementOrigin(building, tile);
+          state.placeBuilding(layer.id, building.id, origin.x, origin.y);
+          return;
+        }
+        const hit = buildingInstanceAt(layer, state.buildings, tile);
+        state.selectBuildingInstance(hit?.id ?? null);
+        if (hit && !layer.locked && !state.activeVariationId) {
+          startHistoryBatch();
+          buildingDragRef.current = {
+            layerId: layer.id,
+            id: hit.id,
+            dx: tile.x - hit.x,
+            dy: tile.y - hit.y,
+          };
+        }
+        return;
+      }
 
       // ── Water tools — brush and eraser paint pixels; flow tools draw and remove currents ──
       if (isWaterTool(activeTool) && e.button === 0) {
@@ -1267,6 +1298,18 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
         setHoveredTile(null);
       }
 
+      const buildingDrag = buildingDragRef.current;
+      if (buildingDrag && e.buttons === 1 && tile) {
+        useEditorStore
+          .getState()
+          .moveBuilding(
+            buildingDrag.layerId,
+            buildingDrag.id,
+            tile.x - buildingDrag.dx,
+            tile.y - buildingDrag.dy,
+          );
+      }
+
       // Water paint stroke: connect the previous pixel to this one so fast moves leave no gaps.
       const waterStroke = waterStrokeRef.current;
       if (waterStroke && e.buttons === 1 && worldPos) {
@@ -1834,6 +1877,12 @@ export function useMapTools({ viewport }: UseMapToolsProps) {
   // Handle pointer up
   const handlePointerUp = useCallback(
     (e: PointerEvent) => {
+      if (buildingDragRef.current) {
+        buildingDragRef.current = null;
+        finishHistoryBatch();
+        return;
+      }
+
       // Finish a water stroke: one history entry holding the re-encoded mask.
       if (waterStrokeRef.current) {
         const { layerId } = waterStrokeRef.current;

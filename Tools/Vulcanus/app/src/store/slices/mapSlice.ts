@@ -105,6 +105,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
           state.selectedAnchorId = null;
           state.selectedTriggerId = null;
           state.selectedObjectInstanceId = null;
+          state.selectedBuildingInstanceId = null;
           if (enrichedMap && state.mapCameras?.[enrichedMap.id]) {
             state.camera = { ...state.mapCameras[enrichedMap.id] };
           }
@@ -146,6 +147,7 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
           state.selectedEntityId = null;
           state.selectedEntityIds = new Set();
           state.selectedObjectInstanceId = null;
+          state.selectedBuildingInstanceId = null;
           state.selectedLinkId = null;
           state.selectedAnchorId = null;
           state.selectedTriggerId = null;

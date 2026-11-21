@@ -204,6 +204,8 @@ export interface Layer {
   objectGroups?: ObjectGroup[];
   // Explicit placed object instances for object layers.
   objectInstances?: MapObjectInstance[];
+  // For building layers: the placed buildings.
+  buildings?: BuildingInstance[];
 
   // For terrain layers: parallel grid storing the terrain ID painted at each cell.
   // Used to re-resolve tile graphics when terrain rules change.
@@ -272,6 +274,14 @@ export interface MapObjectInstance {
   y: number; // Pixel Y coordinate of the object's top-left origin; may be negative for overhangs
 }
 
+/** A building placed on a map: its footprint's north-west cell, in tiles. */
+export interface BuildingInstance {
+  id: string;
+  buildingId: string;
+  x: number;
+  y: number;
+}
+
 export type LayerKind =
   | 'visual' // Rendered tile layers
   | 'object' // Placed reusable object instances
@@ -280,7 +290,8 @@ export type LayerKind =
   | 'metadata' // Data-only, invisible
   | 'entity' // Layer that contains entities (EntityInstance[])
   | 'terrain' // Terrain-painted layer (autotiled)
-  | 'water'; // Hand-drawn pixel water mask (no tiles)
+  | 'water' // Hand-drawn pixel water mask (no tiles)
+  | 'building'; // Placed buildings (BuildingInstance[])
 
 export type PropertyValue =
   | string

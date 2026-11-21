@@ -125,6 +125,10 @@ function normalizeLayer(layer: Layer, prefix: string): Layer {
       tilesetId: qualifyResourceId(instance.tilesetId, prefix),
       objectDefinitionId: localReference(instance.objectDefinitionId),
     })),
+    buildings: collection(layer.buildings, (instance) => ({
+      ...localDefinition(instance),
+      buildingId: qualifyResourceId(instance.buildingId, prefix),
+    })),
     terrainData: layer.terrainData?.map((row) =>
       row.map((id) => (typeof id === 'string' ? localReference(id) : id)),
     ),

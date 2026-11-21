@@ -1,4 +1,5 @@
-import type { Placement } from './layout';
+import type { Building } from '../../types/building';
+import { layoutExterior, STOREY_ROWS, type Placement } from './layout';
 import { KIT_TILE } from './kitLayout';
 import type { PixelSheet, ResolvedKit } from './resolveKit';
 
@@ -75,4 +76,35 @@ export function renderDraws(
       sheet.height * scale,
     );
   }
+}
+
+const exteriorCache = new WeakMap<
+  Building,
+  Map<string, { kit: ResolvedKit; canvas: HTMLCanvasElement }>
+>();
+
+/**
+ * The building's exterior at 1×, in a variation chain (empty for the base look). Made once per building revision, kit
+ * and chain: an edit or a re-read kit replaces the object, and so the entry.
+ */
+export function exteriorCanvas(
+  building: Building,
+  kit: ResolvedKit,
+  variationChain: readonly string[],
+): HTMLCanvasElement {
+  let byChain = exteriorCache.get(building);
+  if (!byChain) exteriorCache.set(building, (byChain = new Map()));
+  const key = variationChain.join('/');
+  const cached = byChain.get(key);
+  if (cached?.kit === kit) return cached.canvas;
+  const canvas = document.createElement('canvas');
+  canvas.width = building.width * KIT_TILE;
+  canvas.height = (building.depth + STOREY_ROWS) * KIT_TILE;
+  renderDraws(
+    drawList(layoutExterior(building), kit, variationChain),
+    kit,
+    canvas.getContext('2d')!,
+  );
+  byChain.set(key, { kit, canvas });
+  return canvas;
 }

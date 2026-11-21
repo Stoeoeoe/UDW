@@ -3,6 +3,7 @@ import { Box, Text, useToast } from '@chakra-ui/react';
 import { Application, BitmapFont } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useResolvedKitsStore } from '../../../store/useResolvedKitsStore';
 import { useWorkspaceStore } from '../../../store/useWorkspaceStore';
 import { useMapRenderer } from './useMapRenderer';
 import { useMapTools } from './useMapTools';
@@ -379,6 +380,7 @@ export const MapViewportPixi: React.FC = () => {
               layer.data !== prev?.data ||
               layer.objectGroups !== prev?.objectGroups ||
               layer.objectInstances !== prev?.objectInstances ||
+              layer.buildings !== prev?.buildings ||
               layer.id !== prev?.id ||
               layer.kind !== prev?.kind ||
               layer.visible !== prev?.visible
@@ -441,9 +443,14 @@ export const MapViewportPixi: React.FC = () => {
       if (state.selectedEntityId !== prevState.selectedEntityId) {
         renderEntities();
       }
-      if (state.selectedObjectInstanceId !== prevState.selectedObjectInstanceId) {
+      if (
+        state.selectedObjectInstanceId !== prevState.selectedObjectInstanceId ||
+        state.selectedBuildingInstanceId !== prevState.selectedBuildingInstanceId ||
+        state.buildings !== prevState.buildings
+      ) {
         renderTiles();
       }
+      if (state.buildings !== prevState.buildings) renderCollisionOverlay();
       // Re-render collision overlay when tileset metadata changes
       if (state.tilesets !== prevState.tilesets) {
         renderCollisionOverlay();
@@ -507,6 +514,7 @@ export const MapViewportPixi: React.FC = () => {
         state.selectedTileIndex !== prevState.selectedTileIndex ||
         state.selectedTileIndices !== prevState.selectedTileIndices ||
         state.selectedObjectDefinitionId !== prevState.selectedObjectDefinitionId ||
+        state.paletteBuildingId !== prevState.paletteBuildingId ||
         state.drawPreview !== prevState.drawPreview ||
         state.brushSize !== prevState.brushSize ||
         state.drawMode !== prevState.drawMode
@@ -522,7 +530,16 @@ export const MapViewportPixi: React.FC = () => {
       }
     });
 
-    return unsubscribe;
+    // Kits are read from their sheets after the map is drawn, and again when a sheet changes.
+    const unsubscribeKits = useResolvedKitsStore.subscribe(() => {
+      renderTiles();
+      renderPreview();
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeKits();
+    };
   }, [
     isReady,
     renderWater,
@@ -645,6 +662,21 @@ export const MapViewportPixi: React.FC = () => {
           selectObjectInstance(null);
           return;
         }
+        const {
+          currentMap: map,
+          selectedBuildingInstanceId,
+          removeBuilding,
+        } = useEditorStore.getState();
+        const buildingLayer = map?.layers.find(
+          (layer) =>
+            layer.id === selectedLayerId &&
+            layer.buildings?.some((instance) => instance.id === selectedBuildingInstanceId),
+        );
+        if (buildingLayer && selectedBuildingInstanceId) {
+          e.preventDefault();
+          removeBuilding(buildingLayer.id, selectedBuildingInstanceId);
+          return;
+        }
       }
 
       // Escape cancels polygon pen drawing
@@ -692,6 +724,8 @@ export const MapViewportPixi: React.FC = () => {
           useEditorStore.getState().setActiveTool('linkPlace');
         } else if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectPlace');
+        } else if (layer?.kind === 'building') {
+          useEditorStore.getState().setActiveTool('buildingPlace');
         } else {
           useEditorStore.getState().setActiveTool('entityPlace');
         }
@@ -710,6 +744,8 @@ export const MapViewportPixi: React.FC = () => {
           useEditorStore.getState().setActiveTool('select');
         } else if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectSelect');
+        } else if (layer?.kind === 'building') {
+          useEditorStore.getState().setActiveTool('buildingSelect');
         } else {
           useEditorStore.getState().setActiveTool('entitySelect');
         }
@@ -719,7 +755,7 @@ export const MapViewportPixi: React.FC = () => {
         const layer = cm?.layers.find((l) => l.id === selectedLayerId);
         if (layer?.kind === 'object') {
           useEditorStore.getState().setActiveTool('objectDelete');
-        } else if (layer?.kind !== 'navigation') {
+        } else if (layer?.kind !== 'navigation' && layer?.kind !== 'building') {
           useEditorStore.getState().setActiveTool('entityDelete');
         }
       }
@@ -763,6 +799,7 @@ export const MapViewportPixi: React.FC = () => {
       activeTool === 'erase' ||
       activeTool === 'fill' ||
       activeTool === 'objectPlace' ||
+      activeTool === 'buildingPlace' ||
       activeTool === 'triggerPolygon' ||
       activeTool === 'triggerPlace' ||
       activeTool === 'collisionPolygon' ||

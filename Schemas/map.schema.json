@@ -125,7 +125,8 @@
             "metadata",
             "entity",
             "terrain",
-            "water"
+            "water",
+            "building"
           ]
         },
         "visible": {
@@ -195,6 +196,13 @@
           "description": "Placed reusable object instances for object-sorted layers. Instance positions are stored in pixels.",
           "items": {
             "$ref": "#/$defs/MapObjectInstance"
+          }
+        },
+        "buildings": {
+          "type": "array",
+          "description": "Buildings placed on a building layer.",
+          "items": {
+            "$ref": "#/$defs/BuildingInstance"
           }
         },
         "terrainPalette": {
@@ -273,6 +281,29 @@
         "tileIndex": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "BuildingInstance": {
+      "type": "object",
+      "required": ["id", "buildingId", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "buildingId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+        },
+        "x": {
+          "type": "integer",
+          "description": "Column of the footprint's north-west cell."
+        },
+        "y": {
+          "type": "integer",
+          "description": "Row of the footprint's north-west cell. The exterior image reaches 3 rows above it."
         }
       }
     },
