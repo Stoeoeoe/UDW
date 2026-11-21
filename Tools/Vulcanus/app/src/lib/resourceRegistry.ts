@@ -42,6 +42,7 @@ export interface ResourceDocuments {
   dialogue: DialogueDocument;
   'dialogue-runtime': DialogueDocument;
   'dialogue-i18n': DialogueI18nExport;
+  object: import('../types/object').ObjectDefinition;
 }
 export type ResourceDocumentKind = keyof ResourceDocuments;
 export type ResourceFolder =
@@ -56,7 +57,8 @@ export type ResourceFolder =
   | 'routines'
   | 'entities'
   | 'dialogues'
-  | 'cutscenes';
+  | 'cutscenes'
+  | 'objects';
 
 export interface ResourceDefinition<K extends ResourceDocumentKind = ResourceDocumentKind> {
   kind: K;
@@ -389,6 +391,18 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
           ...('map' in objective ? { map: resourceReference(objective.map, prefix) } : {}),
         })),
       })),
+    }),
+  },
+  object: {
+    kind: 'object',
+    folder: 'objects',
+    extension: '.object.json',
+    schemaFile: 'object.schema.json',
+    idScope: 'resource',
+    normalize: (object, prefix) => ({
+      ...object,
+      id: qualifyResourceId(object.id, prefix),
+      tilesetId: resourceReference(object.tilesetId, prefix),
     }),
   },
   'quest-i18n': {

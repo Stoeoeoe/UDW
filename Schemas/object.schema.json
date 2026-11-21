@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "object.schema.json",
+  "title": "Object",
+  "description": "A reusable map object (*.object.json): a group of tiles from one tileset, placed on a map's object layer as one depth-sorted piece. Collision and sorting come from the tileset's tiles.",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "id",
+    "name",
+    "tilesetId",
+    "tiles"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Stable namespaced ID, for example base:pine_tree."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "description": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "description": "Free-text tags for finding and organizing objects in Vulcanus.",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    },
+    "tilesetId": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "The tileset the object's tiles come from."
+    },
+    "tiles": {
+      "type": "array",
+      "description": "The object's tiles, by offset from its top-left cell.",
+      "items": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "tileIndex"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tileIndex": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "folderPath": {
+      "type": "string"
+    }
+  }
+}

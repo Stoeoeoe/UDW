@@ -21,6 +21,7 @@ export type CommandPaletteFilter =
   | 'items'
   | 'shops'
   | 'quests'
+  | 'objects'
   | 'routines'
   | 'dialogues'
   | 'cutscenes';
@@ -33,6 +34,7 @@ export type CommandPaletteResourceType =
   | 'item'
   | 'shop'
   | 'quest'
+  | 'object'
   | 'routine'
   | 'dialogue'
   | 'cutscene';
@@ -63,6 +65,7 @@ export interface BuildCommandPaletteResourcesOptions {
   items: Item[];
   shops: Shop[];
   quests?: import('../types/quest').Quest[];
+  objects?: import('../types/object').ObjectDefinition[];
   routines?: import('../types/routine').Routine[];
   dialogues: DialogueDocument[];
   cutscenes?: import('../types/cutscene').Cutscene[];
@@ -181,6 +184,18 @@ export function buildCommandPaletteResources(
         resourceId: shop.id,
       });
     });
+
+  (options.objects ?? []).forEach((object) =>
+    resources.push({
+      key: `object:${object.id}`,
+      type: 'object',
+      typeLabel: 'Object',
+      label: object.name,
+      secondaryLabel: object.folderPath || undefined,
+      resourceId: object.id,
+      document: createEditorResourceDocument({ type: 'object', id: object.id, name: object.name }),
+    }),
+  );
 
   (options.quests ?? []).forEach((quest) =>
     resources.push({
@@ -426,6 +441,8 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'shop';
     case 'quests':
       return resource.type === 'quest';
+    case 'objects':
+      return resource.type === 'object';
     case 'routines':
       return resource.type === 'routine';
     case 'cutscenes':

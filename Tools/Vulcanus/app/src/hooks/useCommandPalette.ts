@@ -30,6 +30,8 @@ function filterCommandPaletteMatch(
       return match.resource.type === 'shop';
     case 'quests':
       return match.resource.type === 'quest';
+    case 'objects':
+      return match.resource.type === 'object';
     case 'routines':
       return match.resource.type === 'routine';
     case 'cutscenes':
@@ -49,6 +51,7 @@ export function useCommandPalette() {
   const items = useEditorStore((state) => state.items);
   const shops = useEditorStore((state) => state.shops);
   const quests = useEditorStore((state) => state.quests);
+  const objects = useEditorStore((state) => state.objects);
   const routines = useEditorStore((state) => state.routines);
   const dialogues = useEditorStore((state) => state.dialogues);
   const cutscenes = useEditorStore((s) => s.cutscenes);
@@ -73,6 +76,7 @@ export function useCommandPalette() {
         items,
         shops,
         quests,
+        objects,
         routines,
         dialogues: Array.from(dialogues.values()),
         cutscenes,
@@ -88,6 +92,7 @@ export function useCommandPalette() {
       maps,
       shops,
       quests,
+      objects,
       routines,
       tilesets,
     ],

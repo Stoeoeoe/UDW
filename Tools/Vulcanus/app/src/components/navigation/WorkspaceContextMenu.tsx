@@ -42,6 +42,7 @@ interface WorkspaceContextMenuProps {
       | 'shop'
       | 'routine'
       | 'quest'
+      | 'object'
       | 'dialogue'
       | 'cutscene',
     folderPath: string,
@@ -133,7 +134,7 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
 };
 
 export const CreateNewResourceDialog: React.FC<{
-  kind: 'character' | 'entity' | 'item' | 'shop' | 'cutscene';
+  kind: 'character' | 'entity' | 'item' | 'shop' | 'cutscene' | 'object';
   folderPath: string;
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
@@ -152,6 +153,8 @@ export const CreateNewResourceDialog: React.FC<{
         return useEditorStore.getState().items.map((item) => item.id);
       case 'shop':
         return useEditorStore.getState().shops.map((shop) => shop.id);
+      case 'object':
+        return useEditorStore.getState().objects.map((object) => object.id);
     }
   }, [kind]);
 
@@ -203,6 +206,23 @@ export const CreateNewResourceDialog: React.FC<{
             pin: true,
           });
           break;
+        case 'object': {
+          // The tiles are picked in the object editor.
+          const tileset = store.tilesets.values().next().value;
+          if (!tileset) throw new Error('An object needs a tileset; create one first.');
+          await store.addObject({
+            formatVersion: 1,
+            id,
+            name,
+            tilesetId: tileset.id,
+            tiles: [],
+            folderPath,
+          });
+          onOpenDocument(createEditorResourceDocument({ type: 'object', id, name }), {
+            pin: true,
+          });
+          break;
+        }
       }
 
       onClose();
@@ -250,6 +270,7 @@ function buildMenuItems(
       | 'shop'
       | 'routine'
       | 'quest'
+      | 'object'
       | 'dialogue'
       | 'cutscene',
     folderPath: string,
@@ -281,6 +302,7 @@ function buildMenuItems(
             | 'shop'
             | 'routine'
             | 'quest'
+            | 'object'
             | 'dialogue'
             | 'cutscene',
           folderPathForNode,

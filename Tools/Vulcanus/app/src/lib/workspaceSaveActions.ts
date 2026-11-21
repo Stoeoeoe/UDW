@@ -60,6 +60,7 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'shop' ||
     tab.document.kind === 'routine' ||
     tab.document.kind === 'quest' ||
+    tab.document.kind === 'object' ||
     tab.document.kind === 'dialogues'
   );
 }
@@ -88,6 +89,12 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
     // A shop that cannot be written yet is reported, not shown as saved.
     const unit = getSaveUnitStatus(document.saveUnitId);
     if (unit.status === 'error') throw new Error(unit.error ?? 'The shop could not be saved.');
+    return;
+  }
+  if (document.kind === 'object') {
+    await editor.saveObject(document.objectId);
+    const unit = getSaveUnitStatus(document.saveUnitId);
+    if (unit.status === 'error') throw new Error(unit.error ?? 'The object could not be saved.');
     return;
   }
   if (document.kind === 'quest') {
@@ -153,6 +160,10 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
     }
     if (saveUnitId.startsWith('shop:')) {
       await editor.saveShop(saveUnitId.slice('shop:'.length));
+      continue;
+    }
+    if (saveUnitId.startsWith('object:')) {
+      await editor.saveObject(saveUnitId.slice('object:'.length));
       continue;
     }
     if (saveUnitId.startsWith('quest:')) {
@@ -258,6 +269,10 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   }
   if (document.kind === 'shop') {
     useEditorStore.getState().discardShop(document.shopId);
+    return;
+  }
+  if (document.kind === 'object') {
+    useEditorStore.getState().discardObject(document.objectId);
     return;
   }
   if (document.kind === 'quest') {

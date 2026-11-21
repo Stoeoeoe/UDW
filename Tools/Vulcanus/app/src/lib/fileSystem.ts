@@ -265,6 +265,14 @@ export class FileSystemManager {
     );
   }
 
+  async loadAllObjects(): Promise<import('../types/object').ObjectDefinition[]> {
+    return this.readDirectory<import('../types/object').ObjectDefinition>(
+      resourceRegistry.object.folder,
+      resourceRegistry.object.extension,
+      true,
+    );
+  }
+
   /** Load quest sources; localization sidecars are exports, not quest documents. */
   async loadAllQuests(): Promise<import('../types/quest').Quest[]> {
     return this.readDirectory<import('../types/quest').Quest>(

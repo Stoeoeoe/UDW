@@ -16,6 +16,11 @@ function documentHistoryDepth(
   direction: 'past' | 'future',
 ): number {
   switch (document?.kind) {
+    case 'object':
+      return (
+        (direction === 'past' ? state.objectPast : state.objectFuture)[document.objectId]?.length ??
+        0
+      );
     case 'quest':
       return (
         (direction === 'past' ? state.questPast : state.questFuture)[document.questId]?.length ?? 0

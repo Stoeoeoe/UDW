@@ -22,6 +22,7 @@ export type WorkspaceScreenKind =
 
 export type WorkspaceDocument =
   | { kind: 'quest'; questId: string; label: string; saveUnitId: string }
+  | { kind: 'object'; objectId: string; label: string; saveUnitId: string }
   | { kind: 'data'; label: string; saveUnitId: 'configuration' }
   | { kind: 'cutscene'; cutsceneId: string; label: string; saveUnitId: string }
   | { kind: 'cutscenes'; label: string; saveUnitId: 'cutscenes' }
@@ -198,6 +199,7 @@ export interface WorkspaceProjectSnapshot {
   items?: Item[];
   shops?: Shop[];
   quests?: import('./quest').Quest[];
+  objects?: import('./object').ObjectDefinition[];
   routines?: import('./routine').Routine[];
   dialogues?: DialogueDocument[];
   cutscenes?: import('./cutscene').Cutscene[];

@@ -6,6 +6,7 @@ import {
   FiMusic,
   FiFilm,
   FiGrid,
+  FiHexagon,
   FiMap,
   FiMessageSquare,
   FiPackage,
@@ -35,6 +36,7 @@ export const documentPresentation: Record<
   items: { layout: 'form', icon: FiPackage },
   shop: { layout: 'form', icon: FiShoppingBag },
   quest: { layout: 'canvas', icon: FiStar },
+  object: { layout: 'canvas', icon: FiHexagon },
   routine: { layout: 'sequence', icon: FiClock },
   dialogue: { layout: 'sequence', icon: FiMessageSquare },
   dialogues: { layout: 'sequence', icon: FiMessageSquare },
@@ -66,6 +68,8 @@ export function documentTitle(document: WorkspaceDocument, state: EditorStore): 
       return state.shops.find((s) => s.id === document.shopId)?.name ?? document.label;
     case 'quest':
       return state.quests.find((q) => q.id === document.questId)?.title ?? document.label;
+    case 'object':
+      return state.objects.find((o) => o.id === document.objectId)?.name ?? document.label;
     case 'dialogue':
       return state.dialogues.get(document.dialogueId)?.name ?? document.label;
     case 'cutscene':

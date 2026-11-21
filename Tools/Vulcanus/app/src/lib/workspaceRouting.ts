@@ -111,6 +111,10 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'quest');
       params.set('id', document.questId);
       break;
+    case 'object':
+      params.set('doc', 'object');
+      params.set('id', document.objectId);
+      break;
     case 'routine':
       params.set('doc', 'routine');
       params.set('id', document.routineId);
@@ -249,6 +253,12 @@ export function documentFromHash(
       : null;
   }
 
+  if (doc === 'object') {
+    const object = snapshot.objects?.find((entry) => entry.id === params.get('id'));
+    return object
+      ? createEditorResourceDocument({ type: 'object', id: object.id, name: object.name })
+      : null;
+  }
   if (doc === 'quest') {
     const quest = snapshot.quests?.find((q) => q.id === params.get('id'));
     return quest

@@ -370,6 +370,36 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     getFolderPath: (id) =>
       useEditorStore.getState().quests.find((q) => q.id === id)?.folderPath ?? '',
   },
+  object: {
+    id: 'object',
+    documentDefinition: resourceRegistry.object,
+    label: 'Object',
+    collectionLabel: 'Objects',
+    editorIcon: 'objects',
+    createFlow: 'simple',
+    metadataFlow: 'none',
+    saveUnitPrefix: 'object:',
+    accentColor: 'green.300',
+    tint: 'green.900',
+    hoverTint: 'green.800',
+    rowGradient: 'linear(to-r, green.900, transparent)',
+    headerGradient: 'linear(to-r, green.900, transparent)',
+    canCreate: true,
+    canRename: true,
+    canEditMetadata: false,
+    canDelete: true,
+    canRevealInFileExplorer: true,
+    fileExplorerPath: (id) =>
+      `objects/${fileSystem.resolveFilename('objects', resourceFileKey('object', id))}`,
+    renameResource: async (id, name) => {
+      useEditorStore.getState().updateObject(id, { name });
+    },
+    deleteResource: async (id) => {
+      await useEditorStore.getState().deleteObject(id);
+    },
+    getFolderPath: (id) =>
+      useEditorStore.getState().objects.find((object) => object.id === id)?.folderPath ?? '',
+  },
   routine: {
     id: 'routine',
     documentDefinition: resourceRegistry.routine,
@@ -573,6 +603,8 @@ export function getEditorResourceDocumentId(
       return document.cueId;
     case 'quest':
       return document.questId;
+    case 'object':
+      return document.objectId;
     case 'routine':
       return document.routineId;
     case 'cutscene':
@@ -704,6 +736,8 @@ export function createEditorResourceDocument(
       return { kind: 'music', cueId: resource.id, label: resource.name, saveUnitId };
     case 'quest':
       return { kind: 'quest', questId: resource.id, label: resource.name, saveUnitId };
+    case 'object':
+      return { kind: 'object', objectId: resource.id, label: resource.name, saveUnitId };
     case 'routine':
       return { kind: 'routine', routineId: resource.id, label: resource.name, saveUnitId };
     case 'cutscene':
@@ -730,6 +764,7 @@ export function getEditorResourceTypeFromDocument(
     case 'shop':
     case 'routine':
     case 'quest':
+    case 'object':
     case 'dialogue':
     case 'cutscene':
     case 'music':

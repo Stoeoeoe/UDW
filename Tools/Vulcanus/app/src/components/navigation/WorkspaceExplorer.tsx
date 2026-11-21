@@ -36,6 +36,7 @@ import {
   FiX,
   FiFolder,
   FiGrid,
+  FiHexagon,
   FiMap,
   FiMapPin,
   FiMessageSquare,
@@ -92,6 +93,8 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiGrid;
     case 'entities':
       return FiBox;
+    case 'objects':
+      return FiHexagon;
     case 'characters':
       return FiUsers;
     case 'items':

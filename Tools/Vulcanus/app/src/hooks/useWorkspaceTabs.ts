@@ -132,6 +132,10 @@ export function useWorkspaceTabs() {
     if (doc.kind === 'quest') {
       markRecentResource(`quest:${doc.questId}`);
     }
+    if (doc.kind === 'object') {
+      markRecentResource(`object:${doc.objectId}`);
+      return;
+    }
     if (doc.kind === 'routine') {
       markRecentResource(`routine:${doc.routineId}`);
       return;

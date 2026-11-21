@@ -8,6 +8,7 @@ import {
   Map as GameMap,
   Tileset,
 } from '../types/schema';
+import type { ObjectDefinition } from '../types/object';
 
 function createMap(overrides: Partial<GameMap> = {}): GameMap {
   return {
@@ -32,6 +33,7 @@ function createTreeInput(
     entityTypes?: EntityType[];
     items?: Item[];
     dialogues?: DialogueDocument[];
+    objects?: ObjectDefinition[];
   } = {},
 ) {
   return {
@@ -43,6 +45,7 @@ function createTreeInput(
     routines: [],
     items: overrides.items ?? [],
     dialogues: overrides.dialogues ?? [],
+    objects: overrides.objects ?? [],
   };
 }
 
@@ -113,6 +116,31 @@ describe('buildWorkspaceTree', () => {
     });
   });
 
+  it('lists objects in their folders, opening each in the object editor', () => {
+    const tree = buildWorkspaceTree(
+      createTreeInput({
+        objects: [
+          {
+            formatVersion: 1,
+            id: 'test:crate',
+            name: 'Crate',
+            tilesetId: 'test:props',
+            tiles: [],
+            folderPath: 'Market',
+          },
+        ],
+      }),
+    );
+    const market = tree
+      .find((node) => node.id === 'group:objects')
+      ?.children?.find((node) => node.label === 'Market');
+    expect(market?.children?.[0]).toMatchObject({
+      kind: 'leaf',
+      label: 'Crate',
+      document: { kind: 'object', objectId: 'test:crate' },
+    });
+  });
+
   it('keeps scripting as a single overview screen and builds resource sections for the rest', () => {
     const tree = buildWorkspaceTree(
       createTreeInput({
@@ -159,6 +187,7 @@ describe('buildWorkspaceTree', () => {
     expect(tree.map((node) => node.id)).toEqual([
       'group:locations',
       'group:tilesets',
+      'group:objects',
       'group:characters',
       'group:entities',
       'group:items',

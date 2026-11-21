@@ -150,6 +150,14 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       state.questFuture = {};
     });
 
+    const objects = await fileSystem.loadAllObjects();
+    set((state) => {
+      state.objects = castDraft(objects);
+      state.savedObjects = castDraft(Object.fromEntries(objects.map((o) => [o.id, o])));
+      state.objectPast = {};
+      state.objectFuture = {};
+    });
+
     // 1.84 NPC routines
     const routines = await fileSystem.loadAllRoutines();
     set((state) => {
