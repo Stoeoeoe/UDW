@@ -1,12 +1,30 @@
-import type { Building } from '../../types/building';
+import type { Building, WindowSize } from '../../types/building';
 import { floorPlan, type FloorPlan } from './plan';
 import { buildGrid, isFloor, isWall, wallNeighbourMask, type Grid } from './grid';
 import { findRegions, roomsByRegion } from './rooms';
 
-/** Storey height: the front wall's face is this many rows tall. */
-export const STOREY_ROWS = 3;
+/** Storey height: each floor's front wall is this many rows tall. */
+export const STOREY_ROWS = 4;
 /** Rows of a room taken by its back wall's face. */
-export const BACK_WALL_ROWS = 2;
+export const BACK_WALL_ROWS = 4;
+
+/** The rows of a floor's front (0 at its top) and of a back wall's face (1 below the wall) each window size fills. */
+const FRONT_WINDOW: Record<WindowSize, string[]> = {
+  small: ['', 'window_small'],
+  medium: ['', 'window_medium_top', 'window_medium_bottom'],
+  large: ['window_large_top', 'window_large_middle', 'window_large_bottom'],
+};
+const WINDOW_ORDER: WindowSize[] = ['small', 'medium', 'large'];
+const BACK_WINDOW: Record<WindowSize, string[]> = {
+  small: ['', 'wall_window_small'],
+  medium: ['', 'wall_window_medium_top', 'wall_window_medium_bottom'],
+  large: [
+    'wall_window_large_1',
+    'wall_window_large_2',
+    'wall_window_large_3',
+    'wall_window_large_4',
+  ],
+};
 
 /** A kit piece at a cell of a composed image. Overlays are drawn after every other piece. */
 export interface Placement {
@@ -129,24 +147,31 @@ export function layoutExterior(building: Building): Placement[] {
   const floors = building.floors.length;
   building.floors.forEach((floor, index) => {
     const top = roofRows + (floors - 1 - index) * STOREY_ROWS;
-    const windows = new Set(
-      floor.openings
-        .filter((o) => o.kind === 'window' && o.y === south)
-        .map((o) => frontColumn(building, o.x)),
-    );
     const rows = [
       index === floors - 1 ? 'wall_top' : 'wall_band',
+      'wall_mid',
       'wall_mid',
       index === 0 ? 'wall_base' : 'wall_mid',
     ];
     for (let column = 0; column < columns; column++)
-      rows.forEach((kind, i) => {
-        place(`${kind}_${side(column, columns)}`, column, top + i);
-        // Doors and windows are drawn over the wall, so its shadows and mouldings run on around them.
-        if (index === 0 && column === doorColumn)
-          place(['door_lintel', 'door_upper', 'door_lower'][i], column, top + i, true);
-        else if (i === 1 && windows.has(column)) place('window', column, top + i, true);
-      });
+      rows.forEach((kind, i) => place(`${kind}_${side(column, columns)}`, column, top + i));
+    // Doors and windows are drawn over the wall, so its shadows and mouldings run on around them. Two windows in one
+    // front column show as the larger; the door wins over both.
+    const windows = new Map<number, WindowSize>();
+    for (const o of floor.openings)
+      if (o.kind === 'window' && o.y === south) {
+        const column = frontColumn(building, o.x);
+        const shown = windows.get(column);
+        if (!shown || WINDOW_ORDER.indexOf(o.size) > WINDOW_ORDER.indexOf(shown))
+          windows.set(column, o.size);
+      }
+    if (index === 0 && doorColumn >= 0) windows.delete(doorColumn);
+    for (const [column, size] of windows)
+      FRONT_WINDOW[size].forEach((piece, i) => piece && place(piece, column, top + i, true));
+    if (index === 0 && doorColumn >= 0)
+      ['door_lintel', 'door_upper', 'door_middle', 'door_lower'].forEach((piece, i) =>
+        place(piece, doorColumn, top + i, true),
+      );
   });
 
   if (building.chimney) {
@@ -205,17 +230,19 @@ export function layoutInterior(
         continue;
       }
       const faceSide = isWall(grid, x - 1, y) ? 'l' : isWall(grid, x + 1, y) ? 'r' : 'm';
-      if (isWall(grid, x, y - 1)) {
-        if (isHorizontalDoor(x, y - 1)) place('door_face_upper', x, y);
+      // The back wall's face: the first rows below a wall, as many as the wall is tall.
+      const face = [1, 2, 3, 4].find((n) => isWall(grid, x, y - n));
+      if (face) {
+        const wallY = y - face;
+        if (isHorizontalDoor(x, wallY)) place(`door_face_${face}`, x, y);
         else {
-          place(`wall_face_upper_${faceSide}`, x, y);
+          place(`wall_face_${face}_${faceSide}`, x, y);
           blocked[y][x] = true;
-        }
-      } else if (isWall(grid, x, y - BACK_WALL_ROWS)) {
-        if (isHorizontalDoor(x, y - BACK_WALL_ROWS)) place('door_face_lower', x, y);
-        else {
-          place(`wall_face_lower_${faceSide}`, x, y);
-          blocked[y][x] = true;
+          const window = opening(x, wallY);
+          if (window?.kind === 'window' && wallY === 0) {
+            const piece = BACK_WINDOW[window.size][face - 1];
+            if (piece) placements.push({ piece, column: x, row: y, overlay: true });
+          }
         }
       } else {
         // A region without exactly one room is a validation error; it is drawn without a floor.

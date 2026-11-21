@@ -17,7 +17,7 @@ describe('building plan validation', () => {
 
   it('needs a minimum size and inner walls inside the building', () => {
     expect(check((b) => (b.depth = 4))).toEqual(['The building must be at least 5 tiles deep.']);
-    expect(check((b) => (b.floors[0].innerWalls[0].length = 6))).toContain(
+    expect(check((b) => (b.floors[0].innerWalls[0].length = 7))).toContain(
       'The inner wall at (4, 1) reaches beyond the inside of the building.',
     );
   });
@@ -48,8 +48,8 @@ describe('building plan validation', () => {
         b.floors[0].rooms[1].at = { x: 6, y: 4 };
       }),
     ).toEqual([
-      'Room pantry is 2 rows deep; rooms need at least 3 (two for the back wall, one to walk on).',
-      'Room bedroom is 2 rows deep; rooms need at least 3 (two for the back wall, one to walk on).',
+      'Room pantry is 2 rows deep; rooms need at least 6 (four for the back wall, two to walk on).',
+      'Room bedroom is 3 rows deep; rooms need at least 6 (four for the back wall, two to walk on).',
     ]);
   });
 
@@ -58,11 +58,20 @@ describe('building plan validation', () => {
       check((b) => b.floors[0].openings.push({ id: 'hole', kind: 'door', x: 2, y: 3 })),
     ).toEqual(['Door hole is not in a wall.']);
     expect(
-      check((b) => b.floors[0].openings.push({ id: 'corner', kind: 'window', x: 0, y: 6 })),
+      check((b) =>
+        b.floors[0].openings.push({ id: 'corner', kind: 'window', size: 'medium', x: 0, y: 7 }),
+      ),
     ).toEqual(['Window corner is on a corner.']);
     expect(
-      check((b) => b.floors[0].openings.push({ id: 'side', kind: 'window', x: 0, y: 3 })),
-    ).toEqual(['Window side is not in the south wall; windows go there for now.']);
+      check((b) =>
+        b.floors[0].openings.push({ id: 'side', kind: 'window', size: 'medium', x: 0, y: 3 }),
+      ),
+    ).toEqual(['Window side is not in the south or north wall; windows go there.']);
+    expect(
+      check((b) =>
+        b.floors[0].openings.push({ id: 'back', kind: 'window', size: 'large', x: 2, y: 0 }),
+      ),
+    ).toEqual([]);
     expect(
       check((b) => b.floors[0].openings.push({ id: 'back', kind: 'door', x: 2, y: 0 })),
     ).toEqual([
@@ -70,7 +79,7 @@ describe('building plan validation', () => {
     ]);
     expect(check((b) => (b.floors[0].openings[3].y = 1))).toEqual([]);
     expect(
-      check((b) => b.floors[0].openings.push({ id: 'second', kind: 'door', x: 3, y: 6 })),
+      check((b) => b.floors[0].openings.push({ id: 'second', kind: 'door', x: 3, y: 7 })),
     ).toEqual(['Only one door may be in the south wall; doors entrance and second are.']);
     expect(check((b) => b.floors[0].openings.shift())).toEqual([
       'The building needs an entrance: a door in the south wall.',
@@ -119,10 +128,10 @@ describe('building plan validation', () => {
       'Ground floor: the stairs up are not on a floor cell.',
     ]);
     expect(
-      check2((b) => b.floors[1].innerWalls.push({ x: 1, y: 5, direction: 'east', length: 3 })),
-    ).toContain('Floor 2: the stairs down at (2, 5) are not on a floor cell.');
+      check2((b) => b.floors[1].innerWalls.push({ x: 1, y: 6, direction: 'east', length: 3 })),
+    ).toContain('Floor 2: the stairs down at (2, 6) are not on a floor cell.');
     expect(
-      check2((b) => b.floors[1].openings.push({ id: 'door-1', kind: 'door', x: 3, y: 6 })),
+      check2((b) => b.floors[1].openings.push({ id: 'door-1', kind: 'door', x: 3, y: 7 })),
     ).toEqual([
       'Floor 2: Door door-1 is in an outer wall; only the ground floor has a door to the outside.',
     ]);

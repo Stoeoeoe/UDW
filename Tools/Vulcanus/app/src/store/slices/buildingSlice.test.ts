@@ -122,17 +122,17 @@ describe('building store', () => {
 });
 
 describe('new building', () => {
-  it('is a 9 × 7 shell of one floor with one room and an entrance in the south wall', () => {
+  it('is a 16 × 12 shell of one floor, twice as wide inside, with one room and an entrance', () => {
     expect(newBuilding('base:hut', 'Hut', 'village')).toMatchObject({
-      width: 9,
-      depth: 7,
-      scale: 1,
+      width: 16,
+      depth: 12,
+      scale: 2,
       kit: '',
       folderPath: 'village',
       floors: [
         {
           rooms: [{ id: 'room-1', at: { x: 1, y: 1 } }],
-          openings: [{ id: 'entrance', kind: 'door', x: 4, y: 6 }],
+          openings: [{ id: 'entrance', kind: 'door', x: 8, y: 11 }],
         },
       ],
       roof: { kind: 'side-gable' },

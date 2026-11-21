@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { Checkbox, HStack, Text, VStack } from '@chakra-ui/react';
-import type { Building, BuildingKit, BuildingRoofKind } from '../../../types/building';
+import type {
+  Building,
+  BuildingKit,
+  BuildingOpening,
+  BuildingRoofKind,
+  WindowSize,
+} from '../../../types/building';
 import { floorName, floorPlan, withFloor } from '../../../lib/buildings/plan';
 import type { ResolvedKit } from '../../../lib/buildings/resolveKit';
 import type { PlanIssue } from '../../../lib/buildings/validate';
@@ -164,12 +170,14 @@ export function BuildingInspector({
 
   if (opening) {
     const others = { ...plan, openings: plan.openings.filter((o) => o.id !== opening.id) };
-    const setOpening = (changes: Partial<typeof opening>) =>
+    const replace = (next: BuildingOpening) =>
       changePlan({
-        openings: plan.openings.map((entry) =>
-          entry.id === opening.id ? { ...entry, ...changes } : entry,
-        ),
+        openings: plan.openings.map((entry) => (entry.id === opening.id ? next : entry)),
       });
+    const { id, x, y } = opening;
+    // A window becoming a door loses its size; a door becoming a window gets the medium one.
+    const setKind = (kind: BuildingOpening['kind']) =>
+      replace(kind === 'door' ? { id, kind, x, y } : { id, kind, size: 'medium', x, y });
     return (
       <InspectorShell
         title={opening.kind === 'door' ? 'Door' : 'Window'}
@@ -184,7 +192,7 @@ export function BuildingInspector({
           <CompactSelect
             aria-label="Kind"
             value={opening.kind}
-            onChange={(e) => setOpening({ kind: e.target.value as typeof opening.kind })}
+            onChange={(e) => setKind(e.target.value as BuildingOpening['kind'])}
           >
             {(['door', 'window'] as const).map((kind) => (
               <option
@@ -197,6 +205,19 @@ export function BuildingInspector({
             ))}
           </CompactSelect>
         </Field>
+        {opening.kind === 'window' && (
+          <Field label="Size">
+            <CompactSelect
+              aria-label="Size"
+              value={opening.size}
+              onChange={(e) => replace({ ...opening, size: e.target.value as WindowSize })}
+            >
+              <option value="small">Small (a slit)</option>
+              <option value="medium">Medium (two tiles tall)</option>
+              <option value="large">Large (as tall as the wall allows)</option>
+            </CompactSelect>
+          </Field>
+        )}
         <CommitField
           label="Opening ID"
           value={opening.id}
@@ -204,9 +225,9 @@ export function BuildingInspector({
             plan.openings.map((o) => o.id),
             opening.id,
           )}
-          onCommit={(id) => {
-            setOpening({ id });
-            onSelect({ kind: 'opening', id });
+          onCommit={(next) => {
+            replace({ ...opening, id: next });
+            onSelect({ kind: 'opening', id: next });
           }}
         />
         <Field label="Cell">
@@ -293,10 +314,11 @@ export function BuildingInspector({
         <CompactSelect
           aria-label="Inside width"
           value={building.scale}
-          onChange={(e) => onChange({ ...building, scale: Number(e.target.value) as 1 | 2 })}
+          onChange={(e) => onChange({ ...building, scale: Number(e.target.value) as 1 | 2 | 3 })}
         >
           <option value={1}>As wide as the front</option>
           <option value={2}>Twice as wide as the front</option>
+          <option value={3}>Three times as wide as the front</option>
         </CompactSelect>
       </Field>
       <Checkbox

@@ -5,8 +5,8 @@ import { findRegions, isRectangle, roomsByRegion } from './rooms';
 import { floorName, floorPlan, type FloorPlan } from './plan';
 import { frontWidth, gableSpan } from './layout';
 
-/** Rooms need two rows for the back wall's face and at least one to walk on. */
-export const MIN_ROOM_ROWS = 3;
+/** Rooms need four rows for the back wall's face and at least two to walk on. */
+export const MIN_ROOM_ROWS = 6;
 
 const duplicates = (ids: string[]) => [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
 
@@ -68,7 +68,7 @@ function floorIssues(building: FloorPlan, ground: boolean): FloorIssue[] {
     if (rooms.length === 1 && rows < MIN_ROOM_ROWS)
       add(
         `Room ${rooms[0].id} is ${rows} row${rows === 1 ? '' : 's'} deep; rooms need at least ${MIN_ROOM_ROWS} ` +
-          '(two for the back wall, one to walk on).',
+          '(four for the back wall, two to walk on).',
         region.cells,
       );
   });
@@ -96,8 +96,10 @@ function floorIssues(building: FloorPlan, ground: boolean): FloorIssue[] {
       continue;
     }
     if (opening.kind === 'window') {
-      if (y !== south)
-        add(`${name} is not in the south wall; windows go there for now.`, [opening]);
+      if (y !== south && y !== 0)
+        add(`${name} is not in the south or north wall; windows go there.`, [opening]);
+      else if (y === 0 && !isFloor(grid, x, 1))
+        add(`${name} in the north wall has no room below it to be seen from.`, [opening]);
       continue;
     }
     if (y === south && ground) entrances.push(opening);

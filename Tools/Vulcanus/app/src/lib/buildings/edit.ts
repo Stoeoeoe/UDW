@@ -121,7 +121,8 @@ export function openingRefusal(
   if ((x === 0 || x === building.width - 1) && (y === 0 || y === south)) return 'Not on a corner.';
   if (building.openings.some((opening) => opening.x === x && opening.y === y))
     return 'There is already an opening here.';
-  if (kind === 'window' && y !== south) return 'Windows go in the south wall for now.';
+  if (kind === 'window' && y !== south && y !== 0)
+    return 'Windows go in the south wall (seen outside) or the north wall (seen inside).';
   if (kind === 'door' && outer && !ground)
     return 'Only the ground floor has a door to the outside.';
   if (kind === 'door' && outer && y !== south)
@@ -141,7 +142,9 @@ export function addOpening(
     y === building.depth - 1 &&
     !building.openings.some((opening) => opening.id === 'entrance');
   const id = entrance ? 'entrance' : nextId(building.openings, kind);
-  return { ...building, openings: [...building.openings, { id, kind, x, y }] };
+  const opening: BuildingOpening =
+    kind === 'window' ? { id, kind, size: 'medium', x, y } : { id, kind, x, y };
+  return { ...building, openings: [...building.openings, opening] };
 }
 
 /** One floor at a new size, and what that removes; see {@link resize}. */

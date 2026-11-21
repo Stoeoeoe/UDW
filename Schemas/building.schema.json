@@ -54,9 +54,10 @@
       "type": "integer",
       "enum": [
         1,
-        2
+        2,
+        3
       ],
-      "description": "Plan columns per column of the front: 2 makes the inside twice as wide as the outside."
+      "description": "Plan columns per column of the front: 2 or 3 make the inside that many times as wide as the outside."
     },
     "floors": {
       "type": "array",
@@ -204,7 +205,7 @@
         },
         "openings": {
           "type": "array",
-          "description": "Doors and windows, each replacing a wall cell.",
+          "description": "Doors and windows, each replacing a wall cell. Windows go in the south wall (seen outside) or the north wall (seen inside, on the back wall).",
           "items": {
             "type": "object",
             "required": [
@@ -235,8 +236,53 @@
                 "type": "integer",
                 "minimum": 0,
                 "description": "Row of the wall cell."
+              },
+              "size": {
+                "type": "string",
+                "enum": [
+                  "small",
+                  "medium",
+                  "large"
+                ],
+                "description": "A window's size: small is a slit, medium two tiles tall, large as tall as the wall allows."
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "window"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "size"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "door"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "not": {
+                    "required": [
+                      "size"
+                    ]
+                  }
+                }
+              }
+            ]
           }
         },
         "stairsUp": {

@@ -24,14 +24,23 @@ describe('kit layout', () => {
       'wall_base_r',
       'door_lintel',
       'door_upper',
+      'door_middle',
       'door_lower',
-      'window',
+      'window_small',
+      'window_medium_top',
+      'window_medium_bottom',
+      'window_large_top',
+      'window_large_middle',
+      'window_large_bottom',
       'chimney_top',
       'chimney_bottom',
-      'wall_face_upper_l',
-      'wall_face_lower_r',
-      'door_face_upper',
-      'door_face_lower',
+      'wall_face_1_l',
+      'wall_face_4_r',
+      'door_face_1',
+      'door_face_4',
+      'wall_window_small',
+      'wall_window_medium_top',
+      'wall_window_large_4',
       'threshold',
       'entrance_mat',
       'window_cap',
@@ -51,15 +60,12 @@ describe('kit layout', () => {
       'stairs_down',
     ])
       expect(names.has(name), name).toBe(true);
-    expect(KIT_LAYOUT.filter((slot) => slot.overlay).map((slot) => slot.name)).toEqual([
-      'door_lintel',
-      'door_upper',
-      'door_lower',
-      'window',
-      'chimney_top',
-      'chimney_bottom',
-      'stairs_up',
-      'stairs_down',
-    ]);
+    // Openings, the chimney and stairs are drawn over the piece below them.
+    expect(
+      KIT_LAYOUT.filter((slot) => slot.overlay).every((slot) =>
+        /^(door_(lintel|upper|middle|lower)|window_|wall_window_|chimney_|stairs_)/.test(slot.name),
+      ),
+    ).toBe(true);
+    expect(KIT_LAYOUT.filter((slot) => slot.overlay)).toHaveLength(21);
   });
 });

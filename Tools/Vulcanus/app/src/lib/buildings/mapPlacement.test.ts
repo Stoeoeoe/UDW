@@ -30,10 +30,10 @@ describe('placing buildings on maps', () => {
 
   it('finds a building by its roof as well as its footprint', () => {
     const layer = buildingLayer([{ id: 'a', buildingId: 'test:farmhouse', x: 4, y: 6 }]);
-    // 7 rows of image: 3 above the footprint's top row 6, and 4 of footprint.
-    expect(buildingInstanceAt(layer, [farmhouse()], { x: 4, y: 3 })?.id).toBe('a');
+    // 8 rows of image: 4 above the footprint's top row 6, and 4 of footprint.
+    expect(buildingInstanceAt(layer, [farmhouse()], { x: 4, y: 2 })?.id).toBe('a');
     expect(buildingInstanceAt(layer, [farmhouse()], { x: 12, y: 9 })?.id).toBe('a');
-    expect(buildingInstanceAt(layer, [farmhouse()], { x: 4, y: 2 })).toBeUndefined();
+    expect(buildingInstanceAt(layer, [farmhouse()], { x: 4, y: 1 })).toBeUndefined();
     expect(buildingInstanceAt(layer, [farmhouse()], { x: 4, y: 10 })).toBeUndefined();
   });
 

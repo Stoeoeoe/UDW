@@ -11,7 +11,7 @@ describe('building layer view', () => {
     useResolvedKitsStore.setState({ kits: {}, sources: {} });
   });
 
-  it('draws each building from 3 rows above its footprint, back to front', () => {
+  it('draws each building from its image top, 4 rows above the footprint, back to front', () => {
     const view = buildingLayerView(
       buildingLayer([
         { id: 'front', buildingId: 'test:farmhouse', x: 4, y: 10 },
@@ -22,8 +22,8 @@ describe('building layer view', () => {
       16,
     );
     expect(view.children.map((child) => [child.x, child.y])).toEqual([
-      [2 * 16, 3 * 16],
-      [4 * 16, 7 * 16],
+      [2 * 16, 2 * 16],
+      [4 * 16, 6 * 16],
     ]);
   });
 });

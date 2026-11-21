@@ -37,8 +37,8 @@ describe('resolving a kit', () => {
   });
 
   it('lists required pieces with nothing drawn, and a kit without any floor', () => {
-    const kit = resolveKit(sheet(required.filter((name) => name !== 'window')), {});
-    expect(kit.empty).toEqual(['window']);
+    const kit = resolveKit(sheet(required.filter((name) => name !== 'threshold')), {});
+    expect(kit.empty).toEqual(['threshold']);
     expect(kit.problems).toEqual(['The kit needs at least one floor.']);
   });
 

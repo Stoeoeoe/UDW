@@ -7,20 +7,20 @@ export const farmhouse = (): Building => ({
   name: 'Farmhouse',
   kit: 'test:kit',
   width: 9,
-  depth: 7,
+  depth: 8,
   scale: 1,
   floors: [
     {
-      innerWalls: [{ x: 4, y: 1, direction: 'south', length: 5 }],
+      innerWalls: [{ x: 4, y: 1, direction: 'south', length: 6 }],
       rooms: [
         { id: 'kitchen', at: { x: 2, y: 3 }, name: 'Kitchen', floor: 'floor_tiles' },
         { id: 'bedroom', at: { x: 6, y: 3 }, name: 'Bedroom', floor: 'floor_boards' },
       ],
       openings: [
-        { id: 'entrance', kind: 'door', x: 6, y: 6 },
-        { id: 'window-1', kind: 'window', x: 2, y: 6 },
-        { id: 'window-2', kind: 'window', x: 7, y: 6 },
-        { id: 'inner-door', kind: 'door', x: 4, y: 4 },
+        { id: 'entrance', kind: 'door', x: 6, y: 7 },
+        { id: 'window-1', kind: 'window', size: 'medium', x: 2, y: 7 },
+        { id: 'window-2', kind: 'window', size: 'medium', x: 7, y: 7 },
+        { id: 'inner-door', kind: 'door', x: 4, y: 5 },
       ],
     },
   ],
@@ -34,11 +34,11 @@ export const twoStoreyFarmhouse = (): Building => {
   return {
     ...ground,
     floors: [
-      { ...ground.floors[0], stairsUp: { x: 2, y: 5 } },
+      { ...ground.floors[0], stairsUp: { x: 2, y: 6 } },
       {
         innerWalls: [],
         rooms: [{ id: 'loft', at: { x: 1, y: 3 }, name: 'Loft', floor: 'floor_boards' }],
-        openings: [{ id: 'window-1', kind: 'window', x: 4, y: 6 }],
+        openings: [{ id: 'window-1', kind: 'window', size: 'small', x: 4, y: 7 }],
       },
     ],
   };

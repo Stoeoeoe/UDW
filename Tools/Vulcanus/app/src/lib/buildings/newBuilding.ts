@@ -1,9 +1,12 @@
 import type { Building } from '../../types/building';
 
-/** A new building: a 9 × 7 shell with one room and an entrance in the middle of the south wall. */
+/**
+ * A new building: a 16 × 12 shell with one room and an entrance in the middle of the south wall, twice as wide inside
+ * as its 8-column front.
+ */
 export function newBuilding(id: string, name: string, folderPath: string, kit = ''): Building {
-  const width = 9;
-  const depth = 7;
+  const width = 16;
+  const depth = 12;
   return {
     formatVersion: 1,
     id,
@@ -11,7 +14,7 @@ export function newBuilding(id: string, name: string, folderPath: string, kit = 
     kit,
     width,
     depth,
-    scale: 1,
+    scale: 2,
     floors: [
       {
         innerWalls: [],

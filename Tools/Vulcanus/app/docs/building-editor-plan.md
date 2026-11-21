@@ -16,7 +16,7 @@ These were settled while designing; each is cheap to revisit before its phase st
 |---|---|---|
 | D1 | A building is stored as a **plan**: size, scale, a plan per floor (inner walls, rooms, openings, stairs), roof and chimney. The exterior and interior images are always *composed* from the plan and the kit; nothing generated is edited by hand. | One source of truth: the inside and outside can never disagree. |
 | D2 | A **kit** is a sheet image (PNG or Aseprite, flattened) in the **standard kit layout** — every piece at a fixed position — plus a descriptor JSON with a namespaced ID. A variation is an optional extra sheet in the same layout, drawn over the base (for example only the snow). Aseprite slices and variation layers are a later addition. | Works with any image editor; no slices to maintain; IDs stay stable and mod-friendly. |
-| D3 | Walls are whole cells; 3 tiles of wall per floor; interiors on the building's grid. The exterior follows readable rules, not scale: roof slope squashed to half the depth (2–4 rows), side, front or cross gable, inside optionally twice as wide as the front. | Drawn to scale, the roof dwarfed the front (revised after phase 5). |
+| D3 | Walls are whole cells; 4 tiles of wall per floor and of back-wall face inside; interiors on the building's grid. The exterior follows readable rules, not scale: roof slope squashed to half the depth (2–4 rows), side, front or cross gable, inside optionally twice as wide as the front. | Drawn to scale, the roof dwarfed the front (revised after phase 5). |
 | D4 | Placed buildings and interiors **produce ordinary map data** at save: collisions, triggers, anchors and location links, marked as generated. | Unity already imports these; doors and collision work without new Unity code. |
 | D5 | Vulcanus **bakes** the composed images (exterior per variation, interior) next to the building at save. | Unity places images instead of re-implementing the composition rules. |
 | D6 | A building with an interior map may be placed **once** in the project; buildings without one may be placed any number of times. | The interior's door must lead back to exactly one exterior. |
@@ -405,6 +405,21 @@ roof over 3 of wall. Revised D1, D3 and D7.
   inspector; the preview shows the floor being edited inside.
 - Maps: the footprint is the bottom slope rows of the exterior; placement, hit test, collision overlay follow
   `exteriorShape`.
+
+---
+
+## Phase 5c — Taller walls, window sizes, larger interiors (after phase 5b)
+
+Goal: walls and rooms at the scale of games like this one. Asked for after phase 5b: walls about 64 px, windows at
+least 32 px, interiors large enough to move around in.
+
+- 4 rows per floor outside (`STOREY_ROWS`), a 4-row back-wall face inside (`BACK_WALL_ROWS`); rooms need 6 rows.
+- Windows have a `size`: `small`, `medium`, `large` (required for windows in the schema). Windows may also go in the
+  north wall, where they show inside on the back wall of the room below.
+- `scale` may be 3. A new building is 16 × 12 at scale 2: large inside, an 8-column front.
+- The door is four pieces (`door_middle` added); windows are three sizes of pieces outside and inside; the back-wall
+  face is `wall_face_1` … `_4`, the door through it `door_face_1` … `_4`. Positions in `kitLayout.ts`; the prototype
+  kit and the example buildings were redrawn to match.
 
 ---
 

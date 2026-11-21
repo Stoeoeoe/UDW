@@ -32,12 +32,12 @@ export interface BuildingRoom {
   floor: string;
 }
 
-export interface BuildingOpening {
-  id: string;
-  kind: 'door' | 'window';
-  x: number;
-  y: number;
-}
+export type WindowSize = 'small' | 'medium' | 'large';
+
+/** A door, or a window of a size: small is a slit, medium two tiles tall, large as tall as the wall allows. */
+export type BuildingOpening =
+  | { id: string; kind: 'door'; x: number; y: number }
+  | { id: string; kind: 'window'; size: WindowSize; x: number; y: number };
 
 /**
  * One floor's plan on the building's grid: inner walls, rooms, doors and windows, and the stairs up to the floor
@@ -65,8 +65,8 @@ export interface Building {
   kit: string;
   width: number;
   depth: number;
-  /** Plan columns per column of the front: 2 makes the inside twice as wide as the outside. */
-  scale: 1 | 2;
+  /** Plan columns per column of the front: 2 or 3 make the inside that many times as wide as the outside. */
+  scale: 1 | 2 | 3;
   floors: BuildingFloor[];
   /** The column of the plan the chimney rises from. */
   chimney?: { column: number };

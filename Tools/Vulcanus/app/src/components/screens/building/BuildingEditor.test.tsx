@@ -65,9 +65,9 @@ describe('building editor', () => {
     show();
     useTool('Draw wall (W)');
     fireEvent.pointerDown(plan(), cell(4, 1));
-    fireEvent.pointerMove(plan(), cell(4, 5));
-    fireEvent.pointerUp(plan(), cell(4, 5));
-    expect(ground().innerWalls).toEqual([{ x: 4, y: 1, direction: 'south', length: 5 }]);
+    fireEvent.pointerMove(plan(), cell(4, 6));
+    fireEvent.pointerUp(plan(), cell(4, 6));
+    expect(ground().innerWalls).toEqual([{ x: 4, y: 1, direction: 'south', length: 6 }]);
     expect(ground().rooms.map((room) => room.id)).toEqual(['kitchen', 'room-1']);
 
     act(() => useEditorStore.getState().undoBuilding('test:farmhouse'));
@@ -83,8 +83,14 @@ describe('building editor', () => {
     expect(ground().openings).toHaveLength(1);
 
     useTool('Window (N)');
-    fireEvent.pointerDown(plan(), cell(2, 6));
-    expect(ground().openings.at(-1)).toEqual({ id: 'window-1', kind: 'window', x: 2, y: 6 });
+    fireEvent.pointerDown(plan(), cell(2, 7));
+    expect(ground().openings.at(-1)).toEqual({
+      id: 'window-1',
+      kind: 'window',
+      size: 'medium',
+      x: 2,
+      y: 7,
+    });
     expect(screen.getByRole('button', { name: 'Delete window' })).toBeTruthy();
   });
 
@@ -101,7 +107,7 @@ describe('building editor', () => {
     fireEvent.pointerDown(plan(), cell(1, 3));
     fireEvent.pointerUp(plan(), cell(7, 3));
     expect(screen.getAllByRole('alert').map((alert) => alert.textContent)).toContain(
-      'Room kitchen is 2 rows deep; rooms need at least 3 (two for the back wall, one to walk on).',
+      'Room kitchen is 2 rows deep; rooms need at least 6 (four for the back wall, two to walk on).',
     );
     confirm.mockRestore();
   });

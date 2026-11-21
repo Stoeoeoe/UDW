@@ -25,7 +25,8 @@ atrium.
 - Tiles are 16 px; characters are about 32 px tall.
 - The view is oblique top-down: the ground and the tops of things are seen from above, and faces that point south are
   drawn below them at their real height. East, west and north faces are not visible.
-- One floor's front wall is **3 tiles (48 px)** high, so a 32 px character fits through a door with a lintel above.
+- One floor's front wall is **4 tiles (64 px)** high, and a back wall's face inside is 4 tiles too, as in most games
+  of this kind: a 32 px character fits through a 48 px door with an arch above, and walls read as walls.
 - The exterior is drawn by **readable rules, not to scale**, as in most games of this kind: fronts at full height,
   depth squashed. A building's inside can be deeper, and wider (its `scale`), than its outside looks. Drawn to scale, a
   45° roof would be as many rows tall as the building is deep and dwarf the front.
@@ -38,10 +39,14 @@ atrium.
 - The border of the grid is wall. Inner walls are full rows or columns of wall cells; the floor areas between them are
   rooms. Each room has a floor material.
 - Openings replace a wall cell: a **door** (between rooms, or the ground floor's **entrance** in the south wall) or a
-  **window** (in the south wall, the only outer wall seen from outside).
+  **window**: in the south wall it is seen outside, in the north wall inside, on the back wall of the room below it.
+  Windows are **small** (a slit, 1 tile tall), **medium** (2 tiles) or **large** (3 tiles outside, the whole 4-tile
+  back wall inside).
 - Every floor but the top one has **stairs up** on a floor cell; the floor above has its stairs down on the same cell.
 - A **chimney** rises from a column of the plan.
-- **Scale** 1 or 2: plan columns per column of the front. At 2 the inside is twice as wide as the outside.
+- **Scale** 1, 2 or 3: plan columns per column of the front. At 2 or 3 the inside is that many times as wide as the
+  outside; with the squashed depth this keeps fronts compact while rooms are large enough to walk around in. A new
+  building is 16 × 12 at scale 2.
 
 ## Exterior
 
@@ -60,10 +65,12 @@ From the top, the exterior image has:
      an odd number of columns wide.
    - **Cross gable**: a front gable over the room behind the entrance (its walls included, widened by a column if
      needed so the gable has a middle) and side gable wings on both sides, each at least 2 columns wide.
-2. **The walls**, 3 rows per floor, top floor first: `wall_top` (under the eave) or `wall_band` (under the floor
-   above), `wall_mid`, and `wall_base` for the ground floor or `wall_mid` above it. Each floor's south windows show as
-   `window` over its middle row; the entrance shows as `door_lintel`, `door_upper`, `door_lower` over the ground
-   floor's rows. Doors and windows are overlays, so the wall's shadows and mouldings run on around them.
+2. **The walls**, 4 rows per floor, top floor first: `wall_top` (under the eave) or `wall_band` (under the floor
+   above), `wall_mid`, `wall_mid`, and `wall_base` for the ground floor or `wall_mid` above it. Each floor's south
+   windows are drawn over its rows: `window_small` in the second row; `window_medium_{top,bottom}` in the second and
+   third; `window_large_{top,middle,bottom}` in the first three. The entrance is `door_lintel`, `door_upper`,
+   `door_middle`, `door_lower` over the ground floor's four rows. Doors and windows are overlays, so the wall's shadows
+   and mouldings run on around them. Two windows in one front column show as the larger.
 3. **The chimney**: `chimney_top` on the highest roof row of its column and `chimney_bottom` below, drawn **over** the
    roof.
 
@@ -76,19 +83,20 @@ Each floor's interior uses the building's grid, cell for cell.
 
 - A wall cell shows its top: `wall_cap_NN`, where `NN` adds 1, 2, 4 and 8 for a wall neighbour to the north, east,
   south and west.
-- A room's top two rows show its back wall: `wall_face_upper` directly below the wall, `wall_face_lower` below that
-  (with `_l`, `_m` or `_r` by whether a wall is to the left or right). These rows are not walkable, so a room needs at
-  least three rows.
+- A room's top four rows show its back wall: `wall_face_1` directly below the wall down to `wall_face_4` (with `_l`,
+  `_m` or `_r` by whether a wall is to the left or right). These rows are not walkable, so a room needs at least six
+  rows. A window in the north wall is drawn over the face below it: `wall_window_small` in the second row,
+  `wall_window_medium_{top,bottom}` in the second and third, `wall_window_large_1` to `_4` in all four.
 - The other room cells show the room's floor (`floor_boards`, `floor_tiles`).
-- A door in an inner wall shows `threshold`; a door in a back wall cuts through the face with `door_face_upper` and
-  `door_face_lower`. The entrance in the south wall shows `entrance_mat`, where the interior links to the exterior
+- A door in an inner wall shows `threshold`; a door in a back wall cuts through the face with `door_face_1` to
+  `door_face_4`. The entrance in the south wall shows `entrance_mat`, where the interior links to the exterior
   door. A window in the south wall shows `window_cap`.
 - Stairs up show `stairs_up`, and the floor above shows `stairs_down` on the same cell, both drawn over the floor.
 
 ## Kit pieces
 
 Each piece is a 16×16 cell of the kit sheet at a fixed position (the **standard kit layout**, the prototype's layout),
-so its name says where it is; the prototype Aseprite file also carries matching slices for the artist's convenience. Most pieces are opaque; **overlay** pieces (the chimney and the stairs) are transparent
+so its name says where it is; the prototype Aseprite file also carries matching slices for the artist's convenience. Most pieces are opaque; **overlay** pieces (doors, windows, the chimney and the stairs) are transparent
 around what they show and are drawn over the piece below them, so that piece's own variations, such as snow on the
 roof, show around them. Anything that sits on a surface should be an overlay.
 
@@ -97,10 +105,10 @@ roof, show around them. Anything that sits on a surface should be an overlay.
 | Roof | `roof_ridge_{l,m,r}`, `roof_slope_{l,m,r}`, `roof_eave_{l,m,r}` |
 | Front gable | `gable_peak`, `gable_ridge`, `gable_apex`, `gable_back_{l,r}`, `gable_roof_{l,r}`, `gable_edge_{l,r}`, `gable_wall` |
 | Front wall | `wall_top_{l,m,r}`, `wall_band_{l,m,r}`, `wall_mid_{l,m,r}`, `wall_base_{l,m,r}` |
-| Openings | `door_lintel`, `door_upper`, `door_lower`, `window` |
+| Openings | `door_lintel`, `door_upper`, `door_middle`, `door_lower`, `window_small`, `window_medium_{top,bottom}`, `window_large_{top,middle,bottom}` |
 | Overlays | `chimney_top`, `chimney_bottom` |
-| Interior walls | `wall_cap_00` … `wall_cap_15`, `wall_face_upper_{l,m,r}`, `wall_face_lower_{l,m,r}` |
-| Interior openings | `door_face_upper`, `door_face_lower`, `threshold`, `entrance_mat`, `window_cap`, `stairs_up`, `stairs_down` |
+| Interior walls | `wall_cap_00` … `wall_cap_15`, `wall_face_{1,2,3,4}_{l,m,r}` |
+| Interior openings | `door_face_{1,2,3,4}`, `threshold`, `entrance_mat`, `window_cap`, `wall_window_small`, `wall_window_medium_{top,bottom}`, `wall_window_large_{1,2,3,4}`, `stairs_up`, `stairs_down` |
 | Floors | `floor_boards`, `floor_tiles` |
 
 ## Variations in the kit
