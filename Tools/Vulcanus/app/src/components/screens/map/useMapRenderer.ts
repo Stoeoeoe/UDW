@@ -689,8 +689,13 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
   const renderNavigationCostOverlay = useCallback(() => {
     const g = navigationCostGraphicsRef.current;
     const labels = navigationCostLabelContainerRef.current;
-    const { currentMap, tilesets, activeVariationId, showNavigationCostOverlay, hoveredTile } =
-      useEditorStore.getState();
+    const {
+      currentMap,
+      tilesets,
+      activeVariationId,
+      showNavigationCostOverlay,
+      hoveredTile,
+    } = useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!g || !labels || !currentMap) return;
 
