@@ -60,6 +60,8 @@ export function canSaveWorkspaceTab(tab: WorkspaceTab | null): boolean {
     tab.document.kind === 'shop' ||
     tab.document.kind === 'routine' ||
     tab.document.kind === 'quest' ||
+    tab.document.kind === 'building-kit' ||
+    tab.document.kind === 'building' ||
     tab.document.kind === 'dialogues'
   );
 }
@@ -94,6 +96,18 @@ export async function saveWorkspaceTab(tab: WorkspaceTab | null): Promise<void> 
     await editor.saveQuest(document.questId);
     const unit = getSaveUnitStatus(document.saveUnitId);
     if (unit.status === 'error') throw new Error(unit.error ?? 'The quest could not be saved.');
+    return;
+  }
+  if (document.kind === 'building-kit') {
+    await editor.saveBuildingKit(document.kitId);
+    const unit = getSaveUnitStatus(document.saveUnitId);
+    if (unit.status === 'error') throw new Error(unit.error ?? 'The kit could not be saved.');
+    return;
+  }
+  if (document.kind === 'building') {
+    await editor.saveBuilding(document.buildingId);
+    const unit = getSaveUnitStatus(document.saveUnitId);
+    if (unit.status === 'error') throw new Error(unit.error ?? 'The building could not be saved.');
     return;
   }
   if (document.kind === 'routine') {
@@ -157,6 +171,14 @@ export async function saveAllDirtyWorkspaceUnits(): Promise<void> {
     }
     if (saveUnitId.startsWith('quest:')) {
       await editor.saveQuest(saveUnitId.slice('quest:'.length));
+      continue;
+    }
+    if (saveUnitId.startsWith('building-kit:')) {
+      await editor.saveBuildingKit(saveUnitId.slice('building-kit:'.length));
+      continue;
+    }
+    if (saveUnitId.startsWith('building:')) {
+      await editor.saveBuilding(saveUnitId.slice('building:'.length));
       continue;
     }
     if (saveUnitId.startsWith('routine:')) {
@@ -262,6 +284,14 @@ export async function discardWorkspaceTabChanges(tab: WorkspaceTab | null): Prom
   }
   if (document.kind === 'quest') {
     useEditorStore.getState().discardQuest(document.questId);
+    return;
+  }
+  if (document.kind === 'building-kit') {
+    useEditorStore.getState().discardBuildingKit(document.kitId);
+    return;
+  }
+  if (document.kind === 'building') {
+    useEditorStore.getState().discardBuilding(document.buildingId);
     return;
   }
   if (document.kind === 'routine') {

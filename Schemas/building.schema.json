@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "building.schema.json",
+  "title": "Building",
+  "description": "A building's plan (*.building.json), from which its exterior and interior are composed out of its kit's pieces; see Tools/Vulcanus/app/docs/building-editor.md.",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "id",
+    "name",
+    "kit",
+    "width",
+    "depth",
+    "innerWalls",
+    "rooms",
+    "openings",
+    "roof"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Stable namespaced ID, for example base:farmhouse."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "kit": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$",
+      "description": "ID of the kit it is built from; empty until one is chosen."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 3,
+      "description": "Footprint width in tiles, outer walls included."
+    },
+    "depth": {
+      "type": "integer",
+      "minimum": 5,
+      "description": "Footprint depth in tiles, outer walls included."
+    },
+    "innerWalls": {
+      "type": "array",
+      "description": "Straight runs of wall cells inside the outer walls.",
+      "items": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "direction",
+          "length"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Column of the first cell."
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row of the first cell."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "east",
+              "south"
+            ]
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "description": "One entry per floor region: the region containing the cell at.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "name",
+          "floor"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+          },
+          "at": {
+            "type": "object",
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Column of a cell inside the room."
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Row of a cell inside the room."
+              }
+            }
+          },
+          "name": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "floor": {
+            "type": "string",
+            "pattern": "^floor_[a-z0-9_]+$",
+            "description": "Name of a floor piece in the kit."
+          }
+        }
+      }
+    },
+    "openings": {
+      "type": "array",
+      "description": "Doors and windows, each replacing a wall cell.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "x",
+          "y"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "door",
+              "window"
+            ]
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Column of the wall cell."
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row of the wall cell."
+          }
+        }
+      }
+    },
+    "chimney": {
+      "type": "object",
+      "required": [
+        "column"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Column of the roof the chimney stands on."
+        }
+      }
+    },
+    "roof": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "gable"
+          ]
+        }
+      }
+    },
+    "interiorMapId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "ID of the map that is this building's interior."
+    },
+    "folderPath": {
+      "type": "string"
+    }
+  }
+}

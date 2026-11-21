@@ -1,4 +1,6 @@
 import { QuestEditor } from '../screens/quest/QuestEditor';
+import { BuildingEditor } from '../screens/building/BuildingEditor';
+import { BuildingKitEditor } from '../screens/building/BuildingKitEditor';
 import React from 'react';
 import { EditorDocumentFrame } from '../common/EditorDocumentFrame';
 import { documentPresentation, documentTitle } from './documentPresentation';
@@ -121,6 +123,10 @@ const WorkspaceDocumentContent: React.FC<{ tab: WorkspaceTab }> = ({ tab }) => {
       return <ShopResourceDocument shopId={tab.document.shopId} />;
     case 'quest':
       return <QuestEditor questId={tab.document.questId} />;
+    case 'building-kit':
+      return <BuildingKitEditor kitId={tab.document.kitId} />;
+    case 'building':
+      return <BuildingEditor buildingId={tab.document.buildingId} />;
     case 'routine':
       return <RoutineEditor routineId={tab.document.routineId} />;
     case 'dialogue':

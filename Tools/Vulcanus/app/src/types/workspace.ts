@@ -99,6 +99,8 @@ export type WorkspaceDocument =
       label: string;
       saveUnitId: string;
     }
+  | { kind: 'building-kit'; kitId: string; label: string; saveUnitId: string }
+  | { kind: 'building'; buildingId: string; label: string; saveUnitId: string }
   | {
       kind: 'routine';
       routineId: string;
@@ -198,6 +200,8 @@ export interface WorkspaceProjectSnapshot {
   items?: Item[];
   shops?: Shop[];
   quests?: import('./quest').Quest[];
+  buildingKits?: import('./building').BuildingKit[];
+  buildings?: import('./building').Building[];
   routines?: import('./routine').Routine[];
   dialogues?: DialogueDocument[];
   cutscenes?: import('./cutscene').Cutscene[];

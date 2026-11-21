@@ -10,6 +10,8 @@ export const editorResourceTypeIds = [
   'shop',
   'routine',
   'quest',
+  'building-kit',
+  'building',
   'dialogue',
   'cutscene',
   'music',

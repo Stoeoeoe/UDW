@@ -370,6 +370,66 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     getFolderPath: (id) =>
       useEditorStore.getState().quests.find((q) => q.id === id)?.folderPath ?? '',
   },
+  'building-kit': {
+    id: 'building-kit',
+    documentDefinition: resourceRegistry['building-kit'],
+    label: 'Kit',
+    collectionLabel: 'Kits',
+    editorIcon: 'kits',
+    createFlow: 'simple',
+    metadataFlow: 'none',
+    saveUnitPrefix: 'building-kit:',
+    accentColor: 'teal.300',
+    tint: 'teal.900',
+    hoverTint: 'teal.800',
+    rowGradient: 'linear(to-r, teal.900, transparent)',
+    headerGradient: 'linear(to-r, teal.900, transparent)',
+    canCreate: true,
+    canRename: true,
+    canEditMetadata: false,
+    canDelete: true,
+    canRevealInFileExplorer: true,
+    fileExplorerPath: (id) =>
+      `kits/${fileSystem.resolveFilename('kits', resourceFileKey('building-kit', id))}`,
+    renameResource: async (id, name) => {
+      useEditorStore.getState().updateBuildingKit(id, { name });
+    },
+    deleteResource: async (id) => {
+      await useEditorStore.getState().deleteBuildingKit(id);
+    },
+    getFolderPath: (id) =>
+      useEditorStore.getState().buildingKits.find((kit) => kit.id === id)?.folderPath ?? '',
+  },
+  building: {
+    id: 'building',
+    documentDefinition: resourceRegistry.building,
+    label: 'Building',
+    collectionLabel: 'Buildings',
+    editorIcon: 'buildings',
+    createFlow: 'simple',
+    metadataFlow: 'none',
+    saveUnitPrefix: 'building:',
+    accentColor: 'teal.300',
+    tint: 'teal.900',
+    hoverTint: 'teal.800',
+    rowGradient: 'linear(to-r, teal.900, transparent)',
+    headerGradient: 'linear(to-r, teal.900, transparent)',
+    canCreate: true,
+    canRename: true,
+    canEditMetadata: false,
+    canDelete: true,
+    canRevealInFileExplorer: true,
+    fileExplorerPath: (id) =>
+      `buildings/${fileSystem.resolveFilename('buildings', resourceFileKey('building', id))}`,
+    renameResource: async (id, name) => {
+      useEditorStore.getState().updateBuilding(id, { name });
+    },
+    deleteResource: async (id) => {
+      await useEditorStore.getState().deleteBuilding(id);
+    },
+    getFolderPath: (id) =>
+      useEditorStore.getState().buildings.find((building) => building.id === id)?.folderPath ?? '',
+  },
   routine: {
     id: 'routine',
     documentDefinition: resourceRegistry.routine,
@@ -573,6 +633,10 @@ export function getEditorResourceDocumentId(
       return document.cueId;
     case 'quest':
       return document.questId;
+    case 'building-kit':
+      return document.kitId;
+    case 'building':
+      return document.buildingId;
     case 'routine':
       return document.routineId;
     case 'cutscene':
@@ -704,6 +768,10 @@ export function createEditorResourceDocument(
       return { kind: 'music', cueId: resource.id, label: resource.name, saveUnitId };
     case 'quest':
       return { kind: 'quest', questId: resource.id, label: resource.name, saveUnitId };
+    case 'building-kit':
+      return { kind: 'building-kit', kitId: resource.id, label: resource.name, saveUnitId };
+    case 'building':
+      return { kind: 'building', buildingId: resource.id, label: resource.name, saveUnitId };
     case 'routine':
       return { kind: 'routine', routineId: resource.id, label: resource.name, saveUnitId };
     case 'cutscene':
@@ -730,6 +798,8 @@ export function getEditorResourceTypeFromDocument(
     case 'shop':
     case 'routine':
     case 'quest':
+    case 'building-kit':
+    case 'building':
     case 'dialogue':
     case 'cutscene':
     case 'music':

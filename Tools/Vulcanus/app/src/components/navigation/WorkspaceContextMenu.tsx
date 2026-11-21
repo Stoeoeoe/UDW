@@ -20,6 +20,7 @@ import {
   renameEditorResourceDocument,
 } from '../../lib/editorResourceTypes';
 import { useEditorStore } from '../../store/useEditorStore';
+import { newBuilding } from '../../lib/buildings/newBuilding';
 import { ResourceKind, WorkspaceDocument, WorkspaceTreeNode } from '../../types/workspace';
 
 export interface ContextMenuState {
@@ -42,6 +43,8 @@ interface WorkspaceContextMenuProps {
       | 'shop'
       | 'routine'
       | 'quest'
+      | 'building-kit'
+      | 'building'
       | 'dialogue'
       | 'cutscene',
     folderPath: string,
@@ -133,7 +136,7 @@ export const WorkspaceContextMenu: React.FC<WorkspaceContextMenuProps> = ({
 };
 
 export const CreateNewResourceDialog: React.FC<{
-  kind: 'character' | 'entity' | 'item' | 'shop' | 'cutscene';
+  kind: 'character' | 'entity' | 'item' | 'shop' | 'cutscene' | 'building-kit' | 'building';
   folderPath: string;
   onClose: () => void;
   onOpenDocument: (document: WorkspaceDocument, options?: { pin?: boolean }) => void;
@@ -152,6 +155,10 @@ export const CreateNewResourceDialog: React.FC<{
         return useEditorStore.getState().items.map((item) => item.id);
       case 'shop':
         return useEditorStore.getState().shops.map((shop) => shop.id);
+      case 'building-kit':
+        return useEditorStore.getState().buildingKits.map((kit) => kit.id);
+      case 'building':
+        return useEditorStore.getState().buildings.map((building) => building.id);
     }
   }, [kind]);
 
@@ -203,6 +210,19 @@ export const CreateNewResourceDialog: React.FC<{
             pin: true,
           });
           break;
+        case 'building-kit':
+          // The sheet is chosen in the kit editor.
+          await store.addBuildingKit({ formatVersion: 1, id, name, source: '', folderPath });
+          onOpenDocument(createEditorResourceDocument({ type: 'building-kit', id, name }), {
+            pin: true,
+          });
+          break;
+        case 'building':
+          await store.addBuilding(newBuilding(id, name, folderPath, store.buildingKits[0]?.id));
+          onOpenDocument(createEditorResourceDocument({ type: 'building', id, name }), {
+            pin: true,
+          });
+          break;
       }
 
       onClose();
@@ -250,6 +270,8 @@ function buildMenuItems(
       | 'shop'
       | 'routine'
       | 'quest'
+      | 'building-kit'
+      | 'building'
       | 'dialogue'
       | 'cutscene',
     folderPath: string,
@@ -281,6 +303,8 @@ function buildMenuItems(
             | 'shop'
             | 'routine'
             | 'quest'
+            | 'building-kit'
+            | 'building'
             | 'dialogue'
             | 'cutscene',
           folderPathForNode,

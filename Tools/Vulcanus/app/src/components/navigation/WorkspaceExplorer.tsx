@@ -36,6 +36,8 @@ import {
   FiX,
   FiFolder,
   FiGrid,
+  FiHome,
+  FiLayers,
   FiMap,
   FiMapPin,
   FiMessageSquare,
@@ -100,6 +102,10 @@ function getNodeIcon(node: WorkspaceTreeNode) {
       return FiFilm;
     case 'quests':
       return FiStar;
+    case 'kits':
+      return FiLayers;
+    case 'buildings':
+      return FiHome;
     case 'routines':
       return FiClock;
     case 'dialogues':

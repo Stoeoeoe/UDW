@@ -24,6 +24,16 @@ function documentHistoryDepth(
       return (
         (direction === 'past' ? state.shopPast : state.shopFuture)[document.shopId]?.length ?? 0
       );
+    case 'building-kit':
+      return (
+        (direction === 'past' ? state.buildingKitPast : state.buildingKitFuture)[document.kitId]
+          ?.length ?? 0
+      );
+    case 'building':
+      return (
+        (direction === 'past' ? state.buildingPast : state.buildingFuture)[document.buildingId]
+          ?.length ?? 0
+      );
     case 'routine':
       return (
         (direction === 'past' ? state.routinePast : state.routineFuture)[document.routineId]

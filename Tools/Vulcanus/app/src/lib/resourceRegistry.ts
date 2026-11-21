@@ -42,6 +42,8 @@ export interface ResourceDocuments {
   dialogue: DialogueDocument;
   'dialogue-runtime': DialogueDocument;
   'dialogue-i18n': DialogueI18nExport;
+  'building-kit': import('../types/building').BuildingKit;
+  building: import('../types/building').Building;
 }
 export type ResourceDocumentKind = keyof ResourceDocuments;
 export type ResourceFolder =
@@ -56,7 +58,9 @@ export type ResourceFolder =
   | 'routines'
   | 'entities'
   | 'dialogues'
-  | 'cutscenes';
+  | 'cutscenes'
+  | 'kits'
+  | 'buildings';
 
 export interface ResourceDefinition<K extends ResourceDocumentKind = ResourceDocumentKind> {
   kind: K;
@@ -389,6 +393,29 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
           ...('map' in objective ? { map: resourceReference(objective.map, prefix) } : {}),
         })),
       })),
+    }),
+  },
+  'building-kit': {
+    kind: 'building-kit',
+    folder: 'kits',
+    extension: '.kit.json',
+    schemaFile: 'building-kit.schema.json',
+    idScope: 'resource',
+    normalize: (kit, prefix) => ({ ...kit, id: qualifyResourceId(kit.id, prefix) }),
+  },
+  building: {
+    kind: 'building',
+    folder: 'buildings',
+    extension: '.building.json',
+    schemaFile: 'building.schema.json',
+    idScope: 'resource',
+    normalize: (building, prefix) => ({
+      ...building,
+      id: qualifyResourceId(building.id, prefix),
+      kit: resourceReference(building.kit, prefix),
+      interiorMapId: resourceReference(building.interiorMapId, prefix),
+      rooms: collection(building.rooms, localDefinition),
+      openings: collection(building.openings, localDefinition),
     }),
   },
   'quest-i18n': {

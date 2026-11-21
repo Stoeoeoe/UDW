@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { documentFromHash, documentToHash } from './workspaceRouting';
+import { newBuilding } from './buildings/newBuilding';
 import {
   Character,
   DialogueDocument,
@@ -167,6 +168,35 @@ describe('workspaceRouting', () => {
         snapshot,
       ),
     ).toMatchObject({ kind: 'dialogue', dialogueId: 'intro' });
+  });
+
+  it('restores building and kit documents from their routes', () => {
+    const snapshot = {
+      maps: [],
+      tilesets: new Map<string, Tileset>(),
+      buildings: [newBuilding('base:farmhouse', 'Farmhouse', '')],
+      buildingKits: [
+        {
+          formatVersion: 1 as const,
+          id: 'base:roman_basic',
+          name: 'Roman basic',
+          source: 'kit.png',
+        },
+      ],
+    };
+    const route = (document: Parameters<typeof documentToHash>[0]) =>
+      documentFromHash(documentToHash(document), snapshot);
+    expect(
+      route({ kind: 'building', buildingId: 'base:farmhouse', label: 'Farmhouse', saveUnitId: '' }),
+    ).toMatchObject({ kind: 'building', buildingId: 'base:farmhouse', label: 'Farmhouse' });
+    expect(
+      route({
+        kind: 'building-kit',
+        kitId: 'base:roman_basic',
+        label: 'Roman basic',
+        saveUnitId: '',
+      }),
+    ).toMatchObject({ kind: 'building-kit', kitId: 'base:roman_basic' });
   });
 
   it('restores a shop document from its route', () => {

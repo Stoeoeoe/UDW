@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "building-kit.schema.json",
+  "title": "Building kit",
+  "description": "A sheet of 16 px building pieces in the standard kit layout (*.kit.json); see Tools/Vulcanus/app/docs/building-editor.md.",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "id",
+    "name",
+    "source"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Stable namespaced ID, for example base:roman_basic."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Project-relative path of the base sheet: a PNG or an Aseprite file."
+    },
+    "variations": {
+      "type": "object",
+      "description": "Variation ID (such as winter) to the project-relative path of a sheet in the same layout, drawn over the base.",
+      "propertyNames": {
+        "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    },
+    "folderPath": {
+      "type": "string"
+    }
+  }
+}

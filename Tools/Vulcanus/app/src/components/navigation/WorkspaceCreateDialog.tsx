@@ -148,7 +148,10 @@ export const WorkspaceCreateDialog: React.FC<{
 
   return (
     <CreateNewResourceDialog
-      kind={state.kind as 'character' | 'entity' | 'item' | 'shop' | 'cutscene'}
+      kind={
+        state.kind as
+          'character' | 'entity' | 'item' | 'shop' | 'cutscene' | 'building-kit' | 'building'
+      }
       folderPath={state.folderPath}
       onClose={onClose}
       onOpenDocument={onOpenDocument}

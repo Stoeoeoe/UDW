@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildWorkspaceTree } from './workspaceTree';
+import { newBuilding } from './buildings/newBuilding';
 import {
   Character,
   DialogueDocument,
@@ -47,6 +48,27 @@ function createTreeInput(
 }
 
 describe('buildWorkspaceTree', () => {
+  it('lists buildings and kits after tilesets', () => {
+    const tree = buildWorkspaceTree({
+      ...createTreeInput(),
+      buildings: [newBuilding('base:farmhouse', 'Farmhouse', '')],
+      buildingKits: [
+        { formatVersion: 1, id: 'base:roman_basic', name: 'Roman basic', source: 'kit.png' },
+      ],
+    });
+    const labels = tree.map((section) => section.label);
+    expect(labels.slice(labels.indexOf('Tilesets'), labels.indexOf('Tilesets') + 3)).toEqual([
+      'Tilesets',
+      'Buildings',
+      'Kits',
+    ]);
+    const buildings = tree.find((section) => section.label === 'Buildings')!;
+    expect(buildings.children?.[0]).toMatchObject({
+      label: 'Farmhouse',
+      document: { kind: 'building', buildingId: 'base:farmhouse' },
+    });
+  });
+
   it('renders each location as a direct map entry when there are no variations', () => {
     const tree = buildWorkspaceTree(createTreeInput({ maps: [createMap()] }));
     const locations = tree.find((node) => node.id === 'group:locations');
@@ -159,6 +181,8 @@ describe('buildWorkspaceTree', () => {
     expect(tree.map((node) => node.id)).toEqual([
       'group:locations',
       'group:tilesets',
+      'group:buildings',
+      'group:kits',
       'group:characters',
       'group:entities',
       'group:items',

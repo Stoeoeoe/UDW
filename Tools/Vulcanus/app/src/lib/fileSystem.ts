@@ -265,6 +265,22 @@ export class FileSystemManager {
     );
   }
 
+  async loadAllBuildingKits(): Promise<import('../types/building').BuildingKit[]> {
+    return this.readDirectory<import('../types/building').BuildingKit>(
+      resourceRegistry['building-kit'].folder,
+      resourceRegistry['building-kit'].extension,
+      true,
+    );
+  }
+
+  async loadAllBuildings(): Promise<import('../types/building').Building[]> {
+    return this.readDirectory<import('../types/building').Building>(
+      resourceRegistry.building.folder,
+      resourceRegistry.building.extension,
+      true,
+    );
+  }
+
   /** Load quest sources; localization sidecars are exports, not quest documents. */
   async loadAllQuests(): Promise<import('../types/quest').Quest[]> {
     return this.readDirectory<import('../types/quest').Quest>(

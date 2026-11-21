@@ -32,6 +32,8 @@ import { createCharacterSlice, CharacterSlice } from './slices/characterSlice';
 import { createItemSlice, ItemSlice } from './slices/itemSlice';
 import { createShopSlice, ShopSlice } from './slices/shopSlice';
 import { createQuestSlice, QuestSlice } from './slices/questSlice';
+import { createBuildingKitSlice, BuildingKitSlice } from './slices/buildingKitSlice';
+import { createBuildingSlice, BuildingSlice } from './slices/buildingSlice';
 import { createRoutineSlice, RoutineSlice } from './slices/routineSlice';
 import { createItemClassSlice, ItemClassSlice } from './slices/itemClassSlice';
 import { createEmotionSlice, EmotionSlice } from './slices/emotionSlice';
@@ -65,6 +67,8 @@ export interface EditorStore
     ShopSlice,
     RoutineSlice,
     QuestSlice,
+    BuildingKitSlice,
+    BuildingSlice,
     ItemClassSlice,
     EmotionSlice,
     TerrainSlice,
@@ -287,6 +291,16 @@ export function runEditorHistoryCommand(
     else state.redoQuest(activeDocument.questId);
     return true;
   }
+  if (activeDocument?.kind === 'building-kit') {
+    if (command === 'undo') state.undoBuildingKit(activeDocument.kitId);
+    else state.redoBuildingKit(activeDocument.kitId);
+    return true;
+  }
+  if (activeDocument?.kind === 'building') {
+    if (command === 'undo') state.undoBuilding(activeDocument.buildingId);
+    else state.redoBuilding(activeDocument.buildingId);
+    return true;
+  }
   if (activeDocument?.kind === 'routine') {
     if (command === 'undo') state.undoRoutine(activeDocument.routineId);
     else state.redoRoutine(activeDocument.routineId);
@@ -329,6 +343,8 @@ export const useEditorStore = create<EditorStore>()(
           ...createShopSlice(set, get, {} as never),
           ...createRoutineSlice(set, get, {} as never),
           ...createQuestSlice(set, get, {} as never),
+          ...createBuildingKitSlice(set, get, {} as never),
+          ...createBuildingSlice(set, get, {} as never),
           ...createItemClassSlice(set, get, {} as never),
           ...createEmotionSlice(set, get, {} as never),
           ...createTerrainSlice(set, get, {} as never),
@@ -372,6 +388,8 @@ export const useEditorStore = create<EditorStore>()(
             get().resetShops();
             get().resetRoutines();
             get().resetQuests();
+            get().resetBuildingKits();
+            get().resetBuildings();
             project = normalizeProject(project);
             withHistorySuppressed(
               () =>
@@ -408,6 +426,8 @@ export const useEditorStore = create<EditorStore>()(
             get().resetShops();
             get().resetRoutines();
             get().resetQuests();
+            get().resetBuildingKits();
+            get().resetBuildings();
             for (const timeoutId of pendingTilesetSaves.values()) clearTimeout(timeoutId);
             pendingTilesetSaves.clear();
 

@@ -132,6 +132,14 @@ export function useWorkspaceTabs() {
     if (doc.kind === 'quest') {
       markRecentResource(`quest:${doc.questId}`);
     }
+    if (doc.kind === 'building-kit') {
+      markRecentResource(`building-kit:${doc.kitId}`);
+      return;
+    }
+    if (doc.kind === 'building') {
+      markRecentResource(`building:${doc.buildingId}`);
+      return;
+    }
     if (doc.kind === 'routine') {
       markRecentResource(`routine:${doc.routineId}`);
       return;

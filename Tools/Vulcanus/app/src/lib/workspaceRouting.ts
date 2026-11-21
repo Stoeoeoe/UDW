@@ -111,6 +111,14 @@ export function documentToHash(document: WorkspaceDocument): string {
       params.set('doc', 'quest');
       params.set('id', document.questId);
       break;
+    case 'building-kit':
+      params.set('doc', 'building-kit');
+      params.set('id', document.kitId);
+      break;
+    case 'building':
+      params.set('doc', 'building');
+      params.set('id', document.buildingId);
+      break;
     case 'routine':
       params.set('doc', 'routine');
       params.set('id', document.routineId);
@@ -253,6 +261,18 @@ export function documentFromHash(
     const quest = snapshot.quests?.find((q) => q.id === params.get('id'));
     return quest
       ? createEditorResourceDocument({ type: 'quest', id: quest.id, name: quest.title })
+      : null;
+  }
+  if (doc === 'building-kit') {
+    const kit = snapshot.buildingKits?.find((entry) => entry.id === params.get('id'));
+    return kit
+      ? createEditorResourceDocument({ type: 'building-kit', id: kit.id, name: kit.name })
+      : null;
+  }
+  if (doc === 'building') {
+    const building = snapshot.buildings?.find((entry) => entry.id === params.get('id'));
+    return building
+      ? createEditorResourceDocument({ type: 'building', id: building.id, name: building.name })
       : null;
   }
   if (doc === 'routine') {

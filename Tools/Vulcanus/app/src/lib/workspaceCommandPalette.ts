@@ -21,6 +21,7 @@ export type CommandPaletteFilter =
   | 'items'
   | 'shops'
   | 'quests'
+  | 'buildings'
   | 'routines'
   | 'dialogues'
   | 'cutscenes';
@@ -33,6 +34,8 @@ export type CommandPaletteResourceType =
   | 'item'
   | 'shop'
   | 'quest'
+  | 'building-kit'
+  | 'building'
   | 'routine'
   | 'dialogue'
   | 'cutscene';
@@ -63,6 +66,8 @@ export interface BuildCommandPaletteResourcesOptions {
   items: Item[];
   shops: Shop[];
   quests?: import('../types/quest').Quest[];
+  buildingKits?: import('../types/building').BuildingKit[];
+  buildings?: import('../types/building').Building[];
   routines?: import('../types/routine').Routine[];
   dialogues: DialogueDocument[];
   cutscenes?: import('../types/cutscene').Cutscene[];
@@ -193,6 +198,22 @@ export function buildCommandPaletteResources(
       document: createEditorResourceDocument({ type: 'quest', id: quest.id, name: quest.title }),
     }),
   );
+
+  for (const [type, typeLabel, entries] of [
+    ['building', 'Building', options.buildings ?? []],
+    ['building-kit', 'Kit', options.buildingKits ?? []],
+  ] as const)
+    entries.forEach((entry) =>
+      resources.push({
+        key: `${type}:${entry.id}`,
+        type,
+        typeLabel,
+        label: entry.name,
+        secondaryLabel: entry.folderPath || undefined,
+        resourceId: entry.id,
+        document: createEditorResourceDocument({ type, id: entry.id, name: entry.name }),
+      }),
+    );
 
   (options.routines ?? []).forEach((routine) => {
     const label = routineLabel(routine, options.characters);
@@ -426,6 +447,8 @@ function matchesFilter(resource: CommandPaletteResource, filter: CommandPaletteF
       return resource.type === 'shop';
     case 'quests':
       return resource.type === 'quest';
+    case 'buildings':
+      return resource.type === 'building' || resource.type === 'building-kit';
     case 'routines':
       return resource.type === 'routine';
     case 'cutscenes':

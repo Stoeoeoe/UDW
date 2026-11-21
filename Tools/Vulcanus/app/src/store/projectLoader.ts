@@ -142,6 +142,23 @@ export async function loadProjectResources(set: SetFn, get: GetFn): Promise<void
       state.shopFuture = {};
     });
 
+    const buildingKits = await fileSystem.loadAllBuildingKits();
+    const buildings = await fileSystem.loadAllBuildings();
+    set((state) => {
+      state.buildingKits = castDraft(buildingKits);
+      state.savedBuildingKits = castDraft(
+        Object.fromEntries(buildingKits.map((kit) => [kit.id, kit])),
+      );
+      state.buildingKitPast = {};
+      state.buildingKitFuture = {};
+      state.buildings = castDraft(buildings);
+      state.savedBuildings = castDraft(
+        Object.fromEntries(buildings.map((building) => [building.id, building])),
+      );
+      state.buildingPast = {};
+      state.buildingFuture = {};
+    });
+
     const quests = await fileSystem.loadAllQuests();
     set((state) => {
       state.quests = castDraft(quests);

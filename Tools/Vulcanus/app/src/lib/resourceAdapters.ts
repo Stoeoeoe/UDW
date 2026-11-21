@@ -231,6 +231,38 @@ export function listQuestDescriptors(
   }));
 }
 
+export function listBuildingKitDescriptors(
+  kits: import('../types/building').BuildingKit[],
+): ResourceDescriptor[] {
+  return kits.map((kit) => ({
+    type: 'building-kit',
+    kind: 'building-kit',
+    id: kit.id,
+    name: kit.name,
+    folderPath: normalizeFolderPath(kit.folderPath),
+    document: createEditorResourceDocument({ type: 'building-kit', id: kit.id, name: kit.name }),
+    saveUnitId: getEditorResourceSaveUnitId('building-kit', kit.id),
+  }));
+}
+
+export function listBuildingDescriptors(
+  buildings: import('../types/building').Building[],
+): ResourceDescriptor[] {
+  return buildings.map((building) => ({
+    type: 'building',
+    kind: 'building',
+    id: building.id,
+    name: building.name,
+    folderPath: normalizeFolderPath(building.folderPath),
+    document: createEditorResourceDocument({
+      type: 'building',
+      id: building.id,
+      name: building.name,
+    }),
+    saveUnitId: getEditorResourceSaveUnitId('building', building.id),
+  }));
+}
+
 export interface AllResourceDescriptors {
   locations: ResourceDescriptor[];
   tilesets: ResourceDescriptor[];
@@ -239,6 +271,8 @@ export interface AllResourceDescriptors {
   items: ResourceDescriptor[];
   shops: ResourceDescriptor[];
   quests: ResourceDescriptor[];
+  buildingKits: ResourceDescriptor[];
+  buildings: ResourceDescriptor[];
   routines: ResourceDescriptor[];
   dialogues: ResourceDescriptor[];
   cutscenes: ResourceDescriptor[];
@@ -253,6 +287,8 @@ export function buildAllResourceDescriptors(state: {
   items: Item[];
   shops: Shop[];
   quests?: import('../types/quest').Quest[];
+  buildingKits?: import('../types/building').BuildingKit[];
+  buildings?: import('../types/building').Building[];
   routines: Routine[];
   dialogues: Map<string, DialogueDocument>;
   cutscenes?: import('../types/cutscene').Cutscene[];
@@ -268,6 +304,8 @@ export function buildAllResourceDescriptors(state: {
     items: listItemDescriptors(state.items),
     shops: listShopDescriptors(state.shops),
     quests: listQuestDescriptors(state.quests ?? []),
+    buildingKits: listBuildingKitDescriptors(state.buildingKits ?? []),
+    buildings: listBuildingDescriptors(state.buildings ?? []),
     routines: listRoutineDescriptors(state.routines, state.characters),
     dialogues: listDialogueDescriptors(Array.from(state.dialogues.values())),
     cutscenes: listCutsceneDescriptors(
@@ -300,6 +338,8 @@ export function canCreateResourceKind(
   | 'shop'
   | 'routine'
   | 'quest'
+  | 'building-kit'
+  | 'building'
   | 'dialogue'
   | 'cutscene'
   | 'music' {
@@ -312,6 +352,8 @@ export function canCreateResourceKind(
     kind === 'shop' ||
     kind === 'routine' ||
     kind === 'quest' ||
+    kind === 'building-kit' ||
+    kind === 'building' ||
     kind === 'dialogue' ||
     kind === 'cutscene' ||
     kind === 'music'
@@ -343,6 +385,12 @@ export async function setResourceFolderPath(
       break;
     case 'quest':
       store.updateQuest(id, { folderPath: normalizedFolderPath });
+      break;
+    case 'building-kit':
+      store.updateBuildingKit(id, { folderPath: normalizedFolderPath });
+      break;
+    case 'building':
+      store.updateBuilding(id, { folderPath: normalizedFolderPath });
       break;
     case 'routine':
       store.updateRoutine(id, { folderPath: normalizedFolderPath });
@@ -407,6 +455,10 @@ function listDescriptorsForKind(
       return listShopDescriptors(state.shops);
     case 'quest':
       return listQuestDescriptors(state.quests);
+    case 'building-kit':
+      return listBuildingKitDescriptors(state.buildingKits);
+    case 'building':
+      return listBuildingDescriptors(state.buildings);
     case 'routine':
       return listRoutineDescriptors(state.routines, state.characters);
     case 'dialogue':

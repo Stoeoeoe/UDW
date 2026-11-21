@@ -132,7 +132,7 @@ placeholders.
 | `store/projectLoader.ts` | Load both after tilesets, before maps (maps will reference buildings). |
 | `store/slices/buildingKitSlice.ts`, `store/slices/buildingSlice.ts` | Copy the quest slice's structure: items, saved copies, history with the 800 ms merge, `add/update/delete/save/discard/undo/redo/reset`, `issues` set by `check…` on save (phase 2 fills in validation). |
 | `store/useEditorStore.ts` | Wire both slices; undo/redo routing for the two document kinds. |
-| `components/navigation/WorkspaceCreateDialog.tsx`, new `components/screens/building/CreateBuildingDialog.tsx` | Create a building: ID, name, kit picker (required), size defaults 9 × 7; it starts as the example farmhouse's empty shell (outer walls, one room). |
+| `components/navigation/WorkspaceContextMenu.tsx`, `lib/buildings/newBuilding.ts` | Both use the simple ID-and-name create flow. A new building is a 9 × 7 shell (one room, an entrance in the south wall) using the first kit, if any; the kit is chosen in the building editor (phase 3). A new kit has no sheet until one is chosen in the kit editor (phase 1). |
 | `components/workspace/WorkspaceDocumentViews.tsx`, `documentPresentation.ts` | Route the two kinds to placeholder editors; `layout: 'canvas'`. |
 | `components/layout/EditorHistoryActions.tsx` | Undo/redo for both kinds. |
 

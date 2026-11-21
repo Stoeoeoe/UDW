@@ -42,6 +42,8 @@ export function useWorkspaceInit() {
   const items = useEditorStore((state) => state.items);
   const shops = useEditorStore((state) => state.shops);
   const quests = useEditorStore((state) => state.quests);
+  const buildingKits = useEditorStore((state) => state.buildingKits);
+  const buildings = useEditorStore((state) => state.buildings);
   const routines = useEditorStore((state) => state.routines);
   const dialogues = useEditorStore((state) => state.dialogues);
   const cutscenes = useEditorStore((s) => s.cutscenes);
@@ -71,6 +73,8 @@ export function useWorkspaceInit() {
         items,
         shops,
         quests,
+        buildingKits,
+        buildings,
         routines,
         dialogues: Array.from(dialogues.values()),
         cutscenes,
@@ -86,6 +90,8 @@ export function useWorkspaceInit() {
       items,
       shops,
       quests,
+      buildingKits,
+      buildings,
       routines,
       dialogues,
       cutscenes,
@@ -145,6 +151,8 @@ export function useWorkspaceInit() {
       items,
       shops,
       quests,
+      buildingKits,
+      buildings,
       routines,
       dialogues: Array.from(dialogues.values()),
       cutscenes,
@@ -186,6 +194,8 @@ export function useWorkspaceInit() {
     items,
     shops,
     quests,
+    buildingKits,
+    buildings,
     routines,
     dialogues,
     cutscenes,
@@ -211,6 +221,8 @@ export function useWorkspaceInit() {
         items,
         shops,
         quests,
+        buildingKits,
+        buildings,
         routines,
         dialogues: Array.from(dialogues.values()),
         cutscenes,
@@ -237,6 +249,8 @@ export function useWorkspaceInit() {
     items,
     shops,
     quests,
+    buildingKits,
+    buildings,
     routines,
     dialogues,
     cutscenes,

@@ -41,6 +41,7 @@ const FILTER_OPTIONS: Array<{ id: CommandPaletteFilter; label: string }> = [
   { id: 'items', label: 'Items' },
   { id: 'shops', label: 'Shops' },
   { id: 'quests', label: 'Quests' },
+  { id: 'buildings', label: 'Buildings' },
   { id: 'routines', label: 'Routines' },
   { id: 'dialogues', label: 'Dialogues' },
   { id: 'cutscenes', label: 'Cutscenes' },
