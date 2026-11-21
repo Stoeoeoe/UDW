@@ -134,7 +134,7 @@ export const MapViewportPixi: React.FC = () => {
       }
       initializingRef.current = false;
     };
-  }, []);
+  }, [requestRender]);
 
   // Create viewport when map ID or dimensions change (NOT on every tile paint)
   useEffect(() => {
@@ -281,7 +281,7 @@ export const MapViewportPixi: React.FC = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [mapId, mapWidth, mapHeight, appInitialized, projectTileSize]);
+  }, [mapId, mapWidth, mapHeight, appInitialized, projectTileSize, requestRender]);
 
   // Use rendering and tools hooks
   const {
