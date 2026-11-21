@@ -141,11 +141,11 @@ export function layoutExterior(building: Building): Placement[] {
     ];
     for (let column = 0; column < columns; column++)
       rows.forEach((kind, i) => {
-        let piece = `${kind}_${side(column, columns)}`;
+        place(`${kind}_${side(column, columns)}`, column, top + i);
+        // Doors and windows are drawn over the wall, so its shadows and mouldings run on around them.
         if (index === 0 && column === doorColumn)
-          piece = ['door_lintel', 'door_upper', 'door_lower'][i];
-        else if (i === 1 && windows.has(column)) piece = 'window';
-        place(piece, column, top + i);
+          place(['door_lintel', 'door_upper', 'door_lower'][i], column, top + i, true);
+        else if (i === 1 && windows.has(column)) place('window', column, top + i, true);
       });
   });
 

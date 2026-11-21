@@ -62,8 +62,8 @@ From the top, the exterior image has:
      needed so the gable has a middle) and side gable wings on both sides, each at least 2 columns wide.
 2. **The walls**, 3 rows per floor, top floor first: `wall_top` (under the eave) or `wall_band` (under the floor
    above), `wall_mid`, and `wall_base` for the ground floor or `wall_mid` above it. Each floor's south windows show as
-   `window` in its middle row; the entrance shows as `door_lintel`, `door_upper`, `door_lower` in the ground floor's
-   rows.
+   `window` over its middle row; the entrance shows as `door_lintel`, `door_upper`, `door_lower` over the ground
+   floor's rows. Doors and windows are overlays, so the wall's shadows and mouldings run on around them.
 3. **The chimney**: `chimney_top` on the highest roof row of its column and `chimney_bottom` below, drawn **over** the
    roof.
 

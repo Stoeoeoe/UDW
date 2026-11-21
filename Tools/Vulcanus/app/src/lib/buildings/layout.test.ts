@@ -14,10 +14,10 @@ import {
 
 const farmhouse = () => floorPlan(farmhouseBuilding(), 0);
 
-/** The non-overlay pieces as rows of names, for comparing with the tables of the rules. */
+/** The pieces as rows of names, the last drawn on top, without the chimney and stairs standing on them. */
 const asRows = (placements: Placement[], width: number) => {
   const rows: string[][] = [];
-  for (const p of placements.filter((p) => !p.overlay)) {
+  for (const p of placements.filter((p) => !/^(chimney|stairs)/.test(p.piece))) {
     rows[p.row] ??= Array.from({ length: width }, () => '');
     rows[p.row][p.column] = p.piece;
   }
@@ -72,9 +72,14 @@ describe('exterior', () => {
     expect(rows[4]).toEqual(wall('wall_top', 9, { 6: 'door_lintel' }));
     expect(rows[5]).toEqual(wall('wall_mid', 9, { 2: 'window', 6: 'door_upper', 7: 'window' }));
     expect(rows[6]).toEqual(wall('wall_base', 9, { 6: 'door_lower' }));
-    expect(placements.filter((p) => p.overlay)).toEqual([
+    expect(placements.filter((p) => p.piece.startsWith('chimney'))).toEqual([
       { piece: 'chimney_top', column: 2, row: 0, overlay: true },
       { piece: 'chimney_bottom', column: 2, row: 1, overlay: true },
+    ]);
+    // The door is drawn over the wall, so the wall's shadow under the eave runs on behind it.
+    expect(placements.filter((p) => p.column === 6 && p.row === 4).map((p) => p.piece)).toEqual([
+      'wall_top_m',
+      'door_lintel',
     ]);
   });
 
@@ -175,7 +180,11 @@ describe('exterior', () => {
       'roof_eave_m',
     ]);
     // The chimney stands on the wing's ridge.
-    expect(placements.filter((p) => p.overlay).map((p) => [p.piece, p.column, p.row])).toEqual([
+    expect(
+      placements
+        .filter((p) => p.piece.startsWith('chimney'))
+        .map((p) => [p.piece, p.column, p.row]),
+    ).toEqual([
       ['chimney_top', 1, 3],
       ['chimney_bottom', 1, 4],
     ]);

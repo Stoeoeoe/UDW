@@ -13,7 +13,7 @@ describe('kit layout', () => {
     }
   });
 
-  it('has every piece the building rules use, with the chimney and stairs as the only overlays', () => {
+  it('has every piece the building rules use, with openings, the chimney and stairs as the overlays', () => {
     const names = new Set(KIT_LAYOUT.map((slot) => slot.name));
     for (const name of [
       'roof_ridge_l',
@@ -52,6 +52,10 @@ describe('kit layout', () => {
     ])
       expect(names.has(name), name).toBe(true);
     expect(KIT_LAYOUT.filter((slot) => slot.overlay).map((slot) => slot.name)).toEqual([
+      'door_lintel',
+      'door_upper',
+      'door_lower',
+      'window',
       'chimney_top',
       'chimney_bottom',
       'stairs_up',
