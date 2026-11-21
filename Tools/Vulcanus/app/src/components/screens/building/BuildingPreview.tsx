@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, ButtonGroup, HStack, Text, VStack } from '@chakra-ui/react';
 import type { Building } from '../../../types/building';
 import type { ResolvedKit } from '../../../lib/buildings/resolveKit';
-import { layoutExterior, layoutInterior, STOREY_ROWS } from '../../../lib/buildings/layout';
+import { exteriorShape, layoutExterior, layoutFloor } from '../../../lib/buildings/layout';
 import { drawList, renderDraws } from '../../../lib/buildings/render';
 import { KIT_TILE } from '../../../lib/buildings/kitLayout';
 import { CompactSelect } from '../../common/Fields';
@@ -18,9 +18,11 @@ const MARGIN = 2;
 /** The building as it will look outside and inside, in base or in a variation of its kit. */
 export function BuildingPreview({
   building,
+  floor,
   kit,
 }: {
   building: Building;
+  floor: number;
   kit: ResolvedKit | null;
 }) {
   const [view, setView] = useState<'exterior' | 'interior'>('exterior');
@@ -29,8 +31,10 @@ export function BuildingPreview({
   const shownVariation = kit?.variationIds.includes(variation) ? variation : '';
   const tile = KIT_TILE * SCALE;
   const exterior = view === 'exterior';
-  const columns = building.width + (exterior ? MARGIN * 2 : 0);
-  const rows = exterior ? building.depth + STOREY_ROWS + MARGIN * 2 : building.depth;
+  const shape = exteriorShape(building);
+  // Room for a character beside the building, for scale.
+  const columns = exterior ? shape.columns + 1 + MARGIN * 2 : building.width;
+  const rows = exterior ? shape.rows + MARGIN * 2 : building.depth;
 
   useEffect(() => {
     const canvas = ref.current;
@@ -39,7 +43,12 @@ export function BuildingPreview({
     context.clearRect(0, 0, canvas.width, canvas.height);
     const chain = shownVariation ? [shownVariation] : [];
     if (!exterior) {
-      renderDraws(drawList(layoutInterior(building).placements, kit, chain), kit, context, SCALE);
+      renderDraws(
+        drawList(layoutFloor(building, floor).placements, kit, chain),
+        kit,
+        context,
+        SCALE,
+      );
       return;
     }
     context.fillStyle = BUILDING_PREVIEW_GROUND_HEX;
@@ -49,8 +58,8 @@ export function BuildingPreview({
     renderDraws(drawList(layoutExterior(building), kit, chain), kit, context, SCALE);
     // A character standing beside the building, for scale.
     context.fillStyle = BUILDING_PREVIEW_SILHOUETTE_HEX;
-    const feet = (building.depth + STOREY_ROWS) * tile;
-    context.fillRect(building.width * tile + 4 * SCALE, feet - 32 * SCALE, 8 * SCALE, 32 * SCALE);
+    const feet = shape.rows * tile;
+    context.fillRect(shape.columns * tile + 4 * SCALE, feet - 32 * SCALE, 8 * SCALE, 32 * SCALE);
     context.restore();
   });
 

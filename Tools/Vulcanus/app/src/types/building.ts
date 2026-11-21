@@ -39,7 +39,24 @@ export interface BuildingOpening {
   y: number;
 }
 
-/** A building's plan: its footprint in tiles (outer walls included), inner walls, rooms, openings and roof. */
+/**
+ * One floor's plan on the building's grid: inner walls, rooms, doors and windows, and the stairs up to the floor
+ * above. The first floor is the ground floor.
+ */
+export interface BuildingFloor {
+  innerWalls: BuildingInnerWall[];
+  rooms: BuildingRoom[];
+  openings: BuildingOpening[];
+  /** The cell of the stairs up; the floor above has the stairs down on the same cell. */
+  stairsUp?: { x: number; y: number };
+}
+
+export type BuildingRoofKind = 'side-gable' | 'front-gable' | 'cross-gable';
+
+/**
+ * A building: its floors' plans on one grid of `width × depth` cells (outer walls included), its roof and chimney. The
+ * exterior is drawn from it by readable rules rather than to scale; see docs/building-editor.md.
+ */
 export interface Building {
   formatVersion: 1;
   id: string;
@@ -48,11 +65,12 @@ export interface Building {
   kit: string;
   width: number;
   depth: number;
-  innerWalls: BuildingInnerWall[];
-  rooms: BuildingRoom[];
-  openings: BuildingOpening[];
+  /** Plan columns per column of the front: 2 makes the inside twice as wide as the outside. */
+  scale: 1 | 2;
+  floors: BuildingFloor[];
+  /** The column of the plan the chimney rises from. */
   chimney?: { column: number };
-  roof: { kind: 'gable' };
+  roof: { kind: BuildingRoofKind };
   /** The map that is this building's interior. */
   interiorMapId?: string;
   folderPath?: string;

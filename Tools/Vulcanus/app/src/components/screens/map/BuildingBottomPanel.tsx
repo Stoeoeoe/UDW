@@ -98,7 +98,7 @@ export const BuildingBottomPanel: React.FC = () => {
               />
             </HStack>
             <Text fontSize="xs" color="editorMutedText" mb={2}>
-              Footprint at ({instance.x}, {instance.y}), {placed.width} × {placed.depth}
+              Footprint at ({instance.x}, {instance.y})
             </Text>
             <Button
               size="xs"

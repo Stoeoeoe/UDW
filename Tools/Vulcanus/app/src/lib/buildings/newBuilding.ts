@@ -11,10 +11,15 @@ export function newBuilding(id: string, name: string, folderPath: string, kit = 
     kit,
     width,
     depth,
-    innerWalls: [],
-    rooms: [{ id: 'room-1', at: { x: 1, y: 1 }, name: 'Room', floor: 'floor_boards' }],
-    openings: [{ id: 'entrance', kind: 'door', x: Math.floor(width / 2), y: depth - 1 }],
-    roof: { kind: 'gable' },
+    scale: 1,
+    floors: [
+      {
+        innerWalls: [],
+        rooms: [{ id: 'room-1', at: { x: 1, y: 1 }, name: 'Room', floor: 'floor_boards' }],
+        openings: [{ id: 'entrance', kind: 'door', x: Math.floor(width / 2), y: depth - 1 }],
+      },
+    ],
+    roof: { kind: 'side-gable' },
     folderPath,
   };
 }

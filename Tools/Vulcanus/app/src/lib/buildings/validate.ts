@@ -2,6 +2,8 @@ import type { Building, BuildingOpening } from '../../types/building';
 import type { ResolvedKit } from './resolveKit';
 import { buildGrid, innerWallCells, isFloor, isWall, type Grid } from './grid';
 import { findRegions, isRectangle, roomsByRegion } from './rooms';
+import { floorName, floorPlan, type FloorPlan } from './plan';
+import { frontWidth, gableSpan } from './layout';
 
 /** Rooms need two rows for the back wall's face and at least one to walk on. */
 export const MIN_ROOM_ROWS = 3;
@@ -14,28 +16,21 @@ const isCorner = (grid: Grid, x: number, y: number) =>
 const isOuterWall = (grid: Grid, x: number, y: number) =>
   x === 0 || y === 0 || x === grid.width - 1 || y === grid.depth - 1;
 
-/** A problem with a plan, and the cells it concerns (none for the building as a whole). */
+/** A problem with a building, and the cells it concerns on one of its floors (none for the building as a whole). */
 export interface PlanIssue {
   message: string;
+  /** The floor the cells are on; `null` for the building as a whole. */
+  floor: number | null;
   cells: { x: number; y: number }[];
 }
 
-/**
- * What stops a building's plan from being built, each naming what it concerns. With the kit, its pieces and floors
- * are checked too. The rules are those of docs/building-editor.md for one storey and one rectangular wing.
- */
-export function validateBuildingPlan(building: Building, kit?: ResolvedKit): string[] {
-  return planIssues(building, kit).map((issue) => issue.message);
-}
+type FloorIssue = Omit<PlanIssue, 'floor'>;
 
-/** The problems of {@link validateBuildingPlan} with their cells, for outlining them in the plan. */
-export function planIssues(building: Building, kit?: ResolvedKit): PlanIssue[] {
-  const issues: PlanIssue[] = [];
-  const add = (message: string, cells: PlanIssue['cells'] = []) => issues.push({ message, cells });
+/** One floor's problems; only the ground floor has an entrance. */
+function floorIssues(building: FloorPlan, ground: boolean): FloorIssue[] {
+  const issues: FloorIssue[] = [];
+  const add = (message: string, cells: FloorIssue['cells'] = []) => issues.push({ message, cells });
   const { width, depth } = building;
-  if (width < 3) add('The building must be at least 3 tiles wide.');
-  if (depth < 5) add('The building must be at least 5 tiles deep.');
-  if (width < 3 || depth < 5) return issues;
 
   for (const run of building.innerWalls) {
     if (run.length < 1) add(`The inner wall at (${run.x}, ${run.y}) has no cells.`);
@@ -105,8 +100,12 @@ export function planIssues(building: Building, kit?: ResolvedKit): PlanIssue[] {
         add(`${name} is not in the south wall; windows go there for now.`, [opening]);
       continue;
     }
-    if (y === south) entrances.push(opening);
-    else if (isOuterWall(grid, x, y))
+    if (y === south && ground) entrances.push(opening);
+    else if (isOuterWall(grid, x, y) && !ground)
+      add(`${name} is in an outer wall; only the ground floor has a door to the outside.`, [
+        opening,
+      ]);
+    else if (isOuterWall(grid, x, y) && y !== south)
       add(
         `${name} is in an outer wall other than the south wall; only the entrance leads outside.`,
         [opening],
@@ -120,12 +119,75 @@ export function planIssues(building: Building, kit?: ResolvedKit): PlanIssue[] {
         add(`${name} does not lead from one room to another.`, [opening]);
     }
   }
-  if (entrances.length === 0) add('The building needs an entrance: a door in the south wall.');
+  if (ground && entrances.length === 0)
+    add('The building needs an entrance: a door in the south wall.');
   if (entrances.length > 1)
     add(
       `Only one door may be in the south wall; doors ${entrances.map((door) => door.id).join(' and ')} are.`,
       entrances,
     );
+
+  return issues;
+}
+
+/**
+ * What stops a building's plan from being built, each naming what it concerns. With the kit, its pieces and floors
+ * are checked too. The rules are those of docs/building-editor.md.
+ */
+export function validateBuildingPlan(building: Building, kit?: ResolvedKit): string[] {
+  return planIssues(building, kit).map((issue) => issue.message);
+}
+
+/** The problems of {@link validateBuildingPlan} with their floors and cells, for outlining them in the plan. */
+export function planIssues(building: Building, kit?: ResolvedKit): PlanIssue[] {
+  const issues: PlanIssue[] = [];
+  const add = (message: string, floor: number | null = null, cells: PlanIssue['cells'] = []) =>
+    issues.push({ message, floor, cells });
+  const { width, depth, floors } = building;
+  if (width < 3) add('The building must be at least 3 tiles wide.');
+  if (depth < 5) add('The building must be at least 5 tiles deep.');
+  if (floors.length === 0) add('The building needs a floor.');
+  if (width < 3 || depth < 5 || floors.length === 0) return issues;
+
+  floors.forEach((_, index) => {
+    const prefix = floors.length > 1 ? `${floorName(index)}: ` : '';
+    for (const issue of floorIssues(floorPlan(building, index), index === 0))
+      add(prefix + issue.message, index, issue.cells);
+  });
+
+  floors.forEach((floor, index) => {
+    const stairs = floor.stairsUp;
+    const top = index === floors.length - 1;
+    if (top && stairs)
+      add(`${floorName(index)} is the top floor; its stairs lead nowhere.`, index, [stairs]);
+    if (!top && !stairs)
+      add(`${floorName(index)} needs stairs up to ${floorName(index + 1).toLowerCase()}.`, index);
+    if (top || !stairs) return;
+    if (!isFloor(buildGrid(floorPlan(building, index)), stairs.x, stairs.y))
+      add(`${floorName(index)}: the stairs up are not on a floor cell.`, index, [stairs]);
+    if (!isFloor(buildGrid(floorPlan(building, index + 1)), stairs.x, stairs.y))
+      add(
+        `${floorName(index + 1)}: the stairs down at (${stairs.x}, ${stairs.y}) are not on a floor cell.`,
+        index + 1,
+        [stairs],
+      );
+  });
+
+  const span = gableSpan(building);
+  const columns = frontWidth(building);
+  if (building.roof.kind === 'front-gable' && columns % 2 === 0)
+    add(`A front gable needs an odd number of front columns; the front is ${columns} wide.`);
+  if (building.roof.kind === 'cross-gable') {
+    if (!span)
+      add(
+        'A cross gable sits over the room behind the entrance; the building has no entrance room.',
+      );
+    else if (span.left < 2 || span.right > columns - 3)
+      add(
+        'A cross gable needs at least 2 front columns of wing on each side of the room behind the entrance; ' +
+          'make that room narrower or use a front gable.',
+      );
+  }
 
   if (building.chimney && (building.chimney.column < 1 || building.chimney.column > width - 2))
     add('The chimney must stand on a column between the outer walls.');
@@ -133,11 +195,13 @@ export function planIssues(building: Building, kit?: ResolvedKit): PlanIssue[] {
   if (!building.kit) add('Choose a kit.');
   if (kit) {
     if (kit.empty.length) add(`The kit has nothing drawn for: ${kit.empty.join(', ')}.`);
-    for (const room of building.rooms)
-      if (!kit.floors.includes(room.floor))
-        add(`Room ${room.id} uses the floor ${room.floor}, which the kit does not have.`, [
-          room.at,
-        ]);
+    floors.forEach((floor, index) => {
+      for (const room of floor.rooms)
+        if (!kit.floors.includes(room.floor))
+          add(`Room ${room.id} uses the floor ${room.floor}, which the kit does not have.`, index, [
+            room.at,
+          ]);
+    });
   }
   return issues;
 }

@@ -48,11 +48,11 @@ export function buildingIssues(
   resolved: ResolvedKitState | undefined,
 ): PlanIssue[] {
   const issues: PlanIssue[] = [];
-  if (!building.name.trim()) issues.push({ message: 'The building needs a name.', cells: [] });
+  const add = (message: string) => issues.push({ message, floor: null, cells: [] });
+  if (!building.name.trim()) add('The building needs a name.');
   if (building.kit && !kits.some((kit) => kit.id === building.kit))
-    issues.push({ message: `The kit ${building.kit} does not exist.`, cells: [] });
-  else if (resolved?.status === 'error')
-    issues.push({ message: `The kit cannot be read: ${resolved.error}`, cells: [] });
+    add(`The kit ${building.kit} does not exist.`);
+  else if (resolved?.status === 'error') add(`The kit cannot be read: ${resolved.error}`);
   return [
     ...issues,
     ...planIssues(building, resolved?.status === 'ready' ? resolved.kit : undefined),

@@ -116,20 +116,26 @@ describe('building store', () => {
       kit: 'mymod:roman_basic',
       interiorMapId: 'mymod:farmhouse_interior',
     });
-    expect(normalized.rooms[0].id).toBe('room-1');
-    expect(normalized.openings[0].id).toBe('entrance');
+    expect(normalized.floors[0].rooms[0].id).toBe('room-1');
+    expect(normalized.floors[0].openings[0].id).toBe('entrance');
   });
 });
 
 describe('new building', () => {
-  it('is a 9 × 7 shell with one room and an entrance in the south wall', () => {
+  it('is a 9 × 7 shell of one floor with one room and an entrance in the south wall', () => {
     expect(newBuilding('base:hut', 'Hut', 'village')).toMatchObject({
       width: 9,
       depth: 7,
+      scale: 1,
       kit: '',
       folderPath: 'village',
-      rooms: [{ id: 'room-1', at: { x: 1, y: 1 } }],
-      openings: [{ id: 'entrance', kind: 'door', x: 4, y: 6 }],
+      floors: [
+        {
+          rooms: [{ id: 'room-1', at: { x: 1, y: 1 } }],
+          openings: [{ id: 'entrance', kind: 'door', x: 4, y: 6 }],
+        },
+      ],
+      roof: { kind: 'side-gable' },
     });
   });
 });

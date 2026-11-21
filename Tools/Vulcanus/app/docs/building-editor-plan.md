@@ -14,13 +14,13 @@ These were settled while designing; each is cheap to revisit before its phase st
 
 | # | Decision | Why |
 |---|---|---|
-| D1 | A building is stored as a **plan** (size, inner walls, rooms, openings, roof). The exterior and interior images are always *composed* from the plan and the kit; nothing generated is edited by hand. | One source of truth: the inside and outside can never disagree. |
+| D1 | A building is stored as a **plan**: size, scale, a plan per floor (inner walls, rooms, openings, stairs), roof and chimney. The exterior and interior images are always *composed* from the plan and the kit; nothing generated is edited by hand. | One source of truth: the inside and outside can never disagree. |
 | D2 | A **kit** is a sheet image (PNG or Aseprite, flattened) in the **standard kit layout** — every piece at a fixed position — plus a descriptor JSON with a namespaced ID. A variation is an optional extra sheet in the same layout, drawn over the base (for example only the snow). Aseprite slices and variation layers are a later addition. | Works with any image editor; no slices to maintain; IDs stay stable and mod-friendly. |
-| D3 | Walls are whole cells; storey 3 tiles; 45° gable roof, ridge parallel to the front; interior on the same grid. | Fixed in building-editor.md. |
+| D3 | Walls are whole cells; 3 tiles of wall per floor; interiors on the building's grid. The exterior follows readable rules, not scale: roof slope squashed to half the depth (2–4 rows), side, front or cross gable, inside optionally twice as wide as the front. | Drawn to scale, the roof dwarfed the front (revised after phase 5). |
 | D4 | Placed buildings and interiors **produce ordinary map data** at save: collisions, triggers, anchors and location links, marked as generated. | Unity already imports these; doors and collision work without new Unity code. |
 | D5 | Vulcanus **bakes** the composed images (exterior per variation, interior) next to the building at save. | Unity places images instead of re-implementing the composition rules. |
 | D6 | A building with an interior map may be placed **once** in the project; buildings without one may be placed any number of times. | The interior's door must lead back to exactly one exterior. |
-| D7 | First scope only: one storey, one rectangular wing, gable roof, doors, windows on the south wall, one chimney. Validation rejects anything else. | Prove the kit approach before hip roofs, L shapes and storeys. |
+| D7 | Scope: one rectangular wing, any number of floors, side/front/cross gable, doors, windows on the south wall, one chimney. Validation rejects anything else. | Prove the kit approach before hip roofs and L shapes. |
 
 ## Data model
 
@@ -55,31 +55,43 @@ piece's position is known from its name. A variation sheet only needs pixels whe
   "kit": "base:roman_basic",
   "width": 9,
   "depth": 7,
-  "innerWalls": [{ "x": 4, "y": 1, "direction": "south", "length": 5 }],
-  "rooms": [
-    { "id": "kitchen", "at": { "x": 2, "y": 3 }, "name": "Kitchen", "floor": "floor_tiles" },
-    { "id": "bedroom", "at": { "x": 6, "y": 3 }, "name": "Bedroom", "floor": "floor_boards" }
-  ],
-  "openings": [
-    { "id": "entrance", "kind": "door", "x": 6, "y": 6 },
-    { "id": "window-1", "kind": "window", "x": 2, "y": 6 },
-    { "id": "window-2", "kind": "window", "x": 7, "y": 6 },
-    { "id": "inner-door", "kind": "door", "x": 4, "y": 4 }
+  "scale": 1,
+  "floors": [
+    {
+      "innerWalls": [{ "x": 4, "y": 1, "direction": "south", "length": 5 }],
+      "rooms": [
+        { "id": "kitchen", "at": { "x": 2, "y": 3 }, "name": "Kitchen", "floor": "floor_tiles" },
+        { "id": "bedroom", "at": { "x": 6, "y": 3 }, "name": "Bedroom", "floor": "floor_boards" }
+      ],
+      "openings": [
+        { "id": "entrance", "kind": "door", "x": 6, "y": 6 },
+        { "id": "window-1", "kind": "window", "x": 2, "y": 6 },
+        { "id": "inner-door", "kind": "door", "x": 4, "y": 4 }
+      ],
+      "stairsUp": { "x": 2, "y": 5 }
+    },
+    {
+      "innerWalls": [],
+      "rooms": [{ "id": "loft", "at": { "x": 1, "y": 1 }, "name": "Loft", "floor": "floor_boards" }],
+      "openings": [{ "id": "window-1", "kind": "window", "x": 4, "y": 6 }]
+    }
   ],
   "chimney": { "column": 2 },
-  "roof": { "kind": "gable" },
+  "roof": { "kind": "front-gable" },
   "interiorMapId": "base:farmhouse_interior"
 }
 ```
 
-- `width`, `depth`: the footprint in tiles, outer walls included.
-- `innerWalls`: straight runs of wall cells starting at `(x, y)` and going `east` or `south` for `length` cells.
-- `rooms`: one entry per floor region; `at` is any cell inside the region, so a room keeps its identity when walls move.
-  Room and opening `id`s are local IDs (`LOCAL_ID_PATTERN`) and stay stable because generated map data refers to them.
-- `floor`: the name of a floor piece in the kit (`floor_*`).
-- `chimney`: optional.
-- `roof.kind`: only `gable` for now; the field exists because the next roof kind is already planned (hip).
-- `interiorMapId`: optional; the map whose interior this building is.
+- `width`, `depth`: the grid in tiles, outer walls included; every floor has it.
+- `scale`: plan columns per column of the front (1 or 2).
+- `floors`: ground floor first. `innerWalls` are straight runs of wall cells starting at `(x, y)` and going `east` or
+  `south` for `length` cells. `rooms` has one entry per floor region; `at` is any cell inside the region, so a room
+  keeps its identity when walls move. Room and opening `id`s are local IDs (`LOCAL_ID_PATTERN`), unique per floor, and
+  stay stable because generated map data refers to them. `stairsUp` is on every floor but the top one.
+- `floor` (of a room): the name of a floor piece in the kit (`floor_*`).
+- `chimney`: optional; a column of the plan.
+- `roof.kind`: `side-gable`, `front-gable` or `cross-gable`.
+- `interiorMapId`: optional; the map whose interior this building is (phase 7 decides how upper floors get theirs).
 
 ### Placed building — on a map layer of kind `building`
 
@@ -87,7 +99,8 @@ piece's position is known from its name. A variation sheet only needs pixels whe
 { "id": "farmhouse-1", "buildingId": "base:farmhouse", "x": 12, "y": 8 }
 ```
 
-`x`, `y` are the tile coordinates of the footprint's top-left cell. The exterior image reaches 3 rows higher (D3).
+`x`, `y` are the tile coordinates of the footprint's top-left cell. The footprint is as many rows as the roof's slope;
+the exterior image reaches up from it by the rest of its rows (D3).
 
 ### Interior map — a normal map with a binding
 
@@ -96,6 +109,7 @@ piece's position is known from its name. A variation sheet only needs pixels whe
 ```
 
 Its `width`/`height` equal the building's `width`/`depth`; `baseTilesetId` may stay empty (the schema allows it).
+Upper floors need their own maps; phase 7 settles how they are bound.
 
 ---
 
@@ -372,6 +386,28 @@ active.
 
 ---
 
+## Phase 5b — Floors, scale and roof kinds (after phase 5)
+
+Goal: buildings look like buildings. Phase 5 showed the to-scale exterior failing: a 7-deep building had 7 rows of
+roof over 3 of wall. Revised D1, D3 and D7.
+
+- Format: `floors` (each with `innerWalls`, `rooms`, `openings`, `stairsUp?`), `scale` (1|2), `roof.kind`
+  `side-gable | front-gable | cross-gable`. No migration (prototyping); the example buildings were rewritten by hand.
+- `lib/buildings/plan.ts`: `FloorPlan` (a floor with the building's size), `floorPlan`, `withFloor`, `floorName`. Grid,
+  rooms, edits and floor validation work on a `FloorPlan`; `resize` resizes every floor.
+- `layout.ts`: `roofDepthRows`, `frontColumn`, `frontWidth`, `entranceOf`, `gableSpan`, `exteriorShape` and the new
+  `layoutExterior` (building-editor.md, Exterior); `layoutInterior` draws stairs; `layoutFloor`.
+- `validate.ts`: `planIssues` per floor (only the ground floor has an entrance; doors to the outside only there), stairs
+  between floors, an odd front for a front gable, wings of 2 columns beside a cross gable. `PlanIssue.floor` says
+  which floor's plan outlines it.
+- Kit: `gable_*`, `wall_band_{l,m,r}`, `stairs_up`, `stairs_down` (prototype art in the kit files).
+- Editor: floor tabs with "Add floor" and "Remove top floor"; Stairs up tool [S]; roof and inside width in the
+  inspector; the preview shows the floor being edited inside.
+- Maps: the footprint is the bottom slope rows of the exterior; placement, hit test, collision overlay follow
+  `exteriorShape`.
+
+---
+
 ## Phase 6 — Generated map data: collisions, doors and links
 
 Goal: placed buildings and interiors produce the collisions, triggers, anchors and links the game needs, kept in sync
@@ -477,7 +513,7 @@ the generated links goes outside → inside → outside (checked in phase 6's da
 ## Out of scope here
 
 - Unity importer for buildings (needs the unified catalogs; consumes phase 6's map data and phase 8's images).
-- Hip roofs, L/U shapes, more storeys, the domus atrium, columns and porticos.
+- Hip roofs, L/U shapes, the domus atrium, columns and porticos.
 - Props, terrain overlays and the project-wide variation list (separate plans; this plan uses map variation IDs as they
   are, and a kit's variation IDs must match them).
 - Aseprite slices and variation layers inside one Aseprite file (a later addition on top of the standard layout).
@@ -489,5 +525,4 @@ the generated links goes outside → inside → outside (checked in phase 6's da
 |---|---|
 | Phase 5 | Should building layers sort with entities by footprint (y-sort) in the editor, or is drawing them in layer order enough until Unity shows the real sorting? |
 | Phase 6 | Is a footprint rectangle (minus the door) the right exterior collision, or should the front wall's face rows stay walkable so characters can walk "in front of" the building visually overlapping it? |
-| Phase 7 | Interiors on the same grid as the footprint (D3) make small houses cramped; confirm before interiors are built, since changing it later changes generated data. |
 | Phase 8 | Bake per kit variation (as planned) or only for variation IDs that maps actually use? |

@@ -20,13 +20,15 @@ beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = (() => context) as never;
 });
 
-const start = (): Building => ({
-  ...farmhouse(),
-  innerWalls: [],
-  rooms: [farmhouse().rooms[0]],
-  openings: [farmhouse().openings[0]],
-});
+const start = (): Building => {
+  const [ground] = farmhouse().floors;
+  return {
+    ...farmhouse(),
+    floors: [{ innerWalls: [], rooms: [ground.rooms[0]], openings: [ground.openings[0]] }],
+  };
+};
 const building = () => useEditorStore.getState().buildings[0];
+const ground = () => building().floors[0];
 const cell = (x: number, y: number) => ({ clientX: x * 48 + 24, clientY: y * 48 + 24 });
 
 beforeEach(() => {
@@ -65,11 +67,11 @@ describe('building editor', () => {
     fireEvent.pointerDown(plan(), cell(4, 1));
     fireEvent.pointerMove(plan(), cell(4, 5));
     fireEvent.pointerUp(plan(), cell(4, 5));
-    expect(building().innerWalls).toEqual([{ x: 4, y: 1, direction: 'south', length: 5 }]);
-    expect(building().rooms.map((room) => room.id)).toEqual(['kitchen', 'room-1']);
+    expect(ground().innerWalls).toEqual([{ x: 4, y: 1, direction: 'south', length: 5 }]);
+    expect(ground().rooms.map((room) => room.id)).toEqual(['kitchen', 'room-1']);
 
     act(() => useEditorStore.getState().undoBuilding('test:farmhouse'));
-    expect(building().innerWalls).toEqual([]);
+    expect(ground().innerWalls).toEqual([]);
   });
 
   it('says why a door cannot go somewhere, and places windows in the south wall', () => {
@@ -78,11 +80,11 @@ describe('building editor', () => {
     fireEvent.pointerMove(plan(), cell(0, 3));
     expect(screen.getByText('Only the south wall has a door to the outside.')).toBeTruthy();
     fireEvent.pointerDown(plan(), cell(0, 3));
-    expect(building().openings).toHaveLength(1);
+    expect(ground().openings).toHaveLength(1);
 
     useTool('Window (N)');
     fireEvent.pointerDown(plan(), cell(2, 6));
-    expect(building().openings.at(-1)).toEqual({ id: 'window-1', kind: 'window', x: 2, y: 6 });
+    expect(ground().openings.at(-1)).toEqual({ id: 'window-1', kind: 'window', x: 2, y: 6 });
     expect(screen.getByRole('button', { name: 'Delete window' })).toBeTruthy();
   });
 
@@ -110,6 +112,26 @@ describe('building editor', () => {
     const name = screen.getByLabelText('Name');
     fireEvent.change(name, { target: { value: 'Hall' } });
     fireEvent.blur(name);
-    expect(building().rooms[0].name).toBe('Hall');
+    expect(ground().rooms[0].name).toBe('Hall');
+  });
+
+  it('adds a floor above, with stairs up to it from the floor below', () => {
+    show();
+    fireEvent.click(screen.getByRole('button', { name: 'Add floor' }));
+    expect(building().floors).toHaveLength(2);
+    expect(screen.getAllByRole('alert').map((alert) => alert.textContent)).toContain(
+      'Ground floor needs stairs up to floor 2.',
+    );
+
+    useTool('Stairs up (S)');
+    fireEvent.pointerMove(plan(), cell(2, 4));
+    expect(
+      screen.getByText('The top floor has no stairs up; add a floor above first.'),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ground floor' }));
+    fireEvent.pointerDown(plan(), cell(2, 4));
+    expect(ground().stairsUp).toEqual({ x: 2, y: 4 });
+    expect(screen.queryAllByRole('alert')).toEqual([]);
   });
 });

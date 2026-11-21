@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "building.schema.json",
   "title": "Building",
-  "description": "A building's plan (*.building.json), from which its exterior and interior are composed out of its kit's pieces; see Tools/Vulcanus/app/docs/building-editor.md.",
+  "description": "A building (*.building.json): its floors' plans, roof and chimney, from which its exterior and interiors are composed out of its kit's pieces; see Tools/Vulcanus/app/docs/building-editor.md.",
   "type": "object",
   "required": [
     "formatVersion",
@@ -11,9 +11,8 @@
     "kit",
     "width",
     "depth",
-    "innerWalls",
-    "rooms",
-    "openings",
+    "scale",
+    "floors",
     "roof"
   ],
   "additionalProperties": false,
@@ -51,127 +50,20 @@
       "minimum": 5,
       "description": "Footprint depth in tiles, outer walls included."
     },
-    "innerWalls": {
-      "type": "array",
-      "description": "Straight runs of wall cells inside the outer walls.",
-      "items": {
-        "type": "object",
-        "required": [
-          "x",
-          "y",
-          "direction",
-          "length"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "x": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Column of the first cell."
-          },
-          "y": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Row of the first cell."
-          },
-          "direction": {
-            "type": "string",
-            "enum": [
-              "east",
-              "south"
-            ]
-          },
-          "length": {
-            "type": "integer",
-            "minimum": 1
-          }
-        }
-      }
+    "scale": {
+      "type": "integer",
+      "enum": [
+        1,
+        2
+      ],
+      "description": "Plan columns per column of the front: 2 makes the inside twice as wide as the outside."
     },
-    "rooms": {
+    "floors": {
       "type": "array",
-      "description": "One entry per floor region: the region containing the cell at.",
+      "minItems": 1,
+      "description": "The floors' plans, ground floor first.",
       "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "at",
-          "name",
-          "floor"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-          },
-          "at": {
-            "type": "object",
-            "required": [
-              "x",
-              "y"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "x": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Column of a cell inside the room."
-              },
-              "y": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Row of a cell inside the room."
-              }
-            }
-          },
-          "name": {
-            "type": "string",
-            "pattern": "\\S"
-          },
-          "floor": {
-            "type": "string",
-            "pattern": "^floor_[a-z0-9_]+$",
-            "description": "Name of a floor piece in the kit."
-          }
-        }
-      }
-    },
-    "openings": {
-      "type": "array",
-      "description": "Doors and windows, each replacing a wall cell.",
-      "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "x",
-          "y"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "door",
-              "window"
-            ]
-          },
-          "x": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Column of the wall cell."
-          },
-          "y": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Row of the wall cell."
-          }
-        }
+        "$ref": "#/definitions/BuildingFloor"
       }
     },
     "chimney": {
@@ -184,7 +76,7 @@
         "column": {
           "type": "integer",
           "minimum": 0,
-          "description": "Column of the roof the chimney stands on."
+          "description": "Column of the plan the chimney rises from."
         }
       }
     },
@@ -198,7 +90,9 @@
         "kind": {
           "type": "string",
           "enum": [
-            "gable"
+            "side-gable",
+            "front-gable",
+            "cross-gable"
           ]
         }
       }
@@ -210,6 +104,161 @@
     },
     "folderPath": {
       "type": "string"
+    }
+  },
+  "definitions": {
+    "BuildingFloor": {
+      "type": "object",
+      "required": [
+        "innerWalls",
+        "rooms",
+        "openings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "innerWalls": {
+          "type": "array",
+          "description": "Straight runs of wall cells inside the outer walls.",
+          "items": {
+            "type": "object",
+            "required": [
+              "x",
+              "y",
+              "direction",
+              "length"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Column of the first cell."
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Row of the first cell."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "east",
+                  "south"
+                ]
+              },
+              "length": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "rooms": {
+          "type": "array",
+          "description": "One entry per floor region: the region containing the cell at.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "at",
+              "name",
+              "floor"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+              },
+              "at": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Column of a cell inside the room."
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Row of a cell inside the room."
+                  }
+                }
+              },
+              "name": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "floor": {
+                "type": "string",
+                "pattern": "^floor_[a-z0-9_]+$",
+                "description": "Name of a floor piece in the kit."
+              }
+            }
+          }
+        },
+        "openings": {
+          "type": "array",
+          "description": "Doors and windows, each replacing a wall cell.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "x",
+              "y"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "door",
+                  "window"
+                ]
+              },
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Column of the wall cell."
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Row of the wall cell."
+              }
+            }
+          }
+        },
+        "stairsUp": {
+          "type": "object",
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false,
+          "description": "The cell of the stairs up; the floor above has the stairs down on the same cell.",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
     }
   }
 }

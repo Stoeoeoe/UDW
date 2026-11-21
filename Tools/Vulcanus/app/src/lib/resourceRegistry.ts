@@ -418,8 +418,11 @@ export const resourceRegistry: { [K in ResourceDocumentKind]: ResourceDefinition
       id: qualifyResourceId(building.id, prefix),
       kit: resourceReference(building.kit, prefix),
       interiorMapId: resourceReference(building.interiorMapId, prefix),
-      rooms: collection(building.rooms, localDefinition),
-      openings: collection(building.openings, localDefinition),
+      floors: building.floors.map((floor) => ({
+        ...floor,
+        rooms: collection(floor.rooms, localDefinition),
+        openings: collection(floor.openings, localDefinition),
+      })),
     }),
   },
   'quest-i18n': {

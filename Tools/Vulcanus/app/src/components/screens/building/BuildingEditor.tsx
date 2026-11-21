@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Box, Flex, HStack, Text } from '@chakra-ui/react';
+import { Box, Button, ButtonGroup, Flex, HStack, Text } from '@chakra-ui/react';
 import {
+  FiChevronsUp,
   FiDroplet,
   FiLogIn,
   FiMinusSquare,
@@ -21,6 +22,7 @@ import { PlanCanvas, type PlanSelection, type PlanTool } from './PlanCanvas';
 import { BuildingPreview } from './BuildingPreview';
 import { BuildingInspector } from './BuildingInspector';
 import type { Building } from '../../../types/building';
+import { floorName, floorPlan, withFloor } from '../../../lib/buildings/plan';
 
 const TOOLS: { tool: PlanTool; label: string; key: string; icon: React.ReactElement }[] = [
   { tool: 'select', label: 'Select (V)', key: 'v', icon: <FiMousePointer /> },
@@ -28,6 +30,7 @@ const TOOLS: { tool: PlanTool; label: string; key: string; icon: React.ReactElem
   { tool: 'erase', label: 'Erase wall (E)', key: 'e', icon: <FiMinusSquare /> },
   { tool: 'door', label: 'Door (D)', key: 'd', icon: <FiLogIn /> },
   { tool: 'window', label: 'Window (N)', key: 'n', icon: <FiWind /> },
+  { tool: 'stairs', label: 'Stairs up (S)', key: 's', icon: <FiChevronsUp /> },
   { tool: 'chimney', label: 'Chimney (C)', key: 'c', icon: <FiDroplet /> },
 ];
 
@@ -50,19 +53,45 @@ function BuildingWorkspace({ building }: { building: Building }) {
   const [tool, setTool] = useState<PlanTool>('select');
   const [scale, setScale] = useState(3);
   const [selection, setSelection] = useState<PlanSelection>(null);
+  const [shownFloor, setFloor] = useState(0);
+  // Undo can take away the floor being shown.
+  const floor = Math.min(shownFloor, building.floors.length - 1);
   const issues = useMemo(
     () => buildingIssues(building, kits, resolved),
     [building, kits, resolved],
   );
   const defaultFloor = kit?.floors[0] ?? 'floor_boards';
   const change = (next: Building) => update(building.id, next);
+  const shownPlan = floorPlan(building, floor);
+  const showFloor = (index: number) => {
+    setFloor(index);
+    setSelection(null);
+  };
+  const addFloor = () => {
+    const top = building.floors.length - 1;
+    const room = { id: 'room-1', at: { x: 1, y: 1 }, name: 'Room', floor: defaultFloor };
+    change({
+      ...building,
+      floors: [...building.floors, { innerWalls: [], rooms: [room], openings: [] }],
+    });
+    showFloor(top + 1);
+  };
+  const removeTopFloor = () => {
+    const top = building.floors.length - 1;
+    if (!confirm(`Remove ${floorName(top).toLowerCase()} and everything on it?`)) return;
+    // The floor below loses its stairs up, which would lead nowhere.
+    const below = { ...building.floors[top - 1], stairsUp: undefined };
+    change({ ...building, floors: [...building.floors.slice(0, top - 1), below] });
+    showFloor(Math.min(floor, top - 1));
+  };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.target !== event.currentTarget) return; // Typing in a field.
     const shortcut = TOOLS.find((entry) => entry.key === event.key.toLowerCase());
     if (shortcut && !event.ctrlKey && !event.metaKey) setTool(shortcut.tool);
     if (event.key === 'Delete' && selection?.kind === 'opening') {
-      change({ ...building, openings: building.openings.filter((o) => o.id !== selection.id) });
+      const openings = shownPlan.openings.filter((o) => o.id !== selection.id);
+      change(withFloor(building, floor, { ...shownPlan, openings }));
       setSelection(null);
     }
     if (event.key === 'Delete' && selection?.kind === 'chimney') {
@@ -73,7 +102,24 @@ function BuildingWorkspace({ building }: { building: Building }) {
 
   const plan = (
     <Flex direction="column" h="full" tabIndex={0} onKeyDown={onKeyDown} outline="none">
-      <HStack px={4} pt={3} spacing={1}>
+      <HStack px={4} pt={3} spacing={2}>
+        <ButtonGroup size="xs" isAttached variant="outline">
+          {building.floors.map((_, index) => (
+            <Button key={index} isActive={index === floor} onClick={() => showFloor(index)}>
+              {floorName(index)}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Button size="xs" variant="ghost" onClick={addFloor}>
+          Add floor
+        </Button>
+        {building.floors.length > 1 && (
+          <Button size="xs" variant="ghost" onClick={removeTopFloor}>
+            Remove top floor
+          </Button>
+        )}
+      </HStack>
+      <HStack px={4} pt={2} spacing={1}>
         {TOOLS.map((entry) => (
           <ToolbarToggleButton
             key={entry.tool}
@@ -100,6 +146,7 @@ function BuildingWorkspace({ building }: { building: Building }) {
       <Box flex={1} overflow="auto">
         <PlanCanvas
           building={building}
+          floor={floor}
           kit={kit}
           issues={issues}
           tool={tool}
@@ -128,7 +175,7 @@ function BuildingWorkspace({ building }: { building: Building }) {
         content={
           <SplitEditorCanvas
             primary={plan}
-            preview={<BuildingPreview building={building} kit={kit} />}
+            preview={<BuildingPreview building={building} floor={floor} kit={kit} />}
             primaryLabel="Plan"
             previewLabel="Preview"
           />
@@ -136,6 +183,7 @@ function BuildingWorkspace({ building }: { building: Building }) {
         rightPanel={
           <BuildingInspector
             building={building}
+            floor={floor}
             kits={kits}
             kit={kit}
             issues={issues}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Checkbox, HStack, Text, VStack } from '@chakra-ui/react';
-import type { Building, BuildingKit } from '../../../types/building';
+import type { Building, BuildingKit, BuildingRoofKind } from '../../../types/building';
+import { floorName, floorPlan, withFloor } from '../../../lib/buildings/plan';
 import type { ResolvedKit } from '../../../lib/buildings/resolveKit';
 import type { PlanIssue } from '../../../lib/buildings/validate';
 import { openingRefusal, resize } from '../../../lib/buildings/edit';
@@ -50,8 +51,15 @@ function CommitField({
 const localId = (taken: string[], current: string) => (draft: string) =>
   LOCAL_ID_PATTERN.test(draft) && (draft === current || !taken.includes(draft));
 
+const ROOF_KINDS: { kind: BuildingRoofKind; label: string }[] = [
+  { kind: 'side-gable', label: 'Side gable' },
+  { kind: 'front-gable', label: 'Front gable' },
+  { kind: 'cross-gable', label: 'Cross gable (over the entrance room)' },
+];
+
 export function BuildingInspector({
   building,
+  floor,
   kits,
   kit,
   issues,
@@ -61,6 +69,7 @@ export function BuildingInspector({
   onSelect,
 }: {
   building: Building;
+  floor: number;
   kits: readonly BuildingKit[];
   kit: ResolvedKit | null;
   issues: PlanIssue[];
@@ -69,12 +78,13 @@ export function BuildingInspector({
   onChange: (building: Building) => void;
   onSelect: (selection: PlanSelection) => void;
 }) {
+  const plan = floorPlan(building, floor);
+  const changePlan = (changes: Partial<typeof plan>) =>
+    onChange(withFloor(building, floor, { ...plan, ...changes }));
   const room =
-    selection?.kind === 'room' ? building.rooms.find((r) => r.id === selection.id) : undefined;
+    selection?.kind === 'room' ? plan.rooms.find((r) => r.id === selection.id) : undefined;
   const opening =
-    selection?.kind === 'opening'
-      ? building.openings.find((o) => o.id === selection.id)
-      : undefined;
+    selection?.kind === 'opening' ? plan.openings.find((o) => o.id === selection.id) : undefined;
   const chimney = selection?.kind === 'chimney' ? building.chimney : undefined;
 
   const resizeTo = (width: number, depth: number) => {
@@ -106,14 +116,11 @@ export function BuildingInspector({
       ? kit.floors
       : [room.floor, ...(kit?.floors ?? [])];
     const setRoom = (changes: Partial<typeof room>) =>
-      onChange({
-        ...building,
-        rooms: building.rooms.map((entry) =>
-          entry.id === room.id ? { ...entry, ...changes } : entry,
-        ),
+      changePlan({
+        rooms: plan.rooms.map((entry) => (entry.id === room.id ? { ...entry, ...changes } : entry)),
       });
     return (
-      <InspectorShell title="Room" subtitle={room.id}>
+      <InspectorShell title="Room" subtitle={`${floorName(floor)} · ${room.id}`}>
         <CommitField
           label="Name"
           value={room.name}
@@ -124,7 +131,7 @@ export function BuildingInspector({
           label="Room ID"
           value={room.id}
           isValid={localId(
-            building.rooms.map((r) => r.id),
+            plan.rooms.map((r) => r.id),
             room.id,
           )}
           onCommit={(id) => {
@@ -156,11 +163,10 @@ export function BuildingInspector({
   }
 
   if (opening) {
-    const others = { ...building, openings: building.openings.filter((o) => o.id !== opening.id) };
+    const others = { ...plan, openings: plan.openings.filter((o) => o.id !== opening.id) };
     const setOpening = (changes: Partial<typeof opening>) =>
-      onChange({
-        ...building,
-        openings: building.openings.map((entry) =>
+      changePlan({
+        openings: plan.openings.map((entry) =>
           entry.id === opening.id ? { ...entry, ...changes } : entry,
         ),
       });
@@ -169,7 +175,7 @@ export function BuildingInspector({
         title={opening.kind === 'door' ? 'Door' : 'Window'}
         subtitle={opening.id}
         onDelete={() => {
-          onChange(others);
+          changePlan({ openings: others.openings });
           onSelect(null);
         }}
         deleteLabel={`Delete ${opening.kind}`}
@@ -184,7 +190,7 @@ export function BuildingInspector({
               <option
                 key={kind}
                 value={kind}
-                disabled={!!openingRefusal(others, kind, opening.x, opening.y)}
+                disabled={!!openingRefusal(others, kind, opening.x, opening.y, floor === 0)}
               >
                 {kind}
               </option>
@@ -195,7 +201,7 @@ export function BuildingInspector({
           label="Opening ID"
           value={opening.id}
           isValid={localId(
-            building.openings.map((o) => o.id),
+            plan.openings.map((o) => o.id),
             opening.id,
           )}
           onCommit={(id) => {
@@ -269,7 +275,29 @@ export function BuildingInspector({
         />
       </HStack>
       <Field label="Roof">
-        <ReadOnlyIdField value="Gable" />
+        <CompactSelect
+          aria-label="Roof"
+          value={building.roof.kind}
+          onChange={(e) =>
+            onChange({ ...building, roof: { kind: e.target.value as BuildingRoofKind } })
+          }
+        >
+          {ROOF_KINDS.map((entry) => (
+            <option key={entry.kind} value={entry.kind}>
+              {entry.label}
+            </option>
+          ))}
+        </CompactSelect>
+      </Field>
+      <Field label="Inside width">
+        <CompactSelect
+          aria-label="Inside width"
+          value={building.scale}
+          onChange={(e) => onChange({ ...building, scale: Number(e.target.value) as 1 | 2 })}
+        >
+          <option value={1}>As wide as the front</option>
+          <option value={2}>Twice as wide as the front</option>
+        </CompactSelect>
       </Field>
       <Checkbox
         size="sm"

@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Text } from '@chakra-ui/react';
 import type { Building } from '../../../types/building';
 import type { ResolvedKit } from '../../../lib/buildings/resolveKit';
-import { buildGrid, isWall } from '../../../lib/buildings/grid';
+import { buildGrid, isFloor, isWall } from '../../../lib/buildings/grid';
 import { findRegions, roomsByRegion } from '../../../lib/buildings/rooms';
 import { layoutInterior } from '../../../lib/buildings/layout';
+import { floorPlan, withFloor } from '../../../lib/buildings/plan';
 import { drawList, renderDraws } from '../../../lib/buildings/render';
 import { KIT_TILE } from '../../../lib/buildings/kitLayout';
 import type { PlanIssue } from '../../../lib/buildings/validate';
@@ -27,7 +28,7 @@ import {
   BUILDING_PLAN_WINDOW_HEX,
 } from '../../../lib/editorColors';
 
-export type PlanTool = 'select' | 'wall' | 'erase' | 'door' | 'window' | 'chimney';
+export type PlanTool = 'select' | 'wall' | 'erase' | 'door' | 'window' | 'stairs' | 'chimney';
 
 export type PlanSelection =
   { kind: 'room'; id: string } | { kind: 'opening'; id: string } | { kind: 'chimney' } | null;
@@ -35,11 +36,13 @@ export type PlanSelection =
 type Cell = { x: number; y: number };
 
 /**
- * The plan, drawn as the interior will look (or as a schematic until the kit is read), with what the inside cannot
- * show on top: room names, doors, windows, the chimney's column, the selection, problems and the active tool's ghost.
+ * One floor's plan, drawn as its interior will look (or as a schematic until the kit is read), with what the inside
+ * cannot show on top: room names, doors, windows, stairs, the chimney's column, the selection, problems and the active
+ * tool's ghost.
  */
 export function PlanCanvas({
   building,
+  floor,
   kit,
   issues,
   tool,
@@ -50,6 +53,7 @@ export function PlanCanvas({
   onSelect,
 }: {
   building: Building;
+  floor: number;
   kit: ResolvedKit | null;
   issues: PlanIssue[];
   tool: PlanTool;
@@ -62,26 +66,40 @@ export function PlanCanvas({
   const ref = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<Cell | null>(null);
   const [dragStart, setDragStart] = useState<Cell | null>(null);
-  const grid = useMemo(() => buildGrid(building), [building]);
+  const plan = useMemo(() => floorPlan(building, floor), [building, floor]);
+  const grid = useMemo(() => buildGrid(plan), [plan]);
+  const ground = floor === 0;
+  const top = floor === building.floors.length - 1;
+  const stairsDown = floor > 0 ? building.floors[floor - 1].stairsUp : undefined;
+  const changePlan = (next: typeof plan) => onChange(withFloor(building, floor, next));
   const regions = useMemo(() => findRegions(grid), [grid]);
   const tile = KIT_TILE * scale;
 
   const ghost: Cell[] =
     (tool === 'wall' || tool === 'erase') && hover
-      ? wallLine(building, dragStart ?? hover, hover)
+      ? wallLine(plan, dragStart ?? hover, hover)
       : hover && tool !== 'select'
         ? [tool === 'chimney' ? { x: hover.x, y: 0 } : hover]
         : [];
-  const refusal =
-    hover && (tool === 'door' || tool === 'window')
-      ? openingRefusal(building, tool, hover.x, hover.y)
-      : null;
+  const refusal = !hover
+    ? null
+    : tool === 'door' || tool === 'window'
+      ? openingRefusal(plan, tool, hover.x, hover.y, ground)
+      : tool === 'stairs'
+        ? stairsRefusal(hover)
+        : null;
+
+  function stairsRefusal(cell: Cell): string | null {
+    if (top) return 'The top floor has no stairs up; add a floor above first.';
+    if (!isFloor(grid, cell.x, cell.y)) return 'Stairs go on a floor cell.';
+    return null;
+  }
 
   useEffect(() => {
     const context = ref.current!.getContext('2d')!;
     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     if (kit) {
-      const { placements } = layoutInterior(building, grid);
+      const { placements } = layoutInterior(plan, grid, stairsDown);
       renderDraws(drawList(placements, kit, []), kit, context, scale);
     } else
       for (let y = 0; y < grid.depth; y++)
@@ -103,15 +121,18 @@ export function PlanCanvas({
       for (const { x, y } of cells)
         context.strokeRect(x * tile + width / 2, y * tile + width / 2, tile - width, tile - width);
     };
-    for (const opening of building.openings)
+    for (const opening of plan.openings)
       outline(
         [opening],
         opening.kind === 'door' ? BUILDING_PLAN_DOOR_HEX : BUILDING_PLAN_WINDOW_HEX,
       );
     if (building.chimney) outline([{ x: building.chimney.column, y: 0 }], BUILDING_PLAN_LABEL_HEX);
-    for (const issue of issues) outline(issue.cells, BUILDING_PLAN_PROBLEM_HEX);
+    if (plan.stairsUp) outline([plan.stairsUp], BUILDING_PLAN_LABEL_HEX);
+    if (stairsDown) outline([stairsDown], BUILDING_PLAN_LABEL_HEX);
+    for (const issue of issues)
+      if (issue.floor === floor) outline(issue.cells, BUILDING_PLAN_PROBLEM_HEX);
 
-    const { roomsIn } = roomsByRegion(building, regions);
+    const { roomsIn } = roomsByRegion(plan, regions);
     context.font = `${Math.max(10, 4 * scale)}px sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -129,7 +150,7 @@ export function PlanCanvas({
         outline(region.cells, BUILDING_PLAN_SELECTION_HEX, 3);
     });
     if (selection?.kind === 'opening') {
-      const opening = building.openings.find((entry) => entry.id === selection.id);
+      const opening = plan.openings.find((entry) => entry.id === selection.id);
       if (opening) outline([opening], BUILDING_PLAN_SELECTION_HEX, 3);
     }
     if (selection?.kind === 'chimney' && building.chimney)
@@ -150,20 +171,21 @@ export function PlanCanvas({
 
   const click = (cell: Cell) => {
     if (tool === 'select') {
-      const opening = building.openings.find((o) => o.x === cell.x && o.y === cell.y);
+      const opening = plan.openings.find((o) => o.x === cell.x && o.y === cell.y);
       if (opening) return onSelect({ kind: 'opening', id: opening.id });
       if (building.chimney && cell.y === 0 && cell.x === building.chimney.column)
         return onSelect({ kind: 'chimney' });
       const region = regions.regionAt[cell.y][cell.x];
-      const room = region >= 0 ? roomsByRegion(building, regions).roomsIn[region][0] : undefined;
+      const room = region >= 0 ? roomsByRegion(plan, regions).roomsIn[region][0] : undefined;
       return onSelect(room ? { kind: 'room', id: room.id } : null);
     }
     if (tool === 'door' || tool === 'window') {
-      if (openingRefusal(building, tool, cell.x, cell.y)) return;
-      const next = addOpening(building, tool, cell.x, cell.y);
-      onChange(next);
+      if (openingRefusal(plan, tool, cell.x, cell.y, ground)) return;
+      const next = addOpening(plan, tool, cell.x, cell.y);
+      changePlan(next);
       onSelect({ kind: 'opening', id: next.openings[next.openings.length - 1].id });
     }
+    if (tool === 'stairs' && !stairsRefusal(cell)) changePlan({ ...plan, stairsUp: cell });
     if (tool === 'chimney' && cell.x >= 1 && cell.x <= building.width - 2) {
       onChange({ ...building, chimney: { column: cell.x } });
       onSelect({ kind: 'chimney' });
@@ -191,12 +213,12 @@ export function PlanCanvas({
         onPointerUp={(event) => {
           const cell = cellAt(event);
           if (!dragStart || !cell) return;
-          const cells = wallLine(building, dragStart, cell);
+          const cells = wallLine(plan, dragStart, cell);
           setDragStart(null);
-          onChange(
+          changePlan(
             tool === 'wall'
-              ? addWall(building, cells, defaultFloor)
-              : eraseWall(building, cells, defaultFloor),
+              ? addWall(plan, cells, defaultFloor)
+              : eraseWall(plan, cells, defaultFloor),
           );
         }}
       />

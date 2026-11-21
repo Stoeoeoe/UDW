@@ -1,4 +1,4 @@
-import type { Building } from '../../types/building';
+import type { FloorPlan } from './plan';
 
 /** The building's footprint, cell by cell: the outer border and inner walls are wall, the rest floor. */
 export interface Grid {
@@ -9,13 +9,13 @@ export interface Grid {
 }
 
 /** The cells of an inner wall run, in order. */
-export function innerWallCells(wall: Building['innerWalls'][number]): { x: number; y: number }[] {
+export function innerWallCells(wall: FloorPlan['innerWalls'][number]): { x: number; y: number }[] {
   return Array.from({ length: wall.length }, (_, i) =>
     wall.direction === 'east' ? { x: wall.x + i, y: wall.y } : { x: wall.x, y: wall.y + i },
   );
 }
 
-export function buildGrid(building: Building): Grid {
+export function buildGrid(building: FloorPlan): Grid {
   const { width, depth } = building;
   const wall = Array.from({ length: depth }, (_, y) =>
     Array.from(

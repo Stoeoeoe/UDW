@@ -1,5 +1,5 @@
 import type { Building } from '../../types/building';
-import { layoutExterior, STOREY_ROWS, type Placement } from './layout';
+import { exteriorShape, layoutExterior, type Placement } from './layout';
 import { KIT_TILE } from './kitLayout';
 import type { PixelSheet, ResolvedKit } from './resolveKit';
 
@@ -98,8 +98,9 @@ export function exteriorCanvas(
   const cached = byChain.get(key);
   if (cached?.kit === kit) return cached.canvas;
   const canvas = document.createElement('canvas');
-  canvas.width = building.width * KIT_TILE;
-  canvas.height = (building.depth + STOREY_ROWS) * KIT_TILE;
+  const { columns, rows } = exteriorShape(building);
+  canvas.width = columns * KIT_TILE;
+  canvas.height = rows * KIT_TILE;
   renderDraws(
     drawList(layoutExterior(building), kit, variationChain),
     kit,

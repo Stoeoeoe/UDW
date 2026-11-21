@@ -3,7 +3,7 @@ import type { Building } from '../../../types/building';
 import type { BuildingInstance, Layer } from '../../../types/schema';
 import { exteriorCanvas } from '../../../lib/buildings/render';
 import { exteriorBounds } from '../../../lib/buildings/mapPlacement';
-import { STOREY_ROWS } from '../../../lib/buildings/layout';
+import { entranceOf, exteriorShape, frontColumn } from '../../../lib/buildings/layout';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useResolvedKitsStore } from '../../../store/useResolvedKitsStore';
 
@@ -52,20 +52,27 @@ function exteriorView(
 
 /** The footprint's outline, in the exterior view's coordinates. */
 function footprintOutline(building: Building, tileSize: number, color: number): Graphics {
+  const { columns, rows, footprintRows } = exteriorShape(building);
   const outline = new Graphics();
-  outline.rect(0, STOREY_ROWS * tileSize, building.width * tileSize, building.depth * tileSize);
+  outline.rect(0, (rows - footprintRows) * tileSize, columns * tileSize, footprintRows * tileSize);
   outline.stroke({ width: 2, color, alpha: 0.95 });
   return outline;
 }
 
-/** Doors in the south wall, in the exterior view's coordinates. */
-function doorMarkers(building: Building, tileSize: number): Graphics {
-  const markers = new Graphics();
-  for (const opening of building.openings)
-    if (opening.kind === 'door' && opening.y === building.depth - 1)
-      markers.rect(opening.x * tileSize, (STOREY_ROWS + opening.y) * tileSize, tileSize, tileSize);
-  markers.stroke({ width: 2, color: DOOR_COLOR, alpha: 0.95 });
-  return markers;
+/** The entrance, in the exterior view's coordinates. */
+function doorMarker(building: Building, tileSize: number): Graphics {
+  const marker = new Graphics();
+  const entrance = entranceOf(building);
+  if (!entrance) return marker;
+  const { rows } = exteriorShape(building);
+  marker.rect(
+    frontColumn(building, entrance.x) * tileSize,
+    (rows - 1) * tileSize,
+    tileSize,
+    tileSize,
+  );
+  marker.stroke({ width: 2, color: DOOR_COLOR, alpha: 0.95 });
+  return marker;
 }
 
 /** A building layer: its buildings drawn back to front, the selected one with its footprint and doors marked. */
@@ -82,12 +89,17 @@ export function buildingLayerView(
     return building ? [{ instance, building }] : [];
   });
   placed
-    .sort((a, b) => a.instance.y + a.building.depth - (b.instance.y + b.building.depth))
+    .sort(
+      (a, b) =>
+        a.instance.y +
+        exteriorShape(a.building).footprintRows -
+        (b.instance.y + exteriorShape(b.building).footprintRows),
+    )
     .forEach(({ instance, building }) => {
       const view = exteriorView(building, instance, variationChain, tileSize);
       if (instance.id === selectedInstanceId) {
         view.addChild(footprintOutline(building, tileSize, SELECTION_COLOR));
-        view.addChild(doorMarkers(building, tileSize));
+        view.addChild(doorMarker(building, tileSize));
       }
       container.addChild(view);
     });

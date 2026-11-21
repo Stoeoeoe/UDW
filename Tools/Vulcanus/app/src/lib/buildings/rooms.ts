@@ -1,4 +1,5 @@
-import type { Building, BuildingRoom } from '../../types/building';
+import type { BuildingRoom } from '../../types/building';
+import type { FloorPlan } from './plan';
 import { isFloor, type Grid } from './grid';
 
 /** A connected floor area. */
@@ -57,7 +58,7 @@ export const isRectangle = (region: Region) =>
 
 /** Which region each room is in (by its `at` cell), and the rooms of each region. */
 export function roomsByRegion(
-  building: Building,
+  building: FloorPlan,
   { regions, regionAt }: Regions,
 ): { regionOf: Map<string, number>; roomsIn: BuildingRoom[][] } {
   const regionOf = new Map<string, number>();

@@ -1,7 +1,7 @@
 import type { Building } from '../../types/building';
 import type { BuildingInstance, Layer, Map as GameMap } from '../../types/schema';
 import { getVariationChain } from '../mapUtils';
-import { STOREY_ROWS } from './layout';
+import { entranceOf, exteriorShape, frontColumn } from './layout';
 
 type Cell = { x: number; y: number };
 
@@ -12,14 +12,10 @@ export function kitVariationChain(map: GameMap, activeVariationId: string | null
     .reverse();
 }
 
-/** The tiles the exterior image covers: the footprint and the 3 rows above it. */
+/** The tiles the exterior image covers: its footprint and the rows of wall and roof above it. */
 export function exteriorBounds(building: Building, instance: BuildingInstance) {
-  return {
-    x: instance.x,
-    y: instance.y - STOREY_ROWS,
-    width: building.width,
-    height: building.depth + STOREY_ROWS,
-  };
+  const { columns, rows, footprintRows } = exteriorShape(building);
+  return { x: instance.x, y: instance.y - (rows - footprintRows), width: columns, height: rows };
 }
 
 /** The topmost placed building whose exterior covers the tile, if any. */
@@ -43,10 +39,10 @@ export function buildingInstanceAt(
 
 /** Where to place a building so the pointer is over its door; the footprint's north-west cell. */
 export function placementOrigin(building: Building, pointer: Cell): Cell {
-  const door = building.openings.find((o) => o.kind === 'door' && o.y === building.depth - 1);
-  return door
-    ? { x: pointer.x - door.x, y: pointer.y - door.y }
-    : { x: pointer.x - Math.floor(building.width / 2), y: pointer.y - (building.depth - 1) };
+  const { columns, footprintRows } = exteriorShape(building);
+  const entrance = entranceOf(building);
+  const door = entrance ? frontColumn(building, entrance.x) : Math.floor(columns / 2);
+  return { x: pointer.x - door, y: pointer.y - (footprintRows - 1) };
 }
 
 /**
@@ -69,16 +65,16 @@ export function placementRefusal(
     : null;
 }
 
-/** The footprint's cells that will collide: all of them except doors in the south wall. */
+/** The footprint's cells that will collide: all of them except the entrance in its bottom row. */
 export function footprintCollisionCells(building: Building, instance: BuildingInstance): Cell[] {
-  const south = building.depth - 1;
-  const doors = new Set(
-    building.openings.filter((o) => o.kind === 'door' && o.y === south).map((o) => o.x),
-  );
+  const { columns, footprintRows } = exteriorShape(building);
+  const entrance = entranceOf(building);
+  const door = entrance ? frontColumn(building, entrance.x) : -1;
   const cells: Cell[] = [];
-  for (let y = 0; y < building.depth; y++)
-    for (let x = 0; x < building.width; x++)
-      if (!(y === south && doors.has(x))) cells.push({ x: instance.x + x, y: instance.y + y });
+  for (let y = 0; y < footprintRows; y++)
+    for (let x = 0; x < columns; x++)
+      if (!(y === footprintRows - 1 && x === door))
+        cells.push({ x: instance.x + x, y: instance.y + y });
   return cells;
 }
 

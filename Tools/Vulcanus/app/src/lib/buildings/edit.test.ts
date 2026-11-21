@@ -8,7 +8,10 @@ import {
   resize,
   wallLine,
 } from './edit';
-import { farmhouse } from './farmhouse.fixture';
+import { farmhouse as farmhouseBuilding, twoStoreyFarmhouse } from './farmhouse.fixture';
+import { floorPlan } from './plan';
+
+const farmhouse = () => floorPlan(farmhouseBuilding(), 0);
 import { validateBuildingPlan } from './validate';
 
 describe('editing a building', () => {
@@ -61,15 +64,22 @@ describe('editing a building', () => {
 
   it('refuses openings where the rules do not allow them, saying why', () => {
     const building = farmhouse();
-    expect(openingRefusal(building, 'door', 2, 3)).toBe('Doors go in a wall.');
-    expect(openingRefusal(building, 'window', 8, 6)).toBe('Not on a corner.');
-    expect(openingRefusal(building, 'window', 6, 6)).toBe('There is already an opening here.');
-    expect(openingRefusal(building, 'window', 0, 3)).toBe('Windows go in the south wall for now.');
-    expect(openingRefusal(building, 'door', 2, 0)).toBe(
+    expect(openingRefusal(building, 'door', 2, 3, true)).toBe('Doors go in a wall.');
+    expect(openingRefusal(building, 'window', 8, 6, true)).toBe('Not on a corner.');
+    expect(openingRefusal(building, 'window', 6, 6, true)).toBe(
+      'There is already an opening here.',
+    );
+    expect(openingRefusal(building, 'window', 0, 3, true)).toBe(
+      'Windows go in the south wall for now.',
+    );
+    expect(openingRefusal(building, 'door', 2, 0, true)).toBe(
       'Only the south wall has a door to the outside.',
     );
-    expect(openingRefusal(building, 'door', 4, 2)).toBeNull();
-    expect(openingRefusal(building, 'window', 3, 6)).toBeNull();
+    expect(openingRefusal(building, 'door', 4, 2, true)).toBeNull();
+    expect(openingRefusal(building, 'window', 3, 6, true)).toBeNull();
+    expect(openingRefusal(building, 'door', 3, 6, false)).toBe(
+      'Only the ground floor has a door to the outside.',
+    );
   });
 
   it('names the first south door the entrance and numbers the rest', () => {
@@ -79,20 +89,30 @@ describe('editing a building', () => {
     expect(addOpening(first, 'window', 2, 6).openings[1].id).toBe('window-1');
   });
 
-  it('resizes, moving south-wall openings along and listing what no longer fits', () => {
-    const { building, removed } = resize(farmhouse(), 6, 8, 'floor_boards');
-    expect(building.openings.map((o) => [o.id, o.x, o.y])).toEqual([
+  it('resizes every floor, moving south-wall openings along and listing what no longer fits', () => {
+    const { building, removed } = resize(farmhouseBuilding(), 6, 8, 'floor_boards');
+    const ground = building.floors[0];
+    expect(ground.openings.map((o) => [o.id, o.x, o.y])).toEqual([
       ['window-1', 2, 7],
       ['inner-door', 4, 4],
     ]);
     expect(removed).toEqual(['door entrance', 'window window-2', 'room bedroom']);
-    expect(building.innerWalls).toEqual([{ x: 4, y: 1, direction: 'south', length: 5 }]);
+    expect(ground.innerWalls).toEqual([{ x: 4, y: 1, direction: 'south', length: 5 }]);
     // The inner wall now stands against the east wall: only the kitchen's area is left.
-    expect(building.rooms.map((room) => room.id)).toEqual(['kitchen']);
+    expect(ground.rooms.map((room) => room.id)).toEqual(['kitchen']);
+
+    expect(resize(twoStoreyFarmhouse(), 4, 7, 'floor_boards').removed).toEqual([
+      'part of the inner wall at (4, 1) on the ground floor',
+      'door entrance on the ground floor',
+      'window window-2 on the ground floor',
+      'door inner-door on the ground floor',
+      'room bedroom on the ground floor',
+      'window window-1 on floor 2',
+    ]);
   });
 
   it('leaves a valid building as it is', () => {
     expect(reconcile(farmhouse(), 'floor_boards')).toEqual(farmhouse());
-    expect(validateBuildingPlan(reconcile(farmhouse(), 'floor_boards'))).toEqual([]);
+    expect(validateBuildingPlan(farmhouseBuilding())).toEqual([]);
   });
 });

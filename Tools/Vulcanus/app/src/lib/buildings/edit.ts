@@ -6,6 +6,7 @@ import type {
 } from '../../types/building';
 import { buildGrid, innerWallCells, isFloor, isWall } from './grid';
 import { findRegions } from './rooms';
+import { floorPlan, withFloor, type FloorPlan } from './plan';
 
 type Cell = { x: number; y: number };
 
@@ -19,7 +20,7 @@ const nextId = (taken: readonly { id: string }[], base: string) => {
  * The straight line of inside cells from `start` towards `end`: along whichever axis the drag moved further, clipped
  * to the inside of the outer walls.
  */
-export function wallLine(building: Building, start: Cell, end: Cell): Cell[] {
+export function wallLine(building: FloorPlan, start: Cell, end: Cell): Cell[] {
   const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
   const from = horizontal ? Math.min(start.x, end.x) : Math.min(start.y, end.y);
   const to = horizontal ? Math.max(start.x, end.x) : Math.max(start.y, end.y);
@@ -47,7 +48,7 @@ const asRun = (
  * Keeps the rest of the plan in step with its walls: openings whose cell is no longer wall go; a room whose cell became
  * wall moves to a neighbouring floor cell; a floor area keeps its first room only; an area without a room gets one.
  */
-export function reconcile(building: Building, defaultFloor: string): Building {
+export function reconcile(building: FloorPlan, defaultFloor: string): FloorPlan {
   const grid = buildGrid(building);
   const openings = building.openings.filter((opening) => isWall(grid, opening.x, opening.y));
   const moved = building.rooms.flatMap((room) => {
@@ -83,7 +84,7 @@ export function reconcile(building: Building, defaultFloor: string): Building {
 }
 
 /** Adds a wall along the cells (consecutive, along one axis). */
-export function addWall(building: Building, cells: Cell[], defaultFloor: string): Building {
+export function addWall(building: FloorPlan, cells: Cell[], defaultFloor: string): FloorPlan {
   if (!cells.length) return building;
   return reconcile(
     { ...building, innerWalls: [...building.innerWalls, asRun(cells)] },
@@ -92,7 +93,7 @@ export function addWall(building: Building, cells: Cell[], defaultFloor: string)
 }
 
 /** Removes inner wall from the cells, splitting the runs they cut. Outer walls stay. */
-export function eraseWall(building: Building, cells: Cell[], defaultFloor: string): Building {
+export function eraseWall(building: FloorPlan, cells: Cell[], defaultFloor: string): FloorPlan {
   const erased = new Set(cells.map(({ x, y }) => `${x},${y}`));
   const innerWalls = building.innerWalls.flatMap((run) => {
     const pieces: Cell[][] = [[]];
@@ -107,10 +108,11 @@ export function eraseWall(building: Building, cells: Cell[], defaultFloor: strin
 
 /** Why an opening of this kind cannot go on the cell, or null if it can. */
 export function openingRefusal(
-  building: Building,
+  building: FloorPlan,
   kind: BuildingOpening['kind'],
   x: number,
   y: number,
+  ground: boolean,
 ): string | null {
   const grid = buildGrid(building);
   const south = building.depth - 1;
@@ -120,18 +122,20 @@ export function openingRefusal(
   if (building.openings.some((opening) => opening.x === x && opening.y === y))
     return 'There is already an opening here.';
   if (kind === 'window' && y !== south) return 'Windows go in the south wall for now.';
+  if (kind === 'door' && outer && !ground)
+    return 'Only the ground floor has a door to the outside.';
   if (kind === 'door' && outer && y !== south)
     return 'Only the south wall has a door to the outside.';
   return null;
 }
 
-/** Adds an opening; the first door in the south wall is the entrance. */
+/** Adds an opening; the ground floor's first door in the south wall is the entrance. */
 export function addOpening(
-  building: Building,
+  building: FloorPlan,
   kind: BuildingOpening['kind'],
   x: number,
   y: number,
-): Building {
+): FloorPlan {
   const entrance =
     kind === 'door' &&
     y === building.depth - 1 &&
@@ -140,16 +144,13 @@ export function addOpening(
   return { ...building, openings: [...building.openings, { id, kind, x, y }] };
 }
 
-/**
- * The building at a new size, and what that removes. Openings in the south wall move with it; inner walls are cut to
- * the new inside; a chimney outside the new roof goes.
- */
-export function resize(
-  building: Building,
+/** One floor at a new size, and what that removes; see {@link resize}. */
+function resizeFloor(
+  building: FloorPlan,
   width: number,
   depth: number,
   defaultFloor: string,
-): { building: Building; removed: string[] } {
+): { building: FloorPlan; removed: string[] } {
   const removed: string[] = [];
   const oldSouth = building.depth - 1;
   const inside = (cell: Cell) =>
@@ -171,16 +172,44 @@ export function resize(
     if (!fits) removed.push(`${opening.kind} ${opening.id}`);
     return fits ? [moved] : [];
   });
-  let chimney = building.chimney;
-  if (chimney && chimney.column > width - 2) {
-    removed.push('the chimney');
-    chimney = undefined;
+  let stairsUp = building.stairsUp;
+  if (stairsUp && !inside(stairsUp)) {
+    removed.push('the stairs');
+    stairsUp = undefined;
   }
   const resized = reconcile(
-    { ...building, width, depth, innerWalls, openings, chimney },
+    { ...building, width, depth, innerWalls, openings, stairsUp },
     defaultFloor,
   );
   for (const room of building.rooms)
     if (!resized.rooms.some((kept) => kept.id === room.id)) removed.push(`room ${room.id}`);
+  return { building: resized, removed };
+}
+
+/**
+ * The building at a new size, and what that removes on any floor. Openings in the south wall move with it; inner walls
+ * are cut to the new inside; stairs and a chimney outside it go.
+ */
+export function resize(
+  building: Building,
+  width: number,
+  depth: number,
+  defaultFloor: string,
+): { building: Building; removed: string[] } {
+  const removed: string[] = [];
+  let resized: Building = { ...building, width, depth };
+  building.floors.forEach((_, index) => {
+    const floor = resizeFloor(floorPlan(building, index), width, depth, defaultFloor);
+    const where =
+      building.floors.length > 1
+        ? ` on ${index === 0 ? 'the ground floor' : `floor ${index + 1}`}`
+        : '';
+    removed.push(...floor.removed.map((entry) => entry + where));
+    resized = withFloor(resized, index, floor.building);
+  });
+  if (resized.chimney && resized.chimney.column > width - 2) {
+    removed.push('the chimney');
+    resized = { ...resized, chimney: undefined };
+  }
   return { building: resized, removed };
 }
