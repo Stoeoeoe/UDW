@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { theme } from '../../../theme';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { useResolvedKitsStore, watchBuildingKits } from '../../../store/useResolvedKitsStore';
+import { useResolvedKitsStore } from '../../../store/useResolvedKitsStore';
+import { watchBuildingKits } from '../../../store/watchBuildingKits';
 import { resolveKit } from '../../../lib/buildings/resolveKit';
 import { KIT_SHEET_HEIGHT, KIT_SHEET_WIDTH } from '../../../lib/buildings/kitLayout';
 import { chooseKitSheet, loadKit } from '../../../lib/buildings/kitSheets';

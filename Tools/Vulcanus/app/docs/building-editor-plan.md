@@ -272,9 +272,12 @@ cannot show (room names, opening markers, invalid cells in red).
   - **Door** [D] / **Window** [N]: click a wall cell; refused cells show why in the ghost preview (e.g. "Windows go in the
     south wall").
   - **Chimney** [C]: click a column (in the plan, the top wall row).
-  - **Room** [R]: click a floor region without a room to create one (name defaults from the next free `room-N`).
-- When walls change, `rooms` are re-paired by `at`; a room whose region vanished is removed, a new region gets a room
-  automatically, and the change is one undo step.
+- There is no room tool: rooms follow the walls (`lib/buildings/edit.ts`, `reconcile`). When walls change, a room whose
+  `at` became wall moves to a neighbouring floor cell, a floor area keeps its first room, an area without a room gets
+  `room-N`, and openings whose wall is gone are removed — all in the same undo step. Rooms are named and given floors
+  in the inspector after selecting them.
+- Problems are shown live (the plan's cells outlined in red, the list in the inspector, the count in the header),
+  from `buildingIssues` in the building slice, which also decides what blocks saving.
 
 ### Preview panel (`PreviewPanel.tsx`)
 

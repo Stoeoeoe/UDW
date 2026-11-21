@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { watchScriptingManifest } from './store/useScriptingManifestStore';
-import { watchBuildingKits } from './store/useResolvedKitsStore';
+import { watchBuildingKits } from './store/watchBuildingKits';
 import { TopBar } from './components/layout/TopBar';
 import { AppShell } from './components/common/AppShell';
 import { LandingScreen } from './components/startup/LandingScreen';

@@ -8,7 +8,9 @@ import { assertUniqueResourceIds } from '../../lib/resourceIds';
 import { cancelPendingSaveUnit, scheduleSaveUnit, useSaveStore } from '../../lib/saveManager';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
-import type { Building } from '../../types/building';
+import type { Building, BuildingKit } from '../../types/building';
+import { planIssues, type PlanIssue } from '../../lib/buildings/validate';
+import { useResolvedKitsStore, type ResolvedKitState } from '../useResolvedKitsStore';
 import { fileSystem } from '../../lib/fileSystem';
 import type { EditorStore } from '../useEditorStore';
 
@@ -36,10 +38,31 @@ export interface BuildingSlice {
   resetBuildings: () => void;
 }
 
-/** What stops a building from being written. The rules of its plan are checked by the building editor. */
-export function validateBuilding(building: Building): string[] {
-  return building.name.trim() ? [] : ['The building needs a name.'];
+/**
+ * What stops a building from being written, with the cells each problem concerns: a name, a kit that exists and can
+ * be read, and the rules of its plan, with the kit's pieces and floors once the kit has been read.
+ */
+export function buildingIssues(
+  building: Building,
+  kits: readonly BuildingKit[],
+  resolved: ResolvedKitState | undefined,
+): PlanIssue[] {
+  const issues: PlanIssue[] = [];
+  if (!building.name.trim()) issues.push({ message: 'The building needs a name.', cells: [] });
+  if (building.kit && !kits.some((kit) => kit.id === building.kit))
+    issues.push({ message: `The kit ${building.kit} does not exist.`, cells: [] });
+  else if (resolved?.status === 'error')
+    issues.push({ message: `The kit cannot be read: ${resolved.error}`, cells: [] });
+  return [
+    ...issues,
+    ...planIssues(building, resolved?.status === 'ready' ? resolved.kit : undefined),
+  ];
 }
+
+export const validateBuilding = (building: Building, kits: readonly BuildingKit[]) =>
+  buildingIssues(building, kits, useResolvedKitsStore.getState().kits[building.kit]).map(
+    (issue) => issue.message,
+  );
 
 const HISTORY_LIMIT = 50;
 // Quick consecutive edits, such as typing a name, are one undo step.
@@ -158,7 +181,7 @@ export const createBuildingSlice: ImmerStateCreator<BuildingSlice> = (set, get) 
       cancelPendingSaveUnit(unit);
       if (!building) return;
       const saves = useSaveStore.getState();
-      const errors = validateBuilding(building);
+      const errors = validateBuilding(building, get().buildingKits);
       if (errors.length) {
         saves.markError(unit, errors.join(' '));
         return;

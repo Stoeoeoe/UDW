@@ -7,7 +7,9 @@ import { EditorResizeHandle } from './EditorWorkspaceShell';
 export const SplitEditorCanvas: React.FC<{
   primary: React.ReactNode;
   preview: React.ReactNode;
-}> = ({ primary, preview }) => {
+  primaryLabel?: string;
+  previewLabel?: string;
+}> = ({ primary, preview, primaryLabel = 'Sequence', previewLabel = 'Map preview' }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(false);
   useEffect(() => {
@@ -20,13 +22,13 @@ export const SplitEditorCanvas: React.FC<{
     <Box ref={ref} h="full" minH={0} minW={0}>
       <PanelGroup key={wide ? 'wide' : 'stacked'} direction={wide ? 'horizontal' : 'vertical'}>
         <Panel defaultSize={wide ? 38 : 45} minSize={25}>
-          <Box as="section" aria-label="Sequence" h="full" minH={0} overflow="auto">
+          <Box as="section" aria-label={primaryLabel} h="full" minH={0} overflow="auto">
             {primary}
           </Box>
         </Panel>
         <EditorResizeHandle direction={wide ? 'horizontal' : 'vertical'} />
         <Panel defaultSize={wide ? 62 : 55} minSize={30}>
-          <Box as="section" aria-label="Map preview" h="full" minH={0} overflow="hidden">
+          <Box as="section" aria-label={previewLabel} h="full" minH={0} overflow="hidden">
             {preview}
           </Box>
         </Panel>
