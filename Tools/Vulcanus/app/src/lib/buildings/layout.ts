@@ -1,4 +1,4 @@
-import type { Building, WindowSize } from '../../types/building';
+import type { Building, BuildingOpening, WindowSize } from '../../types/building';
 import { floorPlan, type FloorPlan } from './plan';
 import { buildGrid, isFloor, isWall, wallNeighbourMask, type Grid } from './grid';
 import { findRegions, roomsByRegion } from './rooms';
@@ -8,13 +8,19 @@ export const STOREY_ROWS = 4;
 /** Rows of a room taken by its back wall's face. */
 export const BACK_WALL_ROWS = 4;
 
-/** The rows of a floor's front (0 at its top) and of a back wall's face (1 below the wall) each window size fills. */
-const FRONT_WINDOW: Record<WindowSize, string[]> = {
-  small: ['', 'window_small'],
-  medium: ['', 'window_medium_top', 'window_medium_bottom'],
-  large: ['window_large_top', 'window_large_middle', 'window_large_bottom'],
+/**
+ * The rows of a floor's front (0 at its top) and of a back wall's face (1 below the wall) each window size fills, and
+ * how many front columns it is wide; a two-column piece has `_l` and `_r` halves.
+ */
+const FRONT_WINDOW: Record<WindowSize, { rows: string[]; columns: 1 | 2 }> = {
+  small: { rows: ['', 'window_small'], columns: 1 },
+  medium: { rows: ['', 'window_medium_top', 'window_medium_bottom'], columns: 2 },
+  large: { rows: ['window_large_top', 'window_large_middle', 'window_large_bottom'], columns: 2 },
 };
-const WINDOW_ORDER: WindowSize[] = ['small', 'medium', 'large'];
+const DOOR_PIECES = ['door_lintel', 'door_upper', 'door_middle', 'door_lower'];
+const SIZE_RANK: Record<WindowSize, number> = { small: 0, medium: 1, large: 2 };
+const halves = (columns: number[]) => (columns.length === 1 ? [''] : ['_l', '_r']);
+type Window = Extract<BuildingOpening, { kind: 'window' }>;
 const BACK_WINDOW: Record<WindowSize, string[]> = {
   small: ['', 'wall_window_small'],
   medium: ['', 'wall_window_medium_top', 'wall_window_medium_bottom'],
@@ -44,6 +50,52 @@ export const roofDepthRows = (depth: number) => Math.min(4, Math.max(2, Math.cei
 export const frontColumn = (building: Building, x: number) => Math.floor(x / building.scale);
 
 export const frontWidth = (building: Building) => Math.ceil(building.width / building.scale);
+
+/**
+ * The front columns a door or window shown at front column `column` covers: itself, or for two columns the next one
+ * too, or the one before where the next would be the corner.
+ */
+export function openingColumns(building: Building, column: number, width: 1 | 2): number[] {
+  if (width === 1) return [column];
+  const columns = frontWidth(building);
+  const left = column + 1 >= columns - 1 && column - 1 >= 1 ? column - 1 : column;
+  return [left, left + 1];
+}
+
+/**
+ * A floor's south windows on the front: the door's columns are taken first (on the ground floor), then the largest
+ * windows; a window that would overlap one already shown is hidden, which validation reports.
+ */
+export function frontWindows(
+  building: Building,
+  floor: number,
+): { shown: { window: Window; span: number[] }[]; hidden: Window[] } {
+  const taken = new Set(floor === 0 ? doorColumns(building) : []);
+  const shown: { window: Window; span: number[] }[] = [];
+  const hidden: Window[] = [];
+  const windows = building.floors[floor].openings
+    .filter((o): o is Window => o.kind === 'window' && o.y === building.depth - 1)
+    .sort((a, b) => SIZE_RANK[b.size] - SIZE_RANK[a.size]);
+  for (const window of windows) {
+    const span = openingColumns(
+      building,
+      frontColumn(building, window.x),
+      FRONT_WINDOW[window.size].columns,
+    );
+    if (span.some((column) => taken.has(column))) hidden.push(window);
+    else {
+      span.forEach((column) => taken.add(column));
+      shown.push({ window, span });
+    }
+  }
+  return { shown, hidden };
+}
+
+/** The front columns of the entrance, two wide; none without an entrance. */
+export const doorColumns = (building: Building) => {
+  const entrance = entranceOf(building);
+  return entrance ? openingColumns(building, frontColumn(building, entrance.x), 2) : [];
+};
 
 /** The ground floor's entrance: its first door in the south wall. */
 export const entranceOf = (building: Building) =>
@@ -141,11 +193,9 @@ export function layoutExterior(building: Building): Placement[] {
     }
   }
 
-  const south = building.depth - 1;
-  const entrance = entranceOf(building);
-  const doorColumn = entrance ? frontColumn(building, entrance.x) : -1;
+  const door = doorColumns(building);
   const floors = building.floors.length;
-  building.floors.forEach((floor, index) => {
+  building.floors.forEach((_, index) => {
     const top = roofRows + (floors - 1 - index) * STOREY_ROWS;
     const rows = [
       index === floors - 1 ? 'wall_top' : 'wall_band',
@@ -155,23 +205,16 @@ export function layoutExterior(building: Building): Placement[] {
     ];
     for (let column = 0; column < columns; column++)
       rows.forEach((kind, i) => place(`${kind}_${side(column, columns)}`, column, top + i));
-    // Doors and windows are drawn over the wall, so its shadows and mouldings run on around them. Two windows in one
-    // front column show as the larger; the door wins over both.
-    const windows = new Map<number, WindowSize>();
-    for (const o of floor.openings)
-      if (o.kind === 'window' && o.y === south) {
-        const column = frontColumn(building, o.x);
-        const shown = windows.get(column);
-        if (!shown || WINDOW_ORDER.indexOf(o.size) > WINDOW_ORDER.indexOf(shown))
-          windows.set(column, o.size);
-      }
-    if (index === 0 && doorColumn >= 0) windows.delete(doorColumn);
-    for (const [column, size] of windows)
-      FRONT_WINDOW[size].forEach((piece, i) => piece && place(piece, column, top + i, true));
-    if (index === 0 && doorColumn >= 0)
-      ['door_lintel', 'door_upper', 'door_middle', 'door_lower'].forEach((piece, i) =>
-        place(piece, doorColumn, top + i, true),
+    // Doors and windows are drawn over the wall, so its shadows and mouldings run on around them.
+    if (index === 0)
+      DOOR_PIECES.forEach((piece, i) =>
+        door.forEach((column, h) => place(`${piece}${halves(door)[h]}`, column, top + i, true)),
       );
+    for (const { window, span } of frontWindows(building, index).shown)
+      FRONT_WINDOW[window.size].rows.forEach((piece, i) => {
+        if (piece)
+          span.forEach((column, h) => place(`${piece}${halves(span)[h]}`, column, top + i, true));
+      });
   });
 
   if (building.chimney) {

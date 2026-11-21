@@ -6,6 +6,7 @@ import { buildGrid, wallNeighbourMask } from './grid';
 import { findRegions, isRectangle, roomsByRegion } from './rooms';
 import {
   exteriorShape,
+  frontWindows,
   layoutExterior,
   layoutFloor,
   layoutInterior,
@@ -69,19 +70,27 @@ describe('exterior', () => {
       repeat('roof_slope', 9),
       repeat('roof_eave', 9),
     ]);
-    // Four rows of wall; the medium windows fill the middle two, the door all four.
-    expect(rows[4]).toEqual(wall('wall_top', 9, { 6: 'door_lintel' }));
+    // Four rows of wall. The door is two columns wide over all four rows, the medium window two columns over the
+    // middle two, the slit one column in the second.
+    expect(rows[4]).toEqual(wall('wall_top', 9, { 6: 'door_lintel_l', 7: 'door_lintel_r' }));
     expect(rows[5]).toEqual(
-      wall('wall_mid', 9, { 2: 'window_medium_top', 6: 'door_upper', 7: 'window_medium_top' }),
+      wall('wall_mid', 9, {
+        2: 'window_medium_top_l',
+        3: 'window_medium_top_r',
+        5: 'window_small',
+        6: 'door_upper_l',
+        7: 'door_upper_r',
+      }),
     );
     expect(rows[6]).toEqual(
       wall('wall_mid', 9, {
-        2: 'window_medium_bottom',
-        6: 'door_middle',
-        7: 'window_medium_bottom',
+        2: 'window_medium_bottom_l',
+        3: 'window_medium_bottom_r',
+        6: 'door_middle_l',
+        7: 'door_middle_r',
       }),
     );
-    expect(rows[7]).toEqual(wall('wall_base', 9, { 6: 'door_lower' }));
+    expect(rows[7]).toEqual(wall('wall_base', 9, { 6: 'door_lower_l', 7: 'door_lower_r' }));
     expect(placements.filter((p) => p.piece.startsWith('chimney'))).toEqual([
       { piece: 'chimney_top', column: 2, row: 0, overlay: true },
       { piece: 'chimney_bottom', column: 2, row: 1, overlay: true },
@@ -89,7 +98,7 @@ describe('exterior', () => {
     // The door is drawn over the wall, so the wall's shadow under the eave runs on behind it.
     expect(placements.filter((p) => p.column === 6 && p.row === 4).map((p) => p.piece)).toEqual([
       'wall_top_m',
-      'door_lintel',
+      'door_lintel_l',
     ]);
   });
 
@@ -100,9 +109,15 @@ describe('exterior', () => {
     expect(rows[5]).toEqual(wall('wall_mid', 9, { 4: 'window_small' }));
     expect(rows[6]).toEqual(repeat('wall_mid', 9));
     expect(rows[7]).toEqual(repeat('wall_mid', 9));
-    expect(rows[8]).toEqual(wall('wall_band', 9, { 6: 'door_lintel' }));
+    expect(rows[8]).toEqual(wall('wall_band', 9, { 6: 'door_lintel_l', 7: 'door_lintel_r' }));
     expect(rows[9]).toEqual(
-      wall('wall_mid', 9, { 2: 'window_medium_top', 6: 'door_upper', 7: 'window_medium_top' }),
+      wall('wall_mid', 9, {
+        2: 'window_medium_top_l',
+        3: 'window_medium_top_r',
+        5: 'window_small',
+        6: 'door_upper_l',
+        7: 'door_upper_r',
+      }),
     );
   });
 
@@ -110,11 +125,13 @@ describe('exterior', () => {
     const building: Building = { ...farmhouseBuilding(), scale: 2 };
     const rows = asRows(layoutExterior(building), 5);
     expect(rows[0]).toEqual(repeat('roof_ridge', 5));
-    // Windows at plan columns 2 and 7 and the door at 6 land in front columns 1, 3 and 3: the door wins.
-    expect(rows[5]).toEqual(wall('wall_mid', 5, { 1: 'window_medium_top', 3: 'door_upper' }));
+    // The door at plan column 6 lands in front column 3 and, two wide, takes 2 and 3 (4 is the corner). The
+    // windows at plan columns 2 and 5 would overlap it, so they are hidden; validation says so.
+    expect(rows[5]).toEqual(wall('wall_mid', 5, { 2: 'door_upper_l', 3: 'door_upper_r' }));
+    expect(frontWindows(building, 0).hidden.map((w) => w.id)).toEqual(['window-1', 'window-2']);
   });
 
-  it('shows each window size over its rows, the larger of two in one column', () => {
+  it('shows each window size over its rows; a window overlapping the door or a larger one is hidden', () => {
     const building = farmhouseBuilding();
     const [ground] = building.floors;
     building.floors = [
@@ -132,13 +149,16 @@ describe('exterior', () => {
     const rows = asRows(layoutExterior({ ...building, scale: 1 }), 9);
     const column = (x: number) => rows.slice(4, 8).map((row) => row[x]);
     expect(column(1)).toEqual(['wall_top_m', 'window_small', 'wall_mid_m', 'wall_base_m']);
-    expect(column(3)).toEqual([
-      'window_large_top',
-      'window_large_middle',
-      'window_large_bottom',
-      'wall_base_m',
-    ]);
-    expect(column(7)).toEqual(column(3));
+    expect([column(3), column(4)]).toEqual(
+      ['l', 'r'].map((h) => [
+        `window_large_top_${h}`,
+        `window_large_middle_${h}`,
+        `window_large_bottom_${h}`,
+        'wall_base_m',
+      ]),
+    );
+    // At plan column 7 a large window would take front columns 6 and 7, the door's; the small one column 7.
+    expect(frontWindows({ ...building, scale: 1 }, 0).hidden.map((w) => w.id)).toEqual(['b', 'a']);
   });
 
   it('draws a front gable as a triangle with the slopes going back beside it', () => {
@@ -167,7 +187,7 @@ describe('exterior', () => {
       ...Array(3).fill('gable_roof_r'),
       'gable_edge_r',
     ]);
-    expect(rows[9]).toEqual(wall('wall_top', 9, { 6: 'door_lintel' }));
+    expect(rows[9]).toEqual(wall('wall_top', 9, { 6: 'door_lintel_l', 7: 'door_lintel_r' }));
   });
 
   it('puts a cross gable over the room behind the entrance, with side gable wings', () => {
@@ -278,9 +298,9 @@ describe('interior', () => {
       'window_cap',
       cap(10),
       cap(11),
-      cap(10),
-      'entrance_mat',
       'window_cap',
+      'entrance_mat',
+      cap(10),
       cap(9),
     ]);
     expect(layout.entrance).toEqual({ x: 6, y: 7 });

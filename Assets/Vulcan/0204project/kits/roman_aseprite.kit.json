@@ -1,0 +1,1 @@
+{ "formatVersion": 1, "id": "base:roman_aseprite", "name": "Roman from Aseprite", "source": "assets/kits/kit_roman_basic.aseprite", "variations": { "winter": "assets/kits/kit_roman_basic_winter.png" } }

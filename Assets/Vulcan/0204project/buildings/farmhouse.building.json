@@ -1,0 +1,91 @@
+{
+  "$schema": "../../../../Schemas/building.schema.json",
+  "formatVersion": 1,
+  "id": "base:farmhouse",
+  "name": "Farmhouse",
+  "kit": "base:roman_basic",
+  "width": 18,
+  "depth": 12,
+  "scale": 2,
+  "floors": [
+    {
+      "innerWalls": [
+        {
+          "x": 9,
+          "y": 1,
+          "direction": "south",
+          "length": 10
+        }
+      ],
+      "rooms": [
+        {
+          "id": "kitchen",
+          "at": {
+            "x": 2,
+            "y": 3
+          },
+          "name": "Kitchen",
+          "floor": "floor_tiles"
+        },
+        {
+          "id": "bedroom",
+          "at": {
+            "x": 12,
+            "y": 3
+          },
+          "name": "Bedroom",
+          "floor": "floor_boards"
+        }
+      ],
+      "openings": [
+        {
+          "id": "entrance",
+          "kind": "door",
+          "x": 13,
+          "y": 11
+        },
+        {
+          "id": "window-1",
+          "kind": "window",
+          "size": "medium",
+          "x": 4,
+          "y": 11
+        },
+        {
+          "id": "window-2",
+          "kind": "window",
+          "size": "medium",
+          "x": 16,
+          "y": 11
+        },
+        {
+          "id": "inner-door",
+          "kind": "door",
+          "x": 9,
+          "y": 8
+        },
+        {
+          "id": "window-3",
+          "kind": "window",
+          "size": "medium",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "id": "window-4",
+          "kind": "window",
+          "size": "large",
+          "x": 13,
+          "y": 0
+        }
+      ]
+    }
+  ],
+  "chimney": {
+    "column": 4
+  },
+  "roof": {
+    "kind": "front-gable"
+  },
+  "folderPath": ""
+}

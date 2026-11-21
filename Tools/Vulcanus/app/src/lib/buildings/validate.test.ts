@@ -86,7 +86,11 @@ describe('building plan validation', () => {
     ]);
     expect(
       check((b) => b.floors[0].openings.push({ ...b.floors[0].openings[1], id: 'window-3' })),
-    ).toEqual(['Openings window-1 and window-3 are on the same cell.']);
+    ).toEqual([
+      'Openings window-1 and window-3 are on the same cell.',
+      'Window window-3 would overlap the entrance or another window on the front; doors and medium and ' +
+        'large windows are two front columns wide. Move it along.',
+    ]);
   });
 
   it('checks a door that leads nowhere, the chimney, unique IDs and the kit', () => {
@@ -145,7 +149,7 @@ describe('building plan validation', () => {
         b.width = 11;
         b.scale = 2;
       }),
-    ).toEqual(['A front gable needs an odd number of front columns; the front is 6 wide.']);
+    ).toContain('A front gable needs an odd number of front columns; the front is 6 wide.');
     // The bedroom behind the entrance reaches the east wall: no wing on that side.
     expect(check((b) => (b.roof.kind = 'cross-gable'))).toEqual([
       'A cross gable needs at least 2 front columns of wing on each side of the room behind the entrance; ' +

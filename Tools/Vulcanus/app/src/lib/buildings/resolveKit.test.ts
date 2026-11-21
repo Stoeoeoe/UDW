@@ -31,7 +31,7 @@ describe('resolving a kit', () => {
     expect([...kit.pieces.get('roof_slope_m')!.variations.keys()]).toEqual(['winter']);
     expect(kit.pieces.get('wall_mid_m')!.variations.size).toBe(0);
     const pixel = kit.pieces
-      .get('door_upper')!
+      .get('door_upper_l')!
       .base.data.slice((5 * KIT_TILE + 5) * 4, (5 * KIT_TILE + 6) * 4);
     expect([...pixel]).toEqual([200, 100, 50, 255]);
   });

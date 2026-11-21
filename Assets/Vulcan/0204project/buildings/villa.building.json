@@ -1,0 +1,203 @@
+{
+  "$schema": "../../../../Schemas/building.schema.json",
+  "formatVersion": 1,
+  "id": "base:villa",
+  "name": "Villa",
+  "kit": "base:roman_basic",
+  "width": 26,
+  "depth": 12,
+  "scale": 2,
+  "floors": [
+    {
+      "innerWalls": [
+        {
+          "x": 8,
+          "y": 1,
+          "direction": "south",
+          "length": 10
+        },
+        {
+          "x": 17,
+          "y": 1,
+          "direction": "south",
+          "length": 10
+        }
+      ],
+      "rooms": [
+        {
+          "id": "triclinium",
+          "at": {
+            "x": 1,
+            "y": 1
+          },
+          "name": "Triclinium",
+          "floor": "floor_tiles"
+        },
+        {
+          "id": "atrium",
+          "at": {
+            "x": 9,
+            "y": 1
+          },
+          "name": "Atrium",
+          "floor": "floor_tiles"
+        },
+        {
+          "id": "kitchen",
+          "at": {
+            "x": 18,
+            "y": 1
+          },
+          "name": "Kitchen",
+          "floor": "floor_boards"
+        }
+      ],
+      "openings": [
+        {
+          "id": "entrance",
+          "kind": "door",
+          "x": 12,
+          "y": 11
+        },
+        {
+          "id": "window-1",
+          "kind": "window",
+          "size": "medium",
+          "x": 3,
+          "y": 11
+        },
+        {
+          "id": "window-2",
+          "kind": "window",
+          "size": "medium",
+          "x": 22,
+          "y": 11
+        },
+        {
+          "id": "door-1",
+          "kind": "door",
+          "x": 8,
+          "y": 8
+        },
+        {
+          "id": "door-2",
+          "kind": "door",
+          "x": 17,
+          "y": 8
+        },
+        {
+          "id": "window-3",
+          "kind": "window",
+          "size": "large",
+          "x": 4,
+          "y": 0
+        },
+        {
+          "id": "window-4",
+          "kind": "window",
+          "size": "large",
+          "x": 12,
+          "y": 0
+        },
+        {
+          "id": "window-5",
+          "kind": "window",
+          "size": "medium",
+          "x": 21,
+          "y": 0
+        }
+      ],
+      "stairsUp": {
+        "x": 10,
+        "y": 9
+      }
+    },
+    {
+      "innerWalls": [
+        {
+          "x": 13,
+          "y": 1,
+          "direction": "south",
+          "length": 10
+        }
+      ],
+      "rooms": [
+        {
+          "id": "bedroom",
+          "at": {
+            "x": 1,
+            "y": 1
+          },
+          "name": "Bedroom",
+          "floor": "floor_boards"
+        },
+        {
+          "id": "study",
+          "at": {
+            "x": 14,
+            "y": 1
+          },
+          "name": "Study",
+          "floor": "floor_boards"
+        }
+      ],
+      "openings": [
+        {
+          "id": "window-1",
+          "kind": "window",
+          "size": "medium",
+          "x": 3,
+          "y": 11
+        },
+        {
+          "id": "window-2",
+          "kind": "window",
+          "size": "medium",
+          "x": 8,
+          "y": 11
+        },
+        {
+          "id": "window-3",
+          "kind": "window",
+          "size": "medium",
+          "x": 18,
+          "y": 11
+        },
+        {
+          "id": "window-4",
+          "kind": "window",
+          "size": "medium",
+          "x": 22,
+          "y": 11
+        },
+        {
+          "id": "door-1",
+          "kind": "door",
+          "x": 13,
+          "y": 8
+        },
+        {
+          "id": "window-5",
+          "kind": "window",
+          "size": "large",
+          "x": 6,
+          "y": 0
+        },
+        {
+          "id": "window-6",
+          "kind": "window",
+          "size": "medium",
+          "x": 19,
+          "y": 0
+        }
+      ]
+    }
+  ],
+  "chimney": {
+    "column": 22
+  },
+  "roof": {
+    "kind": "cross-gable"
+  },
+  "folderPath": ""
+}

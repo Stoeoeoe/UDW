@@ -57,8 +57,10 @@ describe('placing buildings on maps', () => {
       x: 10,
       y: 20,
     });
-    expect(cells).toHaveLength(9 * 4 - 1);
+    // The door is two columns wide: both its cells in the bottom row stay open.
+    expect(cells).toHaveLength(9 * 4 - 2);
     expect(cells).not.toContainEqual({ x: 16, y: 23 });
+    expect(cells).not.toContainEqual({ x: 17, y: 23 });
     expect(cells).toContainEqual({ x: 14, y: 22 });
   });
 });

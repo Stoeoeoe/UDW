@@ -57,16 +57,25 @@ export const KIT_LAYOUT: readonly KitPieceSlot[] = [
   ...row3('wall_top', 3, 'wall'),
   ...row3('wall_mid', 4, 'wall'),
   ...row3('wall_base', 5, 'wall'),
-  slot('door_lintel', 4, 3, 'opening', { overlay: true }),
-  slot('door_upper', 4, 4, 'opening', { overlay: true }),
-  slot('door_middle', 4, 6, 'opening', { overlay: true }),
-  slot('door_lower', 4, 5, 'opening', { overlay: true }),
+  // The entrance and medium and large windows are two front columns wide: a left and a right half.
+  ...(['l', 'r'] as const).flatMap((half, h) =>
+    (
+      [
+        ['door_lintel', 3],
+        ['door_upper', 4],
+        ['door_middle', 6],
+        ['door_lower', 5],
+      ] as const
+    ).map(([name, row]) => slot(`${name}_${half}`, 3 + h, row, 'opening', { overlay: true })),
+  ),
   slot('window_small', 5, 3, 'opening', { overlay: true }),
-  slot('window_medium_top', 5, 4, 'opening', { overlay: true }),
-  slot('window_medium_bottom', 5, 5, 'opening', { overlay: true }),
-  slot('window_large_top', 6, 3, 'opening', { overlay: true }),
-  slot('window_large_middle', 6, 4, 'opening', { overlay: true }),
-  slot('window_large_bottom', 6, 5, 'opening', { overlay: true }),
+  ...(['l', 'r'] as const).flatMap((half, h) => [
+    slot(`window_medium_top_${half}`, 7 + h, 4, 'opening', { overlay: true }),
+    slot(`window_medium_bottom_${half}`, 7 + h, 5, 'opening', { overlay: true }),
+    slot(`window_large_top_${half}`, 9 + h, 3, 'opening', { overlay: true }),
+    slot(`window_large_middle_${half}`, 9 + h, 4, 'opening', { overlay: true }),
+    slot(`window_large_bottom_${half}`, 9 + h, 5, 'opening', { overlay: true }),
+  ]),
   slot('gable_back_l', 7, 0, 'roof'),
   slot('gable_ridge', 8, 0, 'roof'),
   slot('gable_back_r', 9, 0, 'roof'),

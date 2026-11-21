@@ -19,7 +19,7 @@ export const farmhouse = (): Building => ({
       openings: [
         { id: 'entrance', kind: 'door', x: 6, y: 7 },
         { id: 'window-1', kind: 'window', size: 'medium', x: 2, y: 7 },
-        { id: 'window-2', kind: 'window', size: 'medium', x: 7, y: 7 },
+        { id: 'window-2', kind: 'window', size: 'small', x: 5, y: 7 },
         { id: 'inner-door', kind: 'door', x: 4, y: 5 },
       ],
     },

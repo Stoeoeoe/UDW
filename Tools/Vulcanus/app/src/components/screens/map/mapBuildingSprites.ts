@@ -3,7 +3,7 @@ import type { Building } from '../../../types/building';
 import type { BuildingInstance, Layer } from '../../../types/schema';
 import { exteriorCanvas } from '../../../lib/buildings/render';
 import { exteriorBounds } from '../../../lib/buildings/mapPlacement';
-import { entranceOf, exteriorShape, frontColumn } from '../../../lib/buildings/layout';
+import { doorColumns, exteriorShape } from '../../../lib/buildings/layout';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useResolvedKitsStore } from '../../../store/useResolvedKitsStore';
 
@@ -62,15 +62,10 @@ function footprintOutline(building: Building, tileSize: number, color: number): 
 /** The entrance, in the exterior view's coordinates. */
 function doorMarker(building: Building, tileSize: number): Graphics {
   const marker = new Graphics();
-  const entrance = entranceOf(building);
-  if (!entrance) return marker;
+  const door = doorColumns(building);
+  if (!door.length) return marker;
   const { rows } = exteriorShape(building);
-  marker.rect(
-    frontColumn(building, entrance.x) * tileSize,
-    (rows - 1) * tileSize,
-    tileSize,
-    tileSize,
-  );
+  marker.rect(door[0] * tileSize, (rows - 1) * tileSize, door.length * tileSize, tileSize);
   marker.stroke({ width: 2, color: DOOR_COLOR, alpha: 0.95 });
   return marker;
 }

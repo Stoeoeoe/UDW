@@ -3,7 +3,7 @@ import type { ResolvedKit } from './resolveKit';
 import { buildGrid, innerWallCells, isFloor, isWall, type Grid } from './grid';
 import { findRegions, isRectangle, roomsByRegion } from './rooms';
 import { floorName, floorPlan, type FloorPlan } from './plan';
-import { frontWidth, gableSpan } from './layout';
+import { frontWidth, frontWindows, gableSpan } from './layout';
 
 /** Rooms need four rows for the back wall's face and at least two to walk on. */
 export const MIN_ROOM_ROWS = 6;
@@ -172,6 +172,17 @@ export function planIssues(building: Building, kit?: ResolvedKit): PlanIssue[] {
         `${floorName(index + 1)}: the stairs down at (${stairs.x}, ${stairs.y}) are not on a floor cell.`,
         index + 1,
         [stairs],
+      );
+  });
+
+  floors.forEach((_, index) => {
+    const prefix = floors.length > 1 ? `${floorName(index)}: ` : '';
+    for (const window of frontWindows(building, index).hidden)
+      add(
+        `${prefix}Window ${window.id} would overlap ${index === 0 ? 'the entrance or ' : ''}another window on the ` +
+          'front; doors and medium and large windows are two front columns wide. Move it along.',
+        index,
+        [window],
       );
   });
 

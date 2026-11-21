@@ -1,7 +1,7 @@
 import type { Building } from '../../types/building';
 import type { BuildingInstance, Layer, Map as GameMap } from '../../types/schema';
 import { getVariationChain } from '../mapUtils';
-import { entranceOf, exteriorShape, frontColumn } from './layout';
+import { doorColumns, exteriorShape } from './layout';
 
 type Cell = { x: number; y: number };
 
@@ -37,11 +37,10 @@ export function buildingInstanceAt(
   });
 }
 
-/** Where to place a building so the pointer is over its door; the footprint's north-west cell. */
+/** Where to place a building so the pointer is over its door's left half; the footprint's north-west cell. */
 export function placementOrigin(building: Building, pointer: Cell): Cell {
   const { columns, footprintRows } = exteriorShape(building);
-  const entrance = entranceOf(building);
-  const door = entrance ? frontColumn(building, entrance.x) : Math.floor(columns / 2);
+  const door = doorColumns(building)[0] ?? Math.floor(columns / 2);
   return { x: pointer.x - door, y: pointer.y - (footprintRows - 1) };
 }
 
@@ -65,15 +64,14 @@ export function placementRefusal(
     : null;
 }
 
-/** The footprint's cells that will collide: all of them except the entrance in its bottom row. */
+/** The footprint's cells that will collide: all of them except the entrance's two in its bottom row. */
 export function footprintCollisionCells(building: Building, instance: BuildingInstance): Cell[] {
   const { columns, footprintRows } = exteriorShape(building);
-  const entrance = entranceOf(building);
-  const door = entrance ? frontColumn(building, entrance.x) : -1;
+  const door = doorColumns(building);
   const cells: Cell[] = [];
   for (let y = 0; y < footprintRows; y++)
     for (let x = 0; x < columns; x++)
-      if (!(y === footprintRows - 1 && x === door))
+      if (!(y === footprintRows - 1 && door.includes(x)))
         cells.push({ x: instance.x + x, y: instance.y + y });
   return cells;
 }

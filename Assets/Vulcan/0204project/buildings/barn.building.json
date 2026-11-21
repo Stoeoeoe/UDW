@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../../Schemas/building.schema.json",
+  "formatVersion": 1,
+  "id": "base:barn",
+  "name": "Barn",
+  "kit": "base:roman_basic",
+  "width": 16,
+  "depth": 12,
+  "scale": 2,
+  "floors": [
+    {
+      "innerWalls": [],
+      "rooms": [
+        {
+          "id": "room-1",
+          "at": {
+            "x": 1,
+            "y": 1
+          },
+          "name": "Room",
+          "floor": "floor_boards"
+        }
+      ],
+      "openings": [
+        {
+          "id": "entrance",
+          "kind": "door",
+          "x": 8,
+          "y": 11
+        },
+        {
+          "id": "window-1",
+          "kind": "window",
+          "size": "small",
+          "x": 3,
+          "y": 11
+        },
+        {
+          "id": "window-2",
+          "kind": "window",
+          "size": "small",
+          "x": 13,
+          "y": 11
+        },
+        {
+          "id": "window-3",
+          "kind": "window",
+          "size": "medium",
+          "x": 5,
+          "y": 0
+        },
+        {
+          "id": "window-4",
+          "kind": "window",
+          "size": "medium",
+          "x": 11,
+          "y": 0
+        }
+      ]
+    }
+  ],
+  "roof": {
+    "kind": "side-gable"
+  },
+  "folderPath": ""
+}
