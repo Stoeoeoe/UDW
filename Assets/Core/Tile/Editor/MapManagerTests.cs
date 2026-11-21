@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +54,7 @@ namespace Core.Tile.Editor
             // These tests supply a location directly without initializing scene loading.
             _level = Game.Get<LevelManager>();
             _location = Asset<LocationData>();
-            _location.id = "test:farm";
+            _location.SetId("test:farm");
             Game.Location = _location;
             var terrainTypes = new Dictionary<TerrainType, TerrainData>();
             foreach (var type in new[] { TerrainType.Dirt, TerrainType.Grass, TerrainType.Sand, TerrainType.Water })
@@ -148,7 +149,7 @@ namespace Core.Tile.Editor
 
             Assert.That(soil.FarmlandData.IsPlowed, Is.True);
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.SameAs(_plowedTile));
-            Assert.That(Game.State.World.TryGet<FarmlandState>(_location.id, "farmland:0,0", out var saved), Is.True);
+            Assert.That(Game.State.World.TryGet<FarmlandState>(_location.Id, "farmland:0,0", out var saved), Is.True);
             Assert.That(saved.plowed, Is.True);
             Assert.That(character.Stamina.CurrentStamina, Is.EqualTo(100 - tool.StaminaCost));
             Assert.That(executor.IsIdle, Is.True);
@@ -432,8 +433,8 @@ namespace Core.Tile.Editor
             _terrain.SetTile(new Vector3Int(-2, 3), Tile(TerrainType.Dirt, true));
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
             BuildCache();
-            Game.State.World.Set(_location.id, "farmland:-2,3", new FarmlandState { plowed = true, irrigated = true });
-            Game.State.World.Set(_location.id, "farmland:99,99", new FarmlandState { plowed = true });
+            Game.State.World.Set(_location.Id, "farmland:-2,3", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set(_location.Id, "farmland:99,99", new FarmlandState { plowed = true });
             Game.State.World.Set("other:farm", "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
             Call(_map, "RestoreFarmlandState");
             var tile = _map.GetTileDataAtCoordinates(new Vector2Int(-2, 3));
@@ -450,7 +451,7 @@ namespace Core.Tile.Editor
         {
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Grass));
             BuildCache();
-            Game.State.World.Set(_location.id, "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
+            Game.State.World.Set(_location.Id, "farmland:0,0", new FarmlandState { plowed = true, irrigated = true });
             Call(_map, "RestoreFarmlandState");
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData, Is.Null);
             Assert.That(_plowed.GetTile(Vector3Int.zero), Is.Null);
@@ -462,7 +463,7 @@ namespace Core.Tile.Editor
         {
             _terrain.SetTile(Vector3Int.zero, Tile(TerrainType.Dirt, true));
             BuildCache();
-            Game.State.World.Set(_location.id, "farmland:0,0", new FarmlandState { irrigated = true });
+            Game.State.World.Set(_location.Id, "farmland:0,0", new FarmlandState { irrigated = true });
             Call(_map, "RestoreFarmlandState");
             Assert.That(_map.GetTileDataAtCoordinates(Vector2Int.zero).FarmlandData.IsIrrigated, Is.False);
             Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.Null);
@@ -487,7 +488,7 @@ namespace Core.Tile.Editor
             _map.PlowTile(tile);
             _map.IrrigateTile(tile);
             var data = Asset<PlantData>();
-            TestConfiguration.Set(data, "plantId", "test:crop");
+            TestConfiguration.Set(data, "Id", "test:crop");
             var produce = Asset<ProduceItem>();
             Set(produce, "Id", "test:produce");
             Set(data, "_harvestItem", produce);
@@ -496,12 +497,12 @@ namespace Core.Tile.Editor
                 { type = SpriteOrPrefab.SpriteOrPrefabType.Prefab, prefab = _gridRoot });
             Set(data, "growthStages", new List<GrowthStage> { seedStage });
             Assert.That(data.ValidateConfiguration(), Is.Empty);
-            var catalog = Asset<PlantCatalog>();
+            var catalog = Asset<DefinitionCatalog>();
             catalog.Synchronize(new Object[] { data });
             var plants = Game.Get<PlantManager>();
             Set(plants, "_catalog", catalog);
-            var plant = new PlantState(data.plantId);
-            Game.State.World.Set(_location.id, "plant:0,0", plant);
+            var plant = new PlantState(data.Id);
+            Game.State.World.Set(_location.Id, "plant:0,0", plant);
             NewDayEvent.Trigger(1);
             Assert.That(plant.daysPassedSincePlanting, Is.EqualTo(1));
             Assert.That(plant.consecutiveDaysWithoutWater, Is.Zero);
@@ -525,14 +526,14 @@ namespace Core.Tile.Editor
             _map.IrrigateTile(tile);
             _map.OnEvent(new FarmlandDriedEvent { LocationId = "other:farm", ObjectId = "farmland:0,0" });
             Assert.That(tile.FarmlandData.IsIrrigated, Is.True);
-            _map.OnEvent(new FarmlandDriedEvent { LocationId = _location.id, ObjectId = "farmland:0,0" });
+            _map.OnEvent(new FarmlandDriedEvent { LocationId = _location.Id, ObjectId = "farmland:0,0" });
             Assert.That(tile.FarmlandData.IsIrrigated, Is.True);
             Assert.That(_irrigated.GetTile(Vector3Int.zero), Is.SameAs(_irrigatedTile));
         }
 
         private void AssertLand(bool plowed, bool irrigated)
         {
-            Assert.That(Game.State.World.TryGet(_location.id, "farmland:-2,3", out FarmlandState state), Is.True);
+            Assert.That(Game.State.World.TryGet(_location.Id, "farmland:-2,3", out FarmlandState state), Is.True);
             Assert.That(state.plowed, Is.EqualTo(plowed));
             Assert.That(state.irrigated, Is.EqualTo(irrigated));
         }

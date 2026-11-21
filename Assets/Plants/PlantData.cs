@@ -12,10 +12,9 @@ namespace Plants
 {
     /// <summary>Authored growth stages, seasonal rules and harvest settings; validated before gameplay and treated as immutable.</summary>
     [CreateAssetMenu(fileName = "Plant Data", menuName = "Game/Items/Plants/Plant Data")]
-    public class PlantData : ValidatedScriptableObject<PlantDataValidator>
+    [Core.Catalogs.DefinitionResource(IdFormat = Core.Catalogs.DefinitionIdFormat.Any)]
+    public class PlantData : Core.Catalogs.DefinitionScriptableObject<PlantDataValidator>
     {
-        [SerializeField]
-        private string _plantId;
 
         [SerializeField]
         private string _label;
@@ -64,8 +63,6 @@ namespace Plants
         [Tooltip("Spawned at the crop position when clearing a wilted crop. The standalone prefab must autoplay and handle its own cleanup.")]
         [SerializeField]
         private MMF_Player _wiltedFeedbackPrefab;
-
-        public string plantId => _plantId;
         public string label => _label;
         public string description => _description;
         public HarvestMethod HarvestMethod => _harvestMethod;

@@ -7,9 +7,10 @@ namespace Core.Inventory
     /// Base ScriptableObject for all game items.
     /// Subclass to add game-specific data (tools, seeds, equipment, etc.).
     /// </summary>
-    public abstract class ItemDefinition : ValidatedScriptableObject<ItemDefinitionValidator>
+    [Core.Catalogs.DefinitionResource(IdFormat = Core.Catalogs.DefinitionIdFormat.Any)]
+    [Core.Scripting.LuaResource("item", DescriptionMember = nameof(ItemDefinition.Name))]
+    public abstract class ItemDefinition : Core.Catalogs.DefinitionScriptableObject
     {
-        [field: SerializeField, Validation.Id("Assign a stable, nonblank item ID.")] public string Id { get; private set; }
         [field: SerializeField] public string Name { get; private set; }
         [field: SerializeField] public string Category { get; private set; }
         [field: SerializeField] public Sprite Icon { get; private set; }

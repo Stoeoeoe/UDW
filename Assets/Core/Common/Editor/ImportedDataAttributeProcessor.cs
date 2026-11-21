@@ -10,7 +10,8 @@ namespace Core.Common.Editor
     public sealed class ImportedDataAttributeProcessor : OdinAttributeProcessor<object>
     {
         public override bool CanProcessChildMemberAttributes(InspectorProperty parentProperty, MemberInfo member) =>
-            member.DeclaringType.IsDefined(typeof(ImportedDataAttribute), false);
+            member.DeclaringType.IsDefined(typeof(ImportedDataAttribute), false) ||
+            parentProperty.ValueEntry.TypeOfValue.IsDefined(typeof(ImportedDataAttribute), false);
 
         public override void ProcessChildMemberAttributes(InspectorProperty parentProperty, MemberInfo member, List<Attribute> attributes) =>
             attributes.Add(new ReadOnlyAttribute());

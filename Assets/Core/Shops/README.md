@@ -2,7 +2,7 @@
 
 A shop is a static definition authored in Vulcanus (`*.shop.json`, in the project's `shops` folder). It has a namespaced ID (for example `base:market_seeds`), a display name, whether it buys goods, and a fixed list of offerings. Each offering is an item ID and a price. Everything is always in stock at its fixed price.
 
-The importer turns each file into a `Shop` asset. `ShopCatalog` registers them by ID, and its validation fails the refresh when an offering names an item that does not exist. Mods add shops by adding `.shop.json` files.
+The importer turns each file into a `Shop` asset. The shared `DefinitionCatalog` indexes them by ID, and validation fails the refresh when an offering names an item that does not exist. Mods add shops by adding `.shop.json` files.
 
 `ShopService` resolves shops and runs trades:
 

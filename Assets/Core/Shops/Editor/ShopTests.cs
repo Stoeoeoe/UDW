@@ -1,3 +1,4 @@
+using Core.Shops;
 using System.Linq;
 using Character;
 using Core.Common.Editor;
@@ -29,9 +30,9 @@ namespace Core.Shops.Editor
             _purchases = _sales = 0;
             _seed = Item("test:seed", sellPrice: 0);
             _bean = Item("test:bean", sellPrice: 4);
-            Game.Catalog<ItemCatalog>(_seed, _bean);
+            Game.Catalog<ItemDefinition>(_seed, _bean);
             _shop = Shop(buysGoods: true, "{ itemId: 'test:seed', price: 15 }, { itemId: 'test:bean', price: 9 }");
-            Game.Catalog<ShopCatalog>(_shop);
+            Game.Catalog<Shop>(_shop);
             _shops = Game.Get<ShopService>();
             Game.State.Player.Inventory.Slots = new InventorySlotState[2];
             _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _seed.Id ? _seed : id == _bean.Id ? _bean : null);

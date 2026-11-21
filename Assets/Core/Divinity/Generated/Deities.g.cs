@@ -6,5 +6,6 @@ namespace Core.Divinity
     public static class Deities
     {
         public const string Mars = "mars";
+        public const string Rabatonius = "rabatonius";
     }
 }

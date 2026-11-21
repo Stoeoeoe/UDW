@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,8 +62,7 @@ namespace Core.Quests
             }
         }
 
-        private readonly QuestCatalog _quests;
-        private readonly ItemCatalog _items;
+        private readonly DefinitionCatalog _catalog;
         private readonly GameState _gameState;
         private readonly LuaRuntime _lua;
         private readonly CharacterManager _characters;
@@ -71,10 +71,9 @@ namespace Core.Quests
         private bool _checkPending;
         private readonly List<Moment> _moments = new();
 
-        public QuestService(QuestCatalog quests, ItemCatalog items, GameState gameState, LuaRuntime lua, CharacterManager characters)
+        public QuestService(DefinitionCatalog catalog, GameState gameState, LuaRuntime lua, CharacterManager characters)
         {
-            _quests = quests;
-            _items = items;
+            _catalog = catalog;
             _gameState = gameState;
             _lua = lua;
             _characters = characters;
@@ -101,7 +100,7 @@ namespace Core.Quests
         }
 
         public QuestDefinition Require(string questId) =>
-            _quests.Get(questId) ?? throw new InvalidOperationException($"Unknown or disabled quest '{questId}'.");
+            _catalog.Get<QuestDefinition>(questId) ?? throw new InvalidOperationException($"Unknown or disabled quest '{questId}'.");
 
         /// <summary>The quest's progress; null if it has not been started.</summary>
         public QuestProgress Find(string questId)
@@ -252,9 +251,9 @@ namespace Core.Quests
 
         public void OnLocationEnter(LocationData location)
         {
-            _mapId = location.id;
+            _mapId = location.Id;
             RequestCheck();
-            _moments.Add(new Moment(QuestStartKind.LocationChanged, map: location.id));
+            _moments.Add(new Moment(QuestStartKind.LocationChanged, map: location.Id));
         }
 
         public void OnLocationLeave(LocationData location) => _mapId = null;
@@ -266,7 +265,7 @@ namespace Core.Quests
         {
             var moments = _moments.ToArray();
             _moments.Clear();
-            foreach (var quest in _quests.EnabledDefinitions)
+            foreach (var quest in _catalog.All<QuestDefinition>())
                 if (_gameState.Quests.Find(quest.Id) == null && quest.Start.When.Any(when => moments.Any(moment => Matches(when, moment))) &&
                     (string.IsNullOrWhiteSpace(quest.Start.Condition) || Conditions.EvaluateCondition(quest.Start.Condition)))
                     Start(quest.Id);
@@ -313,7 +312,7 @@ namespace Core.Quests
         private IEnumerable<string> ActiveQuestIds() =>
             _gameState.Quests.All.Select(pair => pair.Key).ToArray().Where(questId => _gameState.Quests.Find(questId).Status == QuestStatus.Active);
 
-        private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _items.Find(objective.Item) ??
+        private ItemDefinition RequireItem(QuestDefinition quest, QuestObjective objective) => _catalog.Get<ItemDefinition>(objective.Item) ??
             throw new InvalidOperationException($"Quest '{quest.Id}' needs the unknown item '{objective.Item}'.");
 
         private (QuestDefinition, QuestProgress, QuestStep) CurrentStep(string questId)

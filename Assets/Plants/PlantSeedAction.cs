@@ -31,7 +31,7 @@ namespace Plants
                 throw new InvalidOperationException("Planting requires an available Seed animation.");
             _playingSeedAnimation = true;
             var character = snapshot.Character as MainCharacter;
-            _plantManager.TrySowCarriedSeed(_levelManager.CurrentLocationData.id,
+            _plantManager.TrySowCarriedSeed(_levelManager.CurrentLocationData.Id,
                 snapshot.CurrentTileDataUnderPointer, character!.MainInventory, character.CurrentSelectedSlotIndex);
             return Completed();
         }

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace Core.Inventory
     /// <summary>Unity initialization, registration, save binding and inventory notifications.</summary>
     public class SlotInventory : MonoBehaviour
     {
-        [Inject] private ItemCatalog _itemCatalog;
+        [Inject] private DefinitionCatalog _itemCatalog;
 
         [SerializeField] string _inventoryName;
         [SerializeField] int _numberOfSlots = 15;
@@ -48,7 +49,7 @@ namespace Core.Inventory
         }
         public void EnsureInitialized()
         {
-            if (!IsInitialized) Initialize(new InventoryState(), _itemCatalog.Find);
+            if (!IsInitialized) Initialize(new InventoryState(), _itemCatalog.Get<ItemDefinition>);
         }
         private void OnDestroy()
         {
@@ -56,7 +57,7 @@ namespace Core.Inventory
         }
         public void Bind(InventoryState state, Func<string, ItemDefinition> resolve = null)
         {
-            Initialize(state, resolve ?? _itemCatalog.Find);
+            Initialize(state, resolve ?? _itemCatalog.Get<ItemDefinition>);
             InventoryChangedEvent.Trigger(this);
         }
         public bool ApplyStartingLoadout(IEnumerable<ItemDefinition> items)

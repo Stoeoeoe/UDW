@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.IO;
 using System.Linq;
@@ -29,11 +30,11 @@ namespace Core.Tile.Editor.Vulcanus
                 if (path.StartsWith("Assets/", StringComparison.Ordinal) && path.EndsWith(Extension, StringComparison.OrdinalIgnoreCase) &&
                     !AssetDatabase.LoadAssetAtPath<VulcanusDialogueAsset>(path))
                     throw new InvalidOperationException($"{path}: requires a successful dialogue import before play/build.");
-            var catalog = Resources.Load<DialogueCatalog>(DialogueCatalog.ResourceName);
-            foreach (var dialogue in catalog.EnabledDefinitions)
+            var catalog = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName);
+            foreach (var dialogue in catalog.All<VulcanusDialogueAsset>())
             foreach (var jump in dialogue.Nodes.OfType<VulcanusDialogueJumpNode>().Where(jump => !string.IsNullOrEmpty(jump.TargetDialogueId)))
             {
-                var target = catalog.Get(jump.TargetDialogueId)
+                var target = catalog.Get<VulcanusDialogueAsset>(jump.TargetDialogueId)
                     ?? throw new InvalidOperationException($"Dialogue '{dialogue.Id}', jump '{jump.Id}' requires enabled dialogue '{jump.TargetDialogueId}'.");
                 if (!target.TryGetNode(jump.TargetNodeId, out _))
                     throw new InvalidOperationException($"Dialogue '{dialogue.Id}', jump '{jump.Id}' references missing node '{jump.TargetNodeId}' in '{jump.TargetDialogueId}'.");

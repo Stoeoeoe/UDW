@@ -35,7 +35,7 @@ namespace Core.Location.Editor
             yield return new EnterPlayMode();
             yield return WaitUntilReady();
             var players = LiveGame.Get<PlayerStateManager>();
-            SessionState.SetString(HomeKey, players.StartingHomeLocation.id);
+            SessionState.SetString(HomeKey, players.StartingHomeLocation.Id);
             SessionState.SetString(HomeSceneKey, players.StartingHomeLocation.ScenePath);
             SessionState.SetString(BedKey, players.StartingBedId);
             SessionState.SetInt(DayKey, LiveGame.Get<ClockSettings>().startingDay);
@@ -53,7 +53,7 @@ namespace Core.Location.Editor
             var game = LiveGame.Get<GameStateManager>();
             SessionState.SetString(SlotKey, game.CurrentSlot ?? "");
             Assert.That(game.CurrentSlot, Is.Not.Null);
-            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.id, Is.EqualTo(homeId), "A new game starts at the authored home.");
+            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.Id, Is.EqualTo(homeId), "A new game starts at the authored home.");
             var bed = UnityEngine.Object.FindObjectsByType<Bed>(FindObjectsSortMode.None).Single(b => b.PersistentId == bedId);
             // The bed's pivot is a corner of its sprite, so the player is measured from the middle of the bed.
             Assert.That(Vector2.Distance(LiveGame.Player.transform.position, bed.GetComponent<Collider2D>().bounds.center), Is.LessThan(3.5f));

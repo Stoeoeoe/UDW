@@ -9,6 +9,7 @@ namespace Character.Editor
     /// <summary>Characters reference typewriter sounds authored elsewhere; catalog refresh checks that each one exists.</summary>
     internal static class CharacterCatalogValidation
     {
+        [Core.Catalogs.Editor.DefinitionValidation(typeof(CharacterDefinition))]
         public static void Validate(IEnumerable<CharacterDefinition> characters)
         {
             var soundIds = CatalogAssetDiscovery.Find("Assets", typeof(TypewriterSound)).Cast<TypewriterSound>().Select(sound => sound.Id).ToHashSet();

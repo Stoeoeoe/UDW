@@ -59,7 +59,7 @@ namespace Core
         public void InitializeHome()
         {
             if (_gameState.Player.Home != null) return;
-            _gameState.Player.Home = new PlayerHomeState(StartingHomeLocation.id, StartingBedId);
+            _gameState.Player.Home = new PlayerHomeState(StartingHomeLocation.Id, StartingBedId);
         }
 
     }

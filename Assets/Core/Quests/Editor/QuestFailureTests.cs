@@ -1,3 +1,4 @@
+using Core.Quests;
 using Core.Common.Editor;
 using Core.Tile.Editor.Vulcanus;
 using Core.TimeAndWeather;
@@ -13,7 +14,7 @@ namespace Core.Quests.Editor
         /// <summary>Starts a quest on day 1 at 10:00 whose only step has the given deadline and fail condition.</summary>
         private void Quest(string stepRules)
         {
-            Game.Catalog<QuestCatalog>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
+            Game.Catalog<QuestDefinition>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
                 "{ id: 'test:quest', onFail: \"GameState.Story.Set('test:failed', true)\", steps: [{ id: 'first', " + stepRules +
                 ", objectives: [{ id: 'never', kind: 'condition', condition: 'false' }] }] }"));
             Game.CreatePlayer();

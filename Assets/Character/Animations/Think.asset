@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88b57b01b31b1a548bdf831500d553e8, type: 3}
   m_Name: Think
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.CharacterAnimation
-  animationId: base:think
+  <Id>k__BackingField: base:think
   clip: {fileID: 0}
   memaoAction: Think

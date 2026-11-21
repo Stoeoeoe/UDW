@@ -18,11 +18,11 @@ namespace Interaction.Tools
             snapshot.SceneReady && GetAffectedTiles(snapshot).Count > 0;
 
         public override bool CanBeUsedOnTile(TileData tile) => tile != null &&
-            _plantManager.CanAdvanceGrowthStage(_levelManager.CurrentLocationData.id, tile.Coordinates);
+            _plantManager.CanAdvanceGrowthStage(_levelManager.CurrentLocationData.Id, tile.Coordinates);
 
         public override async Awaitable OnExecute(PlayerInteractionContextSnapshot snapshot, CancellationToken cancellation)
         {
-            var locationId = _levelManager.CurrentLocationData.id;
+            var locationId = _levelManager.CurrentLocationData.Id;
             await ForEachAffectedTile(snapshot, cancellation,
                 tile => _plantManager.TryAdvanceGrowthStage(locationId, tile.Coordinates), 0f);
         }

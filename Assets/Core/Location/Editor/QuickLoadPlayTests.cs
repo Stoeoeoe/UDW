@@ -1,3 +1,5 @@
+using Core.Location;
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.IO;
@@ -36,11 +38,11 @@ namespace Core.Location.Editor
 
             var level = LiveGame.Get<LevelManager>();
             var start = level.CurrentLocationData;
-            var saveLocation = LiveGame.Get<LocationCatalog>().EnabledDefinitions
-                .First(location => location.id != start.id &&
+            var saveLocation = LiveGame.Get<DefinitionCatalog>().All<LocationData>()
+                .First(location => location.Id != start.Id &&
                                    location.ScenePath.StartsWith("Assets/Scenes/Maps/", StringComparison.Ordinal));
             Assert.That(level.LoadLocation(saveLocation, null, Vector2.down), Is.True);
-            yield return WaitUntilFree(() => level.CurrentLocationData.id == saveLocation.id);
+            yield return WaitUntilFree(() => level.CurrentLocationData.Id == saveLocation.Id);
 
             // Save here, then change the world and the player.
             var player = LiveGame.Player;
@@ -62,7 +64,7 @@ namespace Core.Location.Editor
             // Different location: the saved map replaces the one that is open.
             var replaced = LiveGame.Player;
             Assert.That(level.LoadLocation(start, null, Vector2.down), Is.True);
-            yield return WaitUntilFree(() => level.CurrentLocationData.id == start.id);
+            yield return WaitUntilFree(() => level.CurrentLocationData.Id == start.Id);
             replaced = LiveGame.Player;
             game.Story.Set("test:marker", "after");
             Assert.That(game.QuickLoad(), Is.True);
@@ -73,7 +75,7 @@ namespace Core.Location.Editor
 
         private static void AssertRestored(GameStateManager game, LocationData location, Vector2 position)
         {
-            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.id, Is.EqualTo(location.id));
+            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.Id, Is.EqualTo(location.Id));
             Assert.That(game.Story.Get<string>("test:marker"), Is.EqualTo("before"));
             Assert.That(Vector2.Distance(LiveGame.Player.transform.position, position), Is.LessThan(0.05f));
             Assert.That(LiveGame.Player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));

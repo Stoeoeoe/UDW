@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Linq;
 using Character;
@@ -33,7 +34,7 @@ namespace Core.Items.Editor
             Game.State.Time.dayOfSeason = 1;
             Game.State.Time.hour = 6;
             _location = Game.Asset<LocationData>();
-            _location.id = "test:forage";
+            _location.SetId("test:forage");
             Game.Location = _location;
             _spawner = Game.Get<WorldObjectSpawner>();
             _spawner.EnterLocation(_location, Array.Empty<AuthoredSpawnPlacement>());
@@ -136,11 +137,11 @@ namespace Core.Items.Editor
             save.time.daysSinceStart = 3;
             save.time.dayOfSeason = 3;
             save.time.hour = 6;
-            save.world.Set(_location.id, "spot", original);
-            save.Validate(Game.Get<CharacterCatalog>(), Game.Get<ItemCatalog>());
+            save.world.Set(_location.Id, "spot", original);
+            save.Validate(Game.Get<DefinitionCatalog>());
             var bytes = SerializationUtility.SerializeValue(save, DataFormat.Binary);
             var restored = SerializationUtility.DeserializeValue<GameSaveData>(bytes, DataFormat.Binary);
-            Assert.That(restored.world.TryGet(_location.id, "spot", out ForagingSpotState state), Is.True);
+            Assert.That(restored.world.TryGet(_location.Id, "spot", out ForagingSpotState state), Is.True);
             Assert.That(state.lastProcessedDay, Is.EqualTo(3));
             Assert.That(state.forageId, Is.EqualTo(original.forageId));
             Assert.That(state.prefabId, Is.EqualTo(original.prefabId));
@@ -158,7 +159,7 @@ namespace Core.Items.Editor
             Set("dailySpawnChance", 0f);
             _spot.Refresh(deadline);
             Assert.That(spotState.forageId, Is.Null);
-            Assert.That(Game.State.World.TryGet(_location.id, oldId, out SpawnedObjectState _), Is.False);
+            Assert.That(Game.State.World.TryGet(_location.Id, oldId, out SpawnedObjectState _), Is.False);
             Assert.That(_spawner.SpawnedObjects.Count, Is.EqualTo(1));
             Set("dailySpawnChance", 1f);
             _spot.Refresh(deadline);
@@ -195,7 +196,7 @@ namespace Core.Items.Editor
             pickup = (ForagePickup)_spawner.SpawnedObjects.Single(s => s.PersistentId == id);
             Assert.That(((ForagePickupState)pickup.State).expiresOnDay, Is.EqualTo(deadline));
             GameTestFixture.Invoke(pickup, "OnEnable");
-            Assert.That(Game.State.World.TryGet(_location.id, id, out SpawnedObjectState _), Is.False);
+            Assert.That(Game.State.World.TryGet(_location.Id, id, out SpawnedObjectState _), Is.False);
         }
 
         [Test]

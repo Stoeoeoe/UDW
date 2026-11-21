@@ -1,3 +1,5 @@
+using Interaction.Dialog;
+using Core.Catalogs;
 using System;
 using Character;
 using Core.Tile.Editor.Vulcanus;
@@ -10,8 +12,7 @@ namespace Interaction.Dialog.Editor
 {
     public sealed class TypewriterSoundResolverTests
     {
-        private CharacterCatalog _characters;
-        private TypewriterSoundCatalog _sounds;
+        private DefinitionCatalog _catalog;
         private TypewriterSound _fallback, _calm, _harsh;
         private TypewriterSoundResolver _resolver;
 
@@ -24,23 +25,23 @@ namespace Interaction.Dialog.Editor
             var fabia = VulcanusJson.Populate(ScriptableObject.CreateInstance<CharacterDefinition>(),
                 "{ id: 'test:fabia', name: 'Fabia', typewriterSound: 'test:calm', emotionTypewriterSounds: { 'test:angry': 'test:harsh' } }");
             var mute = VulcanusJson.Populate(ScriptableObject.CreateInstance<CharacterDefinition>(), "{ id: 'test:mute', name: 'Mute' }");
-            _characters = ScriptableObject.CreateInstance<CharacterCatalog>();
-            _characters.Synchronize(new Object[] { fabia, mute });
-            _sounds = ScriptableObject.CreateInstance<TypewriterSoundCatalog>();
-            _sounds.Synchronize(new Object[] { _calm, _harsh });
-            _resolver = new TypewriterSoundResolver(_characters, _sounds);
+            _catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
+            _catalog.Synchronize(new Object[] { fabia, mute, _calm, _harsh });
+            _resolver = new TypewriterSoundResolver(_catalog);
         }
 
         [TearDown]
         public void TearDown()
         {
-            foreach (var each in new Object[] { _fallback, _calm, _harsh, _sounds, _characters }) Object.DestroyImmediate(each);
+            foreach (var entry in _catalog.Entries) Object.DestroyImmediate(entry.Definition);
+            Object.DestroyImmediate(_fallback);
+            Object.DestroyImmediate(_catalog);
         }
 
         private static TypewriterSound Sound(string id)
         {
             var sound = ScriptableObject.CreateInstance<TypewriterSound>();
-            TestConfiguration.Set(sound, "_soundId", id);
+            TestConfiguration.Set(sound, "Id", id);
             return sound;
         }
 
@@ -63,7 +64,7 @@ namespace Interaction.Dialog.Editor
         [Test]
         public void UnregisteredSoundNamedByACharacterFailsClearly()
         {
-            _sounds.Synchronize(new Object[] { _calm });
+            _catalog.SetEnabled(_harsh, false);
             Assert.Throws<InvalidOperationException>(() => _resolver.ResolveTypewriterSound("test:fabia", "test:angry", _fallback));
         }
     }

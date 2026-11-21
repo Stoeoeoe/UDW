@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -178,7 +179,7 @@ namespace Core.Tile.Editor.Vulcanus
             var definition = Parse(Source("test:intro"));
             try
             {
-                Assert.That(definition.CutsceneId, Is.EqualTo("test:intro"));
+                Assert.That(definition.Id, Is.EqualTo("test:intro"));
                 Assert.That(definition.MapId, Is.EqualTo("map-1"));
                 Assert.That(definition.Lua, Is.EqualTo("Dialogue.Play(\"base:greeting\");\n"));
                 Assert.That(definition.Steps.Count, Is.EqualTo(1));
@@ -495,25 +496,25 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var path = _folder + "/intro.runtime.cutscene.json";
             var secondPath = _folder + "/second.runtime.cutscene.json";
-            var catalog = Resources.Load<CutsceneCatalog>(CutsceneCatalog.ResourceName);
+            var catalog = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName);
             Assert.That(catalog, Is.Not.Null);
             var source = Source("test:intro");
             Write(path, source);
-            yield return WaitFor(() => catalog.Get("test:intro"));
-            var definition = catalog.Get("test:intro");
+            yield return WaitFor(() => catalog.Get<CutsceneDefinition>("test:intro"));
+            var definition = catalog.Get<CutsceneDefinition>("test:intro");
             var guid = AssetDatabase.AssetPathToGUID(path);
             catalog.SetEnabled(definition, false);
 
             source["sequence"][0]["arguments"]["dialogue"] = "base:updated";
             Write(path, source);
             Write(secondPath, Source("test:second"));
-            yield return WaitFor(() => catalog.Get("test:second"));
+            yield return WaitFor(() => catalog.Get<CutsceneDefinition>("test:second"));
             Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(guid));
             Assert.That(AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(path).Lua, Does.Contain("base:updated"));
             Assert.That(AssetDatabase.LoadAssetAtPath<CutsceneDefinition>(path).Steps[0].Arguments[0].Value, Is.EqualTo("base:updated"));
-            Assert.That(catalog.Get("test:intro"), Is.Null, "Discovery must retain the disabled selection.");
+            Assert.That(catalog.Get<CutsceneDefinition>("test:intro"), Is.Null, "Discovery must retain the disabled selection.");
             AssetDatabase.DeleteAsset(secondPath);
-            yield return WaitFor(() => !catalog.Get("test:second"));
+            yield return WaitFor(() => !catalog.Get<CutsceneDefinition>("test:second"));
         }
 
         [Test]

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Core.Inventory;
 using VContainer;
@@ -12,7 +13,7 @@ namespace Core.Scripting
     public sealed class InventoryLuaApi
     {
         [Inject] private CharacterManager _characters;
-        [Inject] private ItemCatalog _items;
+        [Inject] private DefinitionCatalog _items;
 
         private SlotInventory Bag => _characters.MainCharacter.MainInventory;
 
@@ -29,7 +30,7 @@ namespace Core.Scripting
         public bool Take([LuaResource("item")] string itemId, double count) => Bag.TryRemove(Require(itemId), Quantity(count));
 
         private ItemDefinition Require(string itemId) =>
-            _items.Find(itemId) ?? throw new InvalidOperationException($"Unknown or disabled item '{itemId}'.");
+            _items.Get<ItemDefinition>(itemId) ?? throw new InvalidOperationException($"Unknown or disabled item '{itemId}'.");
 
         private static int Quantity(double count) =>
             double.IsFinite(count) && count == Math.Truncate(count) && count >= 1 && count <= int.MaxValue

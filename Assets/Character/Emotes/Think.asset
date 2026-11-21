@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 051f4b7d258f4b94982057c8ff13b6f9, type: 3}
   m_Name: Think
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.EmoteDefinition
-  emoteId: base:think
+  <Id>k__BackingField: base:think
   duration: 1
   playbackSpeed: 0.5
   animation: {fileID: 11400000, guid: 36e1f817ee1b03d488c2df48a9d7cea7, type: 2}

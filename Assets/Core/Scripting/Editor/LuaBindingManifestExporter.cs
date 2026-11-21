@@ -48,23 +48,23 @@ namespace Core.Scripting.Editor
 
         internal static void PopulateResources(LuaBindingManifest manifest)
         {
-            var catalogs = TypeCache.GetTypesWithAttribute<LuaResourceAttribute>()
-                .Select(DefaultCatalogAssets.Load).ToArray();
-            foreach (var catalog in catalogs) CatalogDiscovery.Refresh(catalog);
-            PopulateResources(manifest, catalogs);
+            var catalog = DefaultCatalogAssets.Load();
+            CatalogDiscovery.Refresh(catalog);
+            PopulateResources(manifest, catalog, DefinitionCatalog.DefinitionTypes
+                .Where(type => type.IsDefined(typeof(LuaResourceAttribute), false)));
         }
 
-        internal static void PopulateResources(LuaBindingManifest manifest, IEnumerable<DefinitionCatalog> catalogs)
+        internal static void PopulateResources(LuaBindingManifest manifest, DefinitionCatalog catalog, IEnumerable<Type> definitionTypes)
         {
             manifest.resources.Add("direction", DescribeDirections());
-            foreach (var catalog in catalogs.OrderBy(catalog => catalog.GetType().GetCustomAttribute<LuaResourceAttribute>().Type, StringComparer.Ordinal))
+            foreach (var type in definitionTypes.OrderBy(type => type.GetCustomAttribute<LuaResourceAttribute>().Type, StringComparer.Ordinal))
             {
-                var resourceType = catalog.GetType().GetCustomAttribute<LuaResourceAttribute>().Type;
+                var resourceType = type.GetCustomAttribute<LuaResourceAttribute>().Type;
                 if (manifest.resources.ContainsKey(resourceType))
                     throw new InvalidOperationException($"Duplicate Lua resource catalog for type '{resourceType}'.");
-                manifest.resources.Add(resourceType, catalog is CharacterAnimationCatalog animations
-                    ? DescribeAnimations(animations, CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray())
-                    : DescribeCatalog(catalog));
+                manifest.resources.Add(resourceType, type == typeof(CharacterAnimationDefinition)
+                    ? DescribeAnimations(catalog, CatalogAssetDiscovery.Find("Assets", typeof(MemaoAnimationLibrary)).Cast<MemaoAnimationLibrary>().ToArray())
+                    : DescribeCatalog(catalog, type));
             }
             foreach (var parameter in manifest.modules.SelectMany(module => module.methods).SelectMany(method => method.parameters))
                 // Vulcanus owns the character definitions and supplies this selector itself.
@@ -72,19 +72,18 @@ namespace Core.Scripting.Editor
                     throw new InvalidOperationException($"No resources exported for type '{parameter.resourceType}'.");
         }
 
-        internal static LuaResourceDescription[] DescribeCatalog(DefinitionCatalog catalog)
+        internal static LuaResourceDescription[] DescribeCatalog(DefinitionCatalog catalog, Type type)
         {
-            var metadata = catalog.GetType().GetCustomAttribute<LuaResourceAttribute>();
-            var member = catalog.DefinitionType.GetMember(metadata.DescriptionMember, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
+            var metadata = type.GetCustomAttribute<LuaResourceAttribute>();
+            var member = type.GetMember(metadata.DescriptionMember, BindingFlags.Public | BindingFlags.Instance).SingleOrDefault();
             Func<Object, string> description = member switch
             {
                 PropertyInfo property when property.PropertyType == typeof(string) => definition => (string)property.GetValue(definition),
                 FieldInfo field when field.FieldType == typeof(string) => definition => (string)field.GetValue(definition),
-                _ => throw new InvalidOperationException($"Lua resource '{metadata.Type}': {catalog.DefinitionType.Name}.{metadata.DescriptionMember} must be a public string field or property.")
+                _ => throw new InvalidOperationException($"Lua resource '{metadata.Type}': {type.Name}.{metadata.DescriptionMember} must be a public string field or property.")
             };
-            return catalog.Entries.Where(entry => entry.Enabled).Select(entry => entry.Definition)
-                .OrderBy(catalog.GetId, StringComparer.Ordinal)
-                .Select(definition => new LuaResourceDescription { id = catalog.GetId(definition), description = description(definition) }).ToArray();
+            return catalog.All(type).OrderBy(DefinitionCatalog.GetId, StringComparer.Ordinal)
+                .Select(definition => new LuaResourceDescription { id = DefinitionCatalog.GetId(definition), description = description(definition) }).ToArray();
         }
 
         internal static LuaClockDescription DescribeClock(Core.TimeAndWeather.ClockSettings clock) => new()
@@ -97,8 +96,8 @@ namespace Core.Scripting.Editor
         internal static LuaResourceDescription[] DescribeDirections() => CardinalDirections.Values.Keys.OrderBy(id => id, StringComparer.Ordinal)
             .Select(id => new LuaResourceDescription { id = id, description = id }).ToArray();
 
-        internal static LuaResourceDescription[] DescribeAnimations(CharacterAnimationCatalog catalog, MemaoAnimationLibrary[] libraries) =>
-            catalog.EnabledDefinitions.OfType<CharacterAnimation>()
+        internal static LuaResourceDescription[] DescribeAnimations(DefinitionCatalog catalog, MemaoAnimationLibrary[] libraries) =>
+            catalog.All<CharacterAnimation>()
                 .Where(animation => IsOneShotCandidate(animation, libraries))
                 .OrderBy(animation => animation.Id, StringComparer.Ordinal)
                 .Select(animation => new LuaResourceDescription { id = animation.Id, description = animation.name }).ToArray();

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.IO;
@@ -52,8 +53,8 @@ namespace UI.MainMenu.Editor
             SessionState.SetString(SlotsKey, game.CurrentSlot ?? "");
             Assert.That(game.CurrentSlot, Is.Not.Null);
             Assert.That(LiveGame.Get<GameState>().Data.saveName, Is.EqualTo(SessionState.GetString(NameKey, "")));
-            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.id,
-                Is.EqualTo(LiveGame.Get<PlayerStateManager>().StartingHomeLocation.id));
+            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.Id,
+                Is.EqualTo(LiveGame.Get<PlayerStateManager>().StartingHomeLocation.Id));
         }
 
         [UnityTest]
@@ -108,8 +109,7 @@ namespace UI.MainMenu.Editor
         [UnityTest]
         public IEnumerator TheLoadListShowsEverySlotAndDeletesAfterConfirming()
         {
-            var saves = new GameSaveService(Resources.Load<Character.CharacterCatalog>(Character.CharacterCatalog.ResourceName),
-                Resources.Load<Core.Inventory.ItemCatalog>(Core.Inventory.ItemCatalog.ResourceName));
+            var saves = new GameSaveService(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName));
             var good = "test-" + Guid.NewGuid().ToString("N");
             var broken = "test-" + Guid.NewGuid().ToString("N");
             SessionState.SetString(SlotsKey, good + ";" + broken);

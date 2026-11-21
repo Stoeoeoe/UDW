@@ -81,7 +81,7 @@ namespace Core.Shops.Editor
             var stall = Object.FindObjectsByType<ShowShopInteractable>(FindObjectsSortMode.None).Single();
             var shopId = (string)typeof(ShowShopInteractable).GetField("shopId", Private).GetValue(stall);
             Assert.That(shopId, Is.EqualTo("base:market_seeds"), "The placed stall's shop comes from the entity property.");
-            Assert.That(stall.GetComponent<SpawnedObject>().PrefabId, Is.EqualTo("base:market_stall_bread"));
+            Assert.That(stall.GetComponent<SpawnedObject>().Id, Is.EqualTo("base:market_stall_bread"));
             Assert.That(stall.PersistentId, Is.EqualTo("market-stall-bread-01"));
             Assert.That(LiveGame.Get<ShopService>().GetOfferings(LiveGame.Get<ShopService>().Require(shopId)), Is.Not.Empty);
         }

@@ -29,7 +29,7 @@ namespace Plants.Editor
 
             var player = LiveGame.Player;
             var plants = LiveGame.Get<PlantManager>();
-            var locationId = LiveGame.Get<LevelManager>().CurrentLocationData.id;
+            var locationId = LiveGame.Get<LevelManager>().CurrentLocationData.Id;
             var position = LiveGame.Get<MapManager>().WorldToTileCoordinates(player.transform.position);
             plants.SowPlantOnCurrentMap(position, "base:broad_beans");
             plants.GetPlantState(locationId, position).daysPassedSincePlanting = 8;

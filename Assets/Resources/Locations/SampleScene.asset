@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8504c6c9aab64da6a9f15cde1799e928, type: 3}
   m_Name: SampleScene
   m_EditorClassIdentifier: Assembly-CSharp::Core.Location.LocationData
-  id: SampleScene
+  <Id>k__BackingField: SampleScene
   label: Sample Scene
   locationType: 1
   scenePath: Assets/Scenes/SampleScene.unity

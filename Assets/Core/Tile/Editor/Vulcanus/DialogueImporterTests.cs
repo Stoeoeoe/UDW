@@ -1,3 +1,5 @@
+using Core.Shops;
+using Core.Catalogs;
 using System;
 using System.IO;
 using System.Linq;
@@ -23,7 +25,7 @@ namespace Core.Tile.Editor.Vulcanus
             if (_folder == null) return;
             AssetDatabase.DeleteAsset(_folder);
             _folder = null;
-            CatalogDiscovery.Refresh(Resources.Load<DialogueCatalog>(DialogueCatalog.ResourceName));
+            CatalogDiscovery.Refresh(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName));
         }
 
         [Test]
@@ -67,7 +69,7 @@ namespace Core.Tile.Editor.Vulcanus
             File.WriteAllText(path, source.ToString());
             AssetDatabase.ImportAsset(folder + "/target.runtime.dialogue.json", ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-            var catalog = Resources.Load<DialogueCatalog>(DialogueCatalog.ResourceName);
+            var catalog = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName);
             CatalogDiscovery.Refresh(catalog);
             Assert.That(DialogueImporter.ValidateSources, Throws.Nothing);
 
@@ -78,7 +80,7 @@ namespace Core.Tile.Editor.Vulcanus
             var error = Assert.Throws<InvalidOperationException>(DialogueImporter.ValidateSources);
             Assert.That(error.Message, Does.Contain("missing").And.Contain("test:jump-target"));
 
-            catalog.SetEnabled(catalog.Get("test:jump-target"), false);
+            catalog.SetEnabled(catalog.Get<VulcanusDialogueAsset>("test:jump-target"), false);
             error = Assert.Throws<InvalidOperationException>(DialogueImporter.ValidateSources);
             Assert.That(error.Message, Does.Contain("requires enabled dialogue 'test:jump-target'"));
         }

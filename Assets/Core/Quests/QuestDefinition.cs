@@ -158,7 +158,8 @@ namespace Core.Quests
     /// <c>.&lt;step&gt;.journal</c> and <c>.&lt;step&gt;.&lt;objective&gt;.text</c>.
     /// </summary>
     [ImportedData]
-    public sealed class QuestDefinition : ValidatedScriptableObject<QuestValidator>
+    [Core.Catalogs.DefinitionResource]
+    public sealed class QuestDefinition : Core.Catalogs.DefinitionScriptableObject<QuestValidator>
     {
         /// <summary>A text from the quest's i18n file.</summary>
         [Serializable, ImportedData]
@@ -167,8 +168,6 @@ namespace Core.Quests
             public string msgKey;
             public string text;
         }
-
-        [field: SerializeField] public string Id { get; private set; }
         /// <summary>The title in the source language; <see cref="TranslatedTitle"/> gives what the player reads.</summary>
         [field: SerializeField] public string Title { get; private set; }
         /// <summary>The description in the source language; <see cref="TranslatedDescription"/> gives what the player reads.</summary>

@@ -8,12 +8,9 @@ namespace Character
 {
     /// <summary>Player-facing skill details and its value at each level, starting with level zero.</summary>
     [CreateAssetMenu(fileName = "Skill Definition", menuName = "Game/Skills/Definition")]
-    public sealed class SkillDefinition : ValidatedScriptableObject<SkillDefinitionValidator>
+    [Core.Catalogs.DefinitionResource("Assets/Resources/Skills", IdFormat = Core.Catalogs.DefinitionIdFormat.Namespaced)]
+    public sealed class SkillDefinition : Core.Catalogs.DefinitionScriptableObject<SkillDefinitionValidator>
     {
-        [Tooltip("Stable namespaced ID, for example base:hammer_mastery. Do not change after saving games with this skill.")]
-        [NamespacedId]
-        [SerializeField, Validation.NamespacedId]
-        private string _skillId;
 
         [SerializeField]
         private string _displayName;
@@ -27,8 +24,6 @@ namespace Character
         [Tooltip("Include level zero (before the skill is upgraded) as the first entry.")]
         [SerializeField, Validation.NotEmpty("Provide at least level zero."), Validation.RequiredElements("Level must not be null."), Validation.Nested]
         private SkillLevelDefinition[] levels = { new SkillLevelDefinition() };
-
-        public string SkillId => _skillId;
         public string DisplayName => _displayName;
         public string Description => _description;
         public Sprite Icon => _icon;

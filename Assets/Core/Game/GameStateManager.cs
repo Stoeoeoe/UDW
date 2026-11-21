@@ -154,7 +154,7 @@ namespace Core.Game
             if (!_location.SceneReady) return;
             var player = _characters.MainCharacter;
             var session = _state.Session;
-            session.LocationId = _location.Location.id;
+            session.LocationId = _location.Location.Id;
             session.Position = player.transform.position;
             session.Facing = player.Orientation.FacingDirection;
         }

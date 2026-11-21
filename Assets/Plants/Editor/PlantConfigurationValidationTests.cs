@@ -29,6 +29,7 @@ namespace Plants.Editor
         public void SetUp()
         {
             _plant = ScriptableObject.CreateInstance<PlantData>();
+            _plant.SetId("test:crop");
             _plant.name = "Validation test crop";
             _produce = ScriptableObject.CreateInstance<ProduceItem>();
             Set(_produce, "Id", "test:produce");

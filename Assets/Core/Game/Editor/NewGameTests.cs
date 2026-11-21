@@ -22,7 +22,7 @@ namespace Core.Game.Editor
             _session = Game.Get<GameStateManager>();
             _saves = Game.Get<GameSaveService>();
             var location = Game.Asset<LocationData>();
-            location.id = "test:farm";
+            location.SetId("test:farm");
             Game.Location = location;
         }
 

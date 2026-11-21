@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eef382cf69e179842be21e5ad52f563b, type: 3}
   m_Name: PrototypeImpact
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.SoundDefinition
-  soundId: base:prototype-impact
+  <Id>k__BackingField: base:prototype-impact
   clip: {fileID: 8300000, guid: 40629c93e05622e4a8f802b335047f01, type: 3}

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core.Catalogs;
+using Core.Catalogs.Editor;
 using Core.Location;
 using Core.Music;
 using Core.Spawning;
@@ -25,8 +26,8 @@ namespace Core.Tile.Editor.Vulcanus
         public static void ImportMap(AssetImportContext ctx, int shorelineDistancePixels = 32)
         {
             var dto = VulcanusImportHelpers.LoadDto<MapDto>(ctx.assetPath);
-            VulcanusImportHelpers.AddDependency(ctx, SpawnableCatalogEditor.CatalogPath);
-            var spawnCatalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>(SpawnableCatalogEditor.CatalogPath);
+            ctx.DependsOnCustomDependency(CatalogDiscovery.DependencyName<SpawnedObject>());
+            var spawnCatalog = AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(SpawnableCatalogEditor.CatalogPath);
 
             var projectAssetPath = VulcanusImportHelpers.FindProjectAssetPath(ctx.assetPath);
             VulcanusProject project = null;
@@ -194,7 +195,7 @@ namespace Core.Tile.Editor.Vulcanus
             }
             if (string.IsNullOrWhiteSpace(metadata.MusicPreset))
                 throw new InvalidOperationException($"Map '{mapId}' requires musicPreset for music cue '{metadata.MusicCue}'.");
-            // Loaded by path, not through the MusicCatalog: the catalog is refreshed after imports, so a full reimport
+            // Loaded by path, not through the DefinitionCatalog: the catalog is refreshed after imports, so a full reimport
             // could reach this map first. Whether the cue is enabled is checked at world catalog refresh.
             var cuePath = MusicCuePath(metadata.MusicCue);
             VulcanusImportHelpers.AddDependency(ctx, cuePath);
@@ -202,7 +203,7 @@ namespace Core.Tile.Editor.Vulcanus
             if (!cue) throw new InvalidOperationException($"Map '{mapId}' references missing music cue '{metadata.MusicCue}' ({cuePath}).");
             cue.RequireValidConfiguration();
             if (cue.presets.All(preset => preset.id != metadata.MusicPreset))
-                throw new InvalidOperationException($"Map '{mapId}' references unknown music preset '{metadata.MusicPreset}' on '{cue.id}'.");
+                throw new InvalidOperationException($"Map '{mapId}' references unknown music preset '{metadata.MusicPreset}' on '{cue.Id}'.");
             var environment = root.AddComponent<MusicEnvironment>();
             environment.cue = cue;
             environment.preset = metadata.MusicPreset;
@@ -214,7 +215,7 @@ namespace Core.Tile.Editor.Vulcanus
         {
             var locationData = ScriptableObject.CreateInstance<LocationData>();
             locationData.name = "LocationData_" + mapId;
-            locationData.id = mapId;
+            locationData.SetId(mapId);
             locationData.label = mapName;
 
             if (metadata?.Extra != null)
@@ -224,7 +225,7 @@ namespace Core.Tile.Editor.Vulcanus
             }
 
             // Source metadata can configure gameplay, but identity and scene routing are importer-owned.
-            locationData.id = mapId;
+            locationData.SetId(mapId);
             locationData.scenePath = VulcanusMapScenePostprocessor.GetScenePath(mapAssetPath);
             return locationData;
         }
@@ -334,7 +335,7 @@ namespace Core.Tile.Editor.Vulcanus
             int mapHeight,
             int tileSize,
             VulcanusWorldCatalog catalog,
-            SpawnableCatalog spawnCatalog,
+            DefinitionCatalog spawnCatalog,
             AssetImportContext ctx,
             List<AuthoredSpawnPlacement> persistentEntities)
         {
@@ -353,7 +354,7 @@ namespace Core.Tile.Editor.Vulcanus
             int mapHeight,
             int tileSize,
             VulcanusWorldCatalog catalog,
-            SpawnableCatalog spawnCatalog,
+            DefinitionCatalog spawnCatalog,
             AssetImportContext ctx,
             List<AuthoredSpawnPlacement> persistentEntities)
         {
@@ -375,15 +376,15 @@ namespace Core.Tile.Editor.Vulcanus
             var worldRot = Quaternion.Euler(0f, 0f, -entityData.rotationDegrees);
 
             // Persistent type IDs resolve from the same catalog used after a restart.
-            var spawnable = spawnCatalog?.Prefabs.FirstOrDefault(p => p && p.PrefabId == entityData.typeId);
+            var spawnable = spawnCatalog.Get<SpawnedObject>(entityData.typeId);
             GameObject prefab = spawnable ? spawnable.gameObject : null;
             if (!prefab) catalog?.TryGetEntityPrefab(entityData.typeId, out prefab);
 
             if (prefab != null)
             {
                 var persistent = prefab.GetComponent<SpawnedObject>();
-                if (persistent && (spawnCatalog == null || !spawnCatalog.Prefabs.Contains(persistent)))
-                    throw new InvalidOperationException($"Persistent entity prefab '{prefab.name}' must be registered in SpawnableCatalog.");
+                if (persistent && (spawnCatalog == null || !spawnCatalog.All<SpawnedObject>().Contains(persistent)))
+                    throw new InvalidOperationException($"Persistent entity prefab '{prefab.name}' must be registered in DefinitionCatalog.");
                 if (persistent && !prefab.activeSelf)
                     throw new InvalidOperationException($"Persistent entity prefab '{prefab.name}' needs an active root; its template parent supplies inactivity.");
                 if (persistent && string.IsNullOrWhiteSpace(dto.Id))
@@ -415,7 +416,7 @@ namespace Core.Tile.Editor.Vulcanus
                 {
                     // JSON properties configure gameplay fields, never the shared prefab identity.
                     var serialized = new SerializedObject(instance.GetComponent<SpawnedObject>());
-                    serialized.FindProperty("prefabId").stringValue = persistent.PrefabId;
+                    serialized.FindProperty("prefabId").stringValue = persistent.Id;
                     serialized.FindProperty("authoredId").stringValue = dto.Id;
                     serialized.ApplyModifiedPropertiesWithoutUndo();
                     persistentEntities.Add(new AuthoredSpawnPlacement { id = dto.Id, template = instance.GetComponent<SpawnedObject>() });

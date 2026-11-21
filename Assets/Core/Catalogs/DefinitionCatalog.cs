@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -19,28 +20,46 @@ namespace Core.Catalogs
     }
 
     /// <summary>Discovered references and authoring selection, never player save data.</summary>
-    public abstract class DefinitionCatalog : ScriptableObject
+    [CreateAssetMenu(menuName = "Game/Definition Catalog")]
+    public sealed class DefinitionCatalog : ScriptableObject
     {
+        public const string ResourceName = "DefinitionCatalog";
+        public const string AssetPath = "Assets/Resources/DefinitionCatalog.asset";
+        public static IReadOnlyList<Type> DefinitionTypes { get; } = typeof(DefinitionCatalog).Assembly.GetTypes()
+            .Where(type => type.IsDefined(typeof(DefinitionResourceAttribute), false))
+            .OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
         [SerializeField, TableList(IsReadOnly = true, AlwaysExpanded = true)]
         private CatalogEntry[] entries = Array.Empty<CatalogEntry>();
-        [NonSerialized] private Dictionary<string, Object> _byId;
+        [NonSerialized] private readonly Dictionary<Type, Dictionary<string, Object>> _byType = new();
         [NonSerialized] private Object[] _testContent = Array.Empty<Object>();
-        /// <summary>Project folder searched recursively by editor discovery, including Assets/.</summary>
-        public abstract string Path { get; }
-        public abstract Type DefinitionType { get; }
         public IReadOnlyList<CatalogEntry> Entries => entries;
-        public abstract string GetId(Object definition);
+        public static string GetId(Object definition) => ((IDefinition)definition).Id;
+        public static string DiscoveryPath(Type type) => FamilyOf(type).GetCustomAttribute<DefinitionResourceAttribute>().Path;
 
-        protected Object FindDefinition(string id)
+        public static Type FamilyOf(Type type)
+        {
+            for (var current = type; current != null; current = current.BaseType)
+                if (current.IsDefined(typeof(DefinitionResourceAttribute), false)) return current;
+            throw new ArgumentException($"{type.FullName} is not a declared definition resource.", nameof(type));
+        }
+
+        public T Get<T>(string id) where T : Object => Get(typeof(T), id) as T;
+        public T Require<T>(string id) where T : Object => Get<T>(id)
+            ?? throw new InvalidOperationException($"{typeof(T).Name} '{id}' is not registered and enabled.");
+        public IEnumerable<T> All<T>() where T : Object => All(typeof(T)).Cast<T>();
+        public IEnumerable<Object> All(Type type) => EnabledObjects.Where(type.IsInstanceOfType);
+
+        public Object Get(Type type, string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
-            if (_byId == null)
+            var family = FamilyOf(type);
+            if (!_byType.TryGetValue(family, out var index))
             {
-                var index = new Dictionary<string, Object>(StringComparer.Ordinal);
-                foreach (var enabled in EnabledObjects) index.Add(GetId(enabled), enabled);
-                _byId = index;
+                index = new Dictionary<string, Object>(StringComparer.Ordinal);
+                foreach (var enabled in All(family)) index.Add(GetId(enabled), enabled);
+                _byType.Add(family, index);
             }
-            return _byId.TryGetValue(id, out var definition) ? definition : null;
+            return index.TryGetValue(id, out var definition) && type.IsInstanceOfType(definition) ? definition : null;
         }
 
         public void SetEnabled(Object definition, bool enabled)
@@ -64,7 +83,7 @@ namespace Core.Catalogs
         }
 
         /// <summary>Enabled definitions, then the test project's while a test scene plays.</summary>
-        protected IEnumerable<Object> EnabledObjects =>
+        private IEnumerable<Object> EnabledObjects =>
             entries.Where(entry => entry.Enabled && entry.Definition).Select(entry => entry.Definition).Concat(_testContent);
 
         /// <summary>
@@ -77,17 +96,8 @@ namespace Core.Catalogs
             InvalidateLookup();
         }
 
-        public void InvalidateLookup() => _byId = null;
-        protected virtual void OnEnable() => InvalidateLookup();
-        protected virtual void OnValidate() => InvalidateLookup();
-    }
-
-    public abstract class DefinitionCatalog<T> : DefinitionCatalog where T : Object
-    {
-        public sealed override Type DefinitionType => typeof(T);
-        protected abstract string GetDefinitionId(T definition);
-        public sealed override string GetId(Object definition) => GetDefinitionId((T)definition);
-        public T Get(string id) => FindDefinition(id) as T;
-        public IEnumerable<T> EnabledDefinitions => EnabledObjects.Cast<T>();
+        public void InvalidateLookup() => _byType.Clear();
+        private void OnEnable() => InvalidateLookup();
+        private void OnValidate() => InvalidateLookup();
     }
 }

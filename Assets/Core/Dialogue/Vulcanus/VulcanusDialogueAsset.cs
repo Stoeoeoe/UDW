@@ -11,7 +11,8 @@ namespace Core.Dialogue.Vulcanus
     /// <summary>A Vulcanus dialogue: its node graph, read straight from *.runtime.dialogue.json, and its texts.</summary>
     [CreateAssetMenu(fileName = "VulcanusDialogue", menuName = "Game/Vulcanus/Dialogue")]
     [ImportedData]
-    public sealed class VulcanusDialogueAsset : ValidatedScriptableObject<VulcanusDialogueValidator>
+    [Core.Catalogs.DefinitionResource(IdFormat = Core.Catalogs.DefinitionIdFormat.Any)]
+    public sealed class VulcanusDialogueAsset : Core.Catalogs.DefinitionScriptableObject
     {
         /// <summary>A translated text, from the dialogue's sibling .i18n.json.</summary>
         [Serializable, ImportedData]
@@ -22,8 +23,6 @@ namespace Core.Dialogue.Vulcanus
         }
 
         internal const string NodesField = nameof(Nodes);
-
-        [field: SerializeField] public string Id { get; private set; }
         [field: SerializeField, Validation.OneOf(NodesField, nameof(VulcanusDialogueNode.Id))] public string StartNodeId { get; private set; }
         [field: SerializeReference, Validation.Nested, Validation.Unique(nameof(VulcanusDialogueNode.Id)),
                 JsonProperty(ItemConverterType = typeof(DialogueNodeJsonConverter))]
@@ -58,12 +57,7 @@ namespace Core.Dialogue.Vulcanus
             _nodeIndexById ??= Nodes.Select((node, index) => (node.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index);
     }
 
-    public sealed class VulcanusDialogueValidator : ScriptableObjectValidator<VulcanusDialogueAsset>
-    {
-        protected override void CollectConfigurationErrors(VulcanusDialogueAsset asset, List<ConfigurationError> errors) { }
-    }
-
-    /// <summary>Reads a dialogue node as the class its "type" names.</summary>
+/// <summary>Reads a dialogue node as the class its "type" names.</summary>
     public sealed class DialogueNodeJsonConverter : JsonConverter
     {
         private static readonly Dictionary<string, Type> Types = new()

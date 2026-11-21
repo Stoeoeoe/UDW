@@ -34,9 +34,10 @@ namespace Core.Music
     }
 
     [CreateAssetMenu(menuName = "Game/Audio/Music cue")]
-    public sealed class MusicCue : ValidatedScriptableObject<MusicCueValidator>
+    [Core.Catalogs.DefinitionResource]
+    [Core.Scripting.LuaResource("musicCue")]
+    public sealed class MusicCue : Core.Catalogs.DefinitionScriptableObject<MusicCueValidator>
     {
-        [Validation.NamespacedId(Lowercase = true)] public string id;
         [Tooltip("Same namespaced theme ID for arrangements that share a timeline. Leave empty for an independent cue.")]
         public string theme;
         [Tooltip("Tempo in quarter-note beats per minute; all arrangements of a theme must match.")]
@@ -47,7 +48,7 @@ namespace Core.Music
         public MusicMixPreset[] presets = Array.Empty<MusicMixPreset>();
         public double BeatSeconds => 60d / bpm;
         public double LoopSeconds => BeatSeconds * beatsPerBar * loopBars;
-        public string Theme => string.IsNullOrEmpty(theme) ? id : theme;
+        public string Theme => string.IsNullOrEmpty(theme) ? Id : theme;
         public MusicMixPreset Preset(string preset) => presets.Single(value => value.id == preset);
     }
 

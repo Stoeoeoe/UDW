@@ -183,7 +183,7 @@ namespace Character.Editor
         {
             var activity = Game.Asset<CharacterActivityAnimation>();
             activity.name = "test:activity";
-            Set(activity, "animationId", "test:activity");
+            Set(activity, "Id", "test:activity");
             Set(activity, "start", start);
             Set(activity, "loop", loop);
             Set(activity, "end", end);
@@ -200,7 +200,7 @@ namespace Character.Editor
             AnimationUtility.SetAnimationClipSettings(clip, settings);
             var animation = Game.Asset<CharacterAnimation>();
             animation.name = id;
-            Set(animation, "animationId", id);
+            Set(animation, "Id", id);
             Set(animation, "clip", clip);
             return animation;
         }

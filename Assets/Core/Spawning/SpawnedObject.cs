@@ -6,12 +6,13 @@ using UnityEngine;
 namespace Core.Spawning
 {
     /// <summary>Runtime view of one saved spawn record. The spawner binds it before enabling it.</summary>
-    public class SpawnedObject : MonoBehaviour
+    [Core.Catalogs.DefinitionResource("Assets/Content/Spawnables")]
+    public class SpawnedObject : MonoBehaviour, Core.Catalogs.IDefinition
     {
         [Tooltip("Stable 'namespace:name' ID stored in saves. Never change it once used.")]
         [NamespacedId]
         [SerializeField] private string prefabId;
-        public string PrefabId => prefabId;
+        public string Id => prefabId;
 
         [Tooltip("The Vulcanus entity ID this object was imported from. Set by the importer; shown for reference.")]
         [ReadOnly] [SerializeField] private string authoredId;

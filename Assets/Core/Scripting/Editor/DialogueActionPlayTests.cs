@@ -1,3 +1,5 @@
+using Core.Scripting;
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -38,7 +40,7 @@ namespace Core.Scripting.Editor
         private GameObject _root;
         private VulcanusDialogueRunner _runner;
         private UIDocument _document;
-        private DialogueCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private Object[] _authoredDialogues;
         private VulcanusDialogueAsset _talk, _end, _error;
         private CutsceneDefinition _npcMovement;
@@ -70,7 +72,7 @@ namespace Core.Scripting.Editor
             _end = CreateDialogue("fixture:end", "{ id: 'entry', type: 'end' }");
             _error = CreateDialogue("fixture:error", @"{ id: 'entry', type: 'action', lua: ""error('Broken fixture script')"" }");
             // The fixture dialogues join the live catalog for this run and are removed again in TearDown.
-            _catalog = LiveGame.Get<DialogueCatalog>();
+            _catalog = LiveGame.Get<DefinitionCatalog>();
             _authoredDialogues = _catalog.Entries.Select(entry => entry.Definition).ToArray();
             _catalog.Synchronize(_authoredDialogues.Concat(new[] { _talk, _end, _error }));
 
@@ -370,7 +372,7 @@ namespace Core.Scripting.Editor
             var started = 0;
             Action<CutsceneRun> observer = run =>
             {
-                if (!run.Definition.CutsceneId.StartsWith("fixture:phases-", StringComparison.Ordinal)) return;
+                if (!run.Definition.Id.StartsWith("fixture:phases-", StringComparison.Ordinal)) return;
                 started++;
                 Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
                 Assert.That(character.IsControlBlocked, Is.True);
@@ -430,7 +432,7 @@ namespace Core.Scripting.Editor
                 Assert.That(service.IsRunning, Is.False);
                 Assert.That(LiveGame.Get<UrGUIManager>().IsGameClockPaused, Is.False);
                 Assert.That(notifications, Is.Zero);
-                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(failed.CutsceneId), Is.False);
+                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(failed.Id), Is.False);
                 Assert.That(() => service.TryStart(invalid, out _), Throws.InvalidOperationException
                     .With.Message.Contains("completion").And.Message.Contains("finish").And.Message.Contains("missing-character"));
                 Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.up));
@@ -565,10 +567,10 @@ namespace Core.Scripting.Editor
                 yield return null;
                 Assert.That(group.alpha, Is.EqualTo(1));
                 Assert.That(session.IsRunning, Is.True, "The skipped action remains owned through the exit hold.");
-                Assert.That(LiveGame.Get<GameState>().Story.Has(definition.CutsceneId), Is.False);
+                Assert.That(LiveGame.Get<GameState>().Story.Has(definition.Id), Is.False);
                 cover.Complete();
-                while (!LiveGame.Get<GameState>().Story.Has(definition.CutsceneId) && Time.realtimeSinceStartup < deadline) yield return null;
-                Assert.That(LiveGame.Get<GameState>().Story.Has(definition.CutsceneId), Is.True);
+                while (!LiveGame.Get<GameState>().Story.Has(definition.Id) && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(LiveGame.Get<GameState>().Story.Has(definition.Id), Is.True);
                 Assert.That(session.IsRunning, Is.False);
                 Assert.That(player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
                 Assert.That(run.IsRunning, Is.True, "Input stays claimed through the exit reveal.");
@@ -601,7 +603,7 @@ namespace Core.Scripting.Editor
                 definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
                     definition.OnComplete, definition.OnStartLua, definition.OnStart, new CutsceneTransition());
                 var replacement = CreatePhaseDefinition(id + "-replacement", 60);
-                replacement.Configure(replacement.CutsceneId, replacement.MapId, replacement.Lua, replacement.Steps, true,
+                replacement.Configure(replacement.Id, replacement.MapId, replacement.Lua, replacement.Steps, true,
                     replacement.OnComplete, replacement.OnStartLua, replacement.OnStart, new CutsceneTransition());
                 var originalFacing = player.Orientation.FacingDirection;
                 var started = false;
@@ -653,7 +655,7 @@ namespace Core.Scripting.Editor
                     Assert.That(service.ActiveRun, Is.SameAs(next));
                     Assert.That(next.IsRunning, Is.True);
                     Assert.That(player.IsControlBlocked, Is.True);
-                    Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(replacement.CutsceneId), Is.False);
+                    Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(replacement.Id), Is.False);
                 }
                 finally
                 {
@@ -669,9 +671,9 @@ namespace Core.Scripting.Editor
         public IEnumerator MusicOverrideReleasesOnCompletionSkipCancellationAndExplicitRelease()
         {
             var service = LiveGame.Get<CutsceneRunner>();
-            var catalog = Resources.Load<MusicCatalog>(MusicCatalog.ResourceName);
+            var catalog = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName);
             var director = LiveGame.Get<MusicDirector>();
-            var cues = catalog.EnabledDefinitions.ToArray();
+            var cues = catalog.All<MusicCue>().ToArray();
             Assert.That(cues.Length, Is.GreaterThanOrEqualTo(2));
             var environmentCue = cues[0];
             var overrideCue = cues[1];
@@ -683,7 +685,7 @@ namespace Core.Scripting.Editor
                 var id = "fixture:music-" + terminal;
                 var definition = CreatePhaseDefinition(id, terminal == "complete" ? 0.05 : 60);
                 var setup = CutsceneSequenceCompiler.Compile(new JArray(new JObject { ["id"] = "music", ["action"] = "music.override",
-                    ["arguments"] = new JObject { ["cue"] = overrideCue.id, ["preset"] = overrideCue.presets[0].id, ["quantization"] = "Immediate", ["fadeSeconds"] = 0.05 } }), id, out var setupSteps, "setup");
+                    ["arguments"] = new JObject { ["cue"] = overrideCue.Id, ["preset"] = overrideCue.presets[0].id, ["quantization"] = "Immediate", ["fadeSeconds"] = 0.05 } }), id, out var setupSteps, "setup");
                 definition.Configure(id, definition.MapId, definition.Lua, definition.Steps, true,
                     definition.OnComplete, setup, setupSteps, new CutsceneTransition(enabled: false));
                 try
@@ -813,7 +815,7 @@ namespace Core.Scripting.Editor
                 run.Cancel();
                 Assert.That(LiveGame.Get<GameState>().Story.Has("fixture:dialogue-choice"), Is.True);
                 Assert.That(LiveGame.Get<GameState>().Story.Has("fixture:completion"), Is.False);
-                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
+                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(definition.Id), Is.False);
             }
             finally { service.Cancel(); Object.Destroy(definition); Object.Destroy(dialogue); }
         }
@@ -843,7 +845,7 @@ namespace Core.Scripting.Editor
             Assert.That(_runner.CurrentDialogueId, Is.EqualTo("fixture:talk"));
             Assert.That(Vector2.Distance(character.GetComponent<Rigidbody2D>().position, anchor.transform.position), Is.LessThanOrEqualTo(0.04f));
             Assert.That(character.Orientation.FacingDirection.x, Is.GreaterThan(0));
-            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.False);
+            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.Id), Is.False);
             Assert.That(_runner.TryAdvanceActiveDialogue(), Is.True);
             for (var frame = 0; frame < 20 && _runner.ActiveContext.CurrentNode is not VulcanusDialogueChoiceNode; frame++) yield return null;
             using (var key = KeyDownEvent.GetPooled('\0', KeyCode.Alpha1, EventModifiers.None))
@@ -855,7 +857,7 @@ namespace Core.Scripting.Editor
             Assert.That(run.IsRunning, Is.False);
             Assert.That(Vector3.Distance(committedFeet.Value, anchor.transform.position), Is.LessThan(0.001f));
             Assert.That(committedSavedPosition, Is.EqualTo(committedPosition));
-            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
+            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.Id), Is.True);
             Assert.That(character.Controller.IsMovementOwned, Is.False);
             Assert.That(character.IsControlBlocked, Is.False);
             AssertClosed();
@@ -864,9 +866,9 @@ namespace Core.Scripting.Editor
             {
                 LiveGame.Get<GameStateManager>().Save(slot);
                 Assert.That(LiveGame.Get<GameSaveService>().TryLoad(slot, out var saved), Is.True);
-                Assert.That(saved.world.TryGet<SpawnedObjectState>(LiveGame.Get<LevelManager>().CurrentLocationData.id, spawn.PersistentId, out var placement), Is.True);
+                Assert.That(saved.world.TryGet<SpawnedObjectState>(LiveGame.Get<LevelManager>().CurrentLocationData.Id, spawn.PersistentId, out var placement), Is.True);
                 Assert.That(placement.position, Is.EqualTo(spawn.transform.position));
-                Assert.That(saved.story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
+                Assert.That(saved.story.CompletedCutscenes.Contains(NpcMovement.Id), Is.True);
             }
             finally { File.Delete(GameSaveService.GetSavePath(slot)); }
         }
@@ -885,7 +887,7 @@ namespace Core.Scripting.Editor
             Assert.That(cancelled.IsRunning, Is.False);
             Assert.That(spawn.transform.position, Is.EqualTo(original));
             Assert.That(spawn.State.position, Is.EqualTo(original));
-            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.False);
+            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.Id), Is.False);
             Assert.That(character.Controller.IsMovementOwned, Is.False);
             Assert.That(character.Controller.CurrentVelocity, Is.EqualTo(Vector2.zero));
             Assert.That(service.TryStart(NpcMovement, out var skipped), Is.True);
@@ -894,7 +896,7 @@ namespace Core.Scripting.Editor
             Assert.That(skipped.Skipped, Is.True);
             Assert.That(spawn.transform.position, Is.Not.EqualTo(original));
             Assert.That(spawn.State.position, Is.EqualTo(spawn.transform.position));
-            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.True);
+            Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.Id), Is.True);
             Assert.That(character.IsControlBlocked, Is.False);
             AssertClosed();
         }
@@ -913,7 +915,7 @@ namespace Core.Scripting.Editor
                 Physics2D.SyncTransforms();
             }
             var definition = CreatePhaseDefinition("fixture:visit", 60);
-            var catalog = ScriptableObject.CreateInstance<CutsceneCatalog>();
+            var catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
             catalog.Synchronize(new[] { definition });
             var previousCatalog = typeof(CutsceneRunner).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(service);
             Set(service, "_catalog", catalog);
@@ -923,7 +925,7 @@ namespace Core.Scripting.Editor
             var area = owner.AddComponent<BoxCollider2D>();
             area.isTrigger = true;
             area.size = Vector2.one * 2f;
-            owner.AddComponent<CutsceneTrigger>().Configure(definition.CutsceneId);
+            owner.AddComponent<CutsceneTrigger>().Configure(definition.Id);
             LiveGame.Inject(owner.GetComponent<CutsceneTrigger>());
             var starts = 0;
             Action<CutsceneRun> onStart = _ => starts++;
@@ -941,7 +943,7 @@ namespace Core.Scripting.Editor
                 for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
                 Assert.That(starts, Is.EqualTo(1), "Restoration must not count as another player visit.");
                 Assert.That(service.IsRunning, Is.False);
-                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(definition.CutsceneId), Is.False);
+                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(definition.Id), Is.False);
 
                 PlacePlayer(original + Vector2.right * 4f);
                 for (var frame = 0; frame < 3; frame++) yield return new WaitForFixedUpdate();
@@ -968,7 +970,7 @@ namespace Core.Scripting.Editor
         {
             var service = LiveGame.Get<CutsceneRunner>();
             var definition = CreateCutscene("fixture:trigger", false, "completed", "fixture:talk");
-            var catalog = ScriptableObject.CreateInstance<CutsceneCatalog>();
+            var catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
             catalog.Synchronize(new[] { definition });
             var originalCatalog = typeof(CutsceneRunner).GetField("_catalog", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(service);
             Set(service, "_catalog", catalog);
@@ -979,7 +981,7 @@ namespace Core.Scripting.Editor
             area.isTrigger = true;
             area.size = Vector2.one * 2;
             var trigger = owner.AddComponent<CutsceneTrigger>();
-            trigger.Configure(definition.CutsceneId);
+            trigger.Configure(definition.Id);
             LiveGame.Inject(trigger);
             var duplicate = LiveGame.Player.gameObject.AddComponent<BoxCollider2D>();
             try
@@ -1058,7 +1060,7 @@ namespace Core.Scripting.Editor
                 Assert.That(character.GetComponent<GameCharacter>().IsControlBlocked, Is.False);
                 Assert.That(character.GetComponent<GameCharacter>().Controller.IsMovementOwned, Is.False);
                 Assert.That(LiveGame.Player.IsControlBlocked, Is.False);
-                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.CutsceneId), Is.False);
+                Assert.That(LiveGame.Get<GameState>().Story.CompletedCutscenes.Contains(NpcMovement.Id), Is.False);
                 AssertClosed();
                 yield return null;
             }

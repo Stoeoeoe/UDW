@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e83292becbf4b62989836e0932b3ca8, type: 3}
   m_Name: SunnyWeatherEffect
   m_EditorClassIdentifier: Assembly-CSharp::Core.TimeAndWeather.WeatherEffect
-  id: Sunny
+  <Id>k__BackingField: Sunny
   label: Sunny
   weatherEffectPrefab: {fileID: 0}
   outdoorAmbience: {fileID: 0}

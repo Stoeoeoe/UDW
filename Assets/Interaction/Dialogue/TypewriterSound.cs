@@ -5,11 +5,10 @@ using UnityEngine;
 namespace Interaction.Dialog
 {
     [CreateAssetMenu(fileName = "TypewriterSound", menuName = "Game/Typewriter Sound", order = 6)]
-    public class TypewriterSound : ValidatedScriptableObject<TypewriterSoundValidator>
+    [Core.Catalogs.DefinitionResource]
+    [Core.Scripting.LuaResource("typewriterSound")]
+    public class TypewriterSound : Core.Catalogs.DefinitionScriptableObject<TypewriterSoundValidator>
     {
-        [SerializeField, Required]
-        [Validation.NamespacedId("Assign a lowercase namespace:name ID, such as base:fabia_voice.", Lowercase = true)]
-        private string _soundId;
 
         [SerializeField, Validation.RequiredElements("Assign a clip or use an empty list for silence.")]
         private AudioClip[] _audioClips;
@@ -19,8 +18,6 @@ namespace Interaction.Dialog
 
         [SerializeField]
         private float _pitchMax = 1.0f;
-
-        public string Id => _soundId;
         public AudioClip[] audioClips => _audioClips;
         public float pitchMin => _pitchMin;
         public float pitchMax => _pitchMax;

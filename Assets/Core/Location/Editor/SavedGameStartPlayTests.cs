@@ -1,3 +1,5 @@
+using Core.Location;
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.Globalization;
@@ -33,11 +35,11 @@ namespace Core.Location.Editor
 
             // Save in a different map than the one that will be open when the game starts again.
             var level = LiveGame.Get<LevelManager>();
-            var other = LiveGame.Get<LocationCatalog>().EnabledDefinitions
-                .First(location => location.id != level.CurrentLocationData.id &&
+            var other = LiveGame.Get<DefinitionCatalog>().All<LocationData>()
+                .First(location => location.Id != level.CurrentLocationData.Id &&
                                    location.ScenePath.StartsWith("Assets/Scenes/Maps/", StringComparison.Ordinal));
             Assert.That(level.LoadLocation(other, null, Vector2.down), Is.True);
-            yield return WaitUntilReady(() => level.CurrentLocationData.id == other.id);
+            yield return WaitUntilReady(() => level.CurrentLocationData.Id == other.Id);
 
             var player = LiveGame.Player;
             player.transform.position += new Vector3(1.5f, 0f, 0f);
@@ -45,7 +47,7 @@ namespace Core.Location.Editor
             var slot = "test-" + Guid.NewGuid().ToString("N");
             LiveGame.Get<GameStateManager>().Save(slot);
             SessionState.SetString(SlotKey, slot);
-            SessionState.SetString(LocationKey, other.id);
+            SessionState.SetString(LocationKey, other.Id);
             SessionState.SetString(PlacementKey, string.Join(",", new[] { player.transform.position.x, player.transform.position.y }
                 .Select(value => value.ToString("R", CultureInfo.InvariantCulture))));
 
@@ -57,7 +59,7 @@ namespace Core.Location.Editor
 
             var expected = SessionState.GetString(PlacementKey, "").Split(',')
                 .Select(value => float.Parse(value, CultureInfo.InvariantCulture)).ToArray();
-            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.id, Is.EqualTo(SessionState.GetString(LocationKey, "")));
+            Assert.That(LiveGame.Get<LevelManager>().CurrentLocationData.Id, Is.EqualTo(SessionState.GetString(LocationKey, "")));
             Assert.That(Vector2.Distance(LiveGame.Player.transform.position, new Vector2(expected[0], expected[1])), Is.LessThan(0.05f));
             Assert.That(LiveGame.Player.Orientation.FacingDirection, Is.EqualTo(Vector2.left));
             Assert.That(LiveGame.Get<GameStateManager>().CurrentSlot, Is.EqualTo(SessionState.GetString(SlotKey, "")));

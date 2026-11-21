@@ -49,7 +49,7 @@ namespace Core.TimeAndWeather.Editor
             var level = Game.Get<LevelManager>();
             Game.Ready = true;
             var homeLocation = Game.Asset<LocationData>();
-            homeLocation.id = "test:home";
+            homeLocation.SetId("test:home");
             Game.Location = homeLocation;
 
             var bedObject = Child("Home bed");
@@ -62,7 +62,7 @@ namespace Core.TimeAndWeather.Editor
             Set(bedSlot, "occupiedAnimation", AssetDatabase.LoadAssetAtPath<CharacterAnimationDefinition>("Assets/Interaction/PrototypeSittingAnimation.asset"));
             GameTestFixture.Invoke(bedSlot, "Awake");
             GameTestFixture.Invoke(bed, "Awake");
-            Game.State.Player.Home = new PlayerHomeState(homeLocation.id, bed.PersistentId);
+            Game.State.Player.Home = new PlayerHomeState(homeLocation.Id, bed.PersistentId);
             _input = Game.Start<InputManager>(input =>
             {
                 input.GetComponent<PlayerInput>().actions = Game.Own(Game.InjectObject(Object.Instantiate(

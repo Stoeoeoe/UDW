@@ -10,9 +10,9 @@ using System.Linq;
 namespace Core.Scripting
 {
     /// <summary>The compiled script and authored step IDs imported from one cutscene source.</summary>
-    public sealed class CutsceneDefinition : ValidatedScriptableObject, ISerializationCallbackReceiver
+    [Core.Catalogs.DefinitionResource(IdFormat = Core.Catalogs.DefinitionIdFormat.Namespaced)]
+    public sealed class CutsceneDefinition : Core.Catalogs.DefinitionScriptableObject, ISerializationCallbackReceiver
     {
-        [SerializeField, ReadOnly] private string cutsceneId;
         [SerializeField, ReadOnly] private string mapId;
         [SerializeField, ReadOnly, TextArea] private string lua;
         [SerializeField, ReadOnly] private CutsceneStep[] steps = Array.Empty<CutsceneStep>();
@@ -25,8 +25,6 @@ namespace Core.Scripting
         [NonSerialized] private IReadOnlyList<CutsceneStep> _onStart;
         [SerializeField, ReadOnly] private CutsceneVariableDefinition[] variables = Array.Empty<CutsceneVariableDefinition>();
         public IReadOnlyList<CutsceneVariableDefinition> Variables => variables;
-
-        public string CutsceneId => cutsceneId;
         public string MapId => mapId;
         public string Lua => lua;
         public bool AllowSkip => allowSkip;
@@ -51,7 +49,7 @@ namespace Core.Scripting
             bool skipAllowed, CutsceneCompletion completionPlan, string setupScript, IEnumerable<CutsceneStep> setupSteps,
             CutsceneTransition presentation = null, CutsceneVariableDefinition[] localVariables = null)
         {
-            cutsceneId = id;
+            SetId(id);
             mapId = map;
             lua = script;
             steps = importedSteps.ToArray();
@@ -69,13 +67,11 @@ namespace Core.Scripting
 
         public override IReadOnlyList<ConfigurationError> ValidateConfiguration()
         {
-            var errors = new List<ConfigurationError>();
+            var errors = new List<ConfigurationError>(base.ValidateConfiguration());
             if (transition == null)
                 errors.Add(new ConfigurationError(this, "transition", "Requires an explicit transition selection."));
             if (onComplete == null) errors.Add(new ConfigurationError(this, "onComplete", "Requires an explicit completion block."));
             else onComplete.Validate(this, errors);
-            if (!DefinitionIdRules.IsNamespaced(cutsceneId))
-                errors.Add(new ConfigurationError(this, "cutsceneId", "Requires a permanent namespace:name ID."));
             if (string.IsNullOrWhiteSpace(mapId))
                 errors.Add(new ConfigurationError(this, "mapId", "Requires its authored map ID."));
             if (string.IsNullOrWhiteSpace(lua))

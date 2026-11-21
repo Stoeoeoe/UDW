@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using Character;
@@ -8,7 +9,7 @@ namespace Core.Scripting
     /// <summary>Resolves character definitions through the game's already registered spawnable prefabs.</summary>
     public static class ActorSpawnDefinitions
     {
-        public static IReadOnlyDictionary<string, SpawnedObject> Find(IEnumerable<SpawnedObject> prefabs, CharacterCatalog catalog)
+        public static IReadOnlyDictionary<string, SpawnedObject> Find(IEnumerable<SpawnedObject> prefabs, DefinitionCatalog catalog)
         {
             var result = new Dictionary<string, SpawnedObject>(StringComparer.Ordinal);
             foreach (var prefab in prefabs)
@@ -19,7 +20,7 @@ namespace Core.Scripting
                     throw new InvalidOperationException($"Character spawnable '{prefab.name}' requires exactly one NPC character; the player uses its existing role.");
                 var character = characters[0];
                 character.ValidateConfiguration();
-                if (catalog.Require(character.CharacterId) != character.Definition)
+                if (catalog.Require<CharacterDefinition>(character.CharacterId) != character.Definition)
                     throw new InvalidOperationException($"Spawnable '{prefab.name}' must reference its registered character definition.");
                 for (var node = character.transform; node != prefab.transform.parent; node = node.parent)
                     if (!node.gameObject.activeSelf)

@@ -1,3 +1,4 @@
+using Core.Quests;
 using Core.Common.Editor;
 using Core.Events;
 using Core.Inventory;
@@ -22,7 +23,7 @@ namespace Core.Quests.Editor
         {
             _wine = Game.Asset<InventoryTestItem>();
             ConfigurationTestData.Set(_wine, "Id", "test:wine");
-            Game.Catalog<ItemCatalog>(_wine);
+            Game.Catalog<ItemDefinition>(_wine);
         }
 
         /// <summary>
@@ -31,7 +32,7 @@ namespace Core.Quests.Editor
         /// </summary>
         private void Quest(string objective, string next = "{ id: 'x', kind: 'condition', condition: 'false' }")
         {
-            Game.Catalog<QuestCatalog>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
+            Game.Catalog<QuestDefinition>(VulcanusJson.Populate(Game.Asset<QuestDefinition>(),
                 $"{{ id: 'test:quest', steps: [{{ id: 'first', objectives: [{objective}] }}, {{ id: 'second', objectives: [{next}] }}] }}"));
             _bag = Game.CreatePlayer().MainInventory;
             _quests = Game.Get<QuestService>();
@@ -75,7 +76,7 @@ namespace Core.Quests.Editor
         [Test]
         public void AQuestThatAnotherQuestsActionsEndedIsNotCheckedAgain()
         {
-            Game.Catalog<QuestCatalog>(
+            Game.Catalog<QuestDefinition>(
                 VulcanusJson.Populate(Game.Asset<QuestDefinition>(), "{ id: 'test:first', steps: [{ id: 'a', " +
                     "objectives: [{ id: 'met', kind: 'condition', condition: 'true' }], onComplete: \"Quests.GoToStep('test:second', 'end')\" }] }"),
                 VulcanusJson.Populate(Game.Asset<QuestDefinition>(), "{ id: 'test:second', steps: [{ id: 'b', " +
@@ -180,7 +181,7 @@ namespace Core.Quests.Editor
         private LocationData Location(string mapId)
         {
             var location = Game.Asset<LocationData>();
-            location.id = mapId;
+            location.SetId(mapId);
             return location;
         }
     }

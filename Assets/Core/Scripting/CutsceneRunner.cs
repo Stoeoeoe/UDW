@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace Core.Scripting
 
         [Inject] private InputManager _inputManager;
 
-        [Inject] private CutsceneCatalog _catalog;
+        [Inject] private DefinitionCatalog _catalog;
         [SerializeField] private CutsceneSkipConfirmation skipConfirmation;
         [SerializeField] private TimeScaleController timeScaleController;
         [ShowInInspector, ReadOnly] private CutscenePresentationSettings _presentation;
@@ -75,7 +76,7 @@ namespace Core.Scripting
             this.Unsubscribe<DayTransitionStarted>();
         }
 
-        public CutsceneDefinition Resolve(string id) => _catalog.Get(id)
+        public CutsceneDefinition Resolve(string id) => _catalog.Get<CutsceneDefinition>(id)
             ?? throw new InvalidOperationException($"Unknown or disabled cutscene '{id}'.");
 
         public bool TryStart(string id, out CutsceneRun run) => TryStart(Resolve(id), out run);
@@ -85,7 +86,7 @@ namespace Core.Scripting
             if (!definition) throw new ArgumentNullException(nameof(definition));
             run = null;
             if (!isActiveAndEnabled || IsRunning || !_level.SceneReady || _gui.HasOpenScreens) return false;
-            if (_gameState.Story.CompletedCutscenes.Contains(definition.CutsceneId)) return false;
+            if (_gameState.Story.CompletedCutscenes.Contains(definition.Id)) return false;
             var player = _characters.MainCharacter;
             if (!player || !player.IsRuntimeInitialized) throw new InvalidOperationException("Cutscenes require the initialized player.");
             if (player.IsControlBlocked || player.Controller.IsMovementOwned) return false;
@@ -96,7 +97,7 @@ namespace Core.Scripting
             var placements = CutscenePlacement.Prepare(definition, bindings, characters);
             if (placements.Any(placement => placement.Character.IsControlBlocked || placement.Character.Controller.IsMovementOwned)) return false;
             var variables = new CutsceneVariables(definition.Variables);
-            var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.CutsceneId, variables: variables);
+            var session = VulcanusLuaEngine.StartSession(bindings, definition.Lua, definition.Id, variables: variables);
             run = new CutsceneRun(this, definition, session, placements, bindings, characters, variables);
             bindings.DynamicActionBound = run.BindDynamicAction;
             ActiveRun = run;
@@ -200,8 +201,8 @@ namespace Core.Scripting
         }
 
         private static string DescribeError(CutsceneRun run, string message) => run.CurrentStepId is string step
-            ? $"{run.Definition.CutsceneId}, step '{step}': {message}"
-            : $"{run.Definition.CutsceneId}: {message}";
+            ? $"{run.Definition.Id}, step '{step}': {message}"
+            : $"{run.Definition.Id}: {message}";
 
         public void Cancel() { if (ActiveRun != null) Cancel(ActiveRun); }
         internal void Cancel(CutsceneRun run) => Finish(run, completed: false);
@@ -229,7 +230,7 @@ namespace Core.Scripting
         private static void ExecuteImmediate(CutsceneRun run, string lua, IReadOnlyList<CutsceneStep> steps, string phase)
         {
             if (steps.Count == 0) return; // An explicitly empty setup/completion block is valid.
-            using var session = VulcanusLuaEngine.StartSession(run.Bindings, lua, $"{run.Definition.CutsceneId}:{phase}", phase: phase, variables: run.Variables);
+            using var session = VulcanusLuaEngine.StartSession(run.Bindings, lua, $"{run.Definition.Id}:{phase}", phase: phase, variables: run.Variables);
             try
             {
                 // Phase registration forbids awaitables; only instruction-budget slices can suspend this script.
@@ -239,7 +240,7 @@ namespace Core.Scripting
             {
                 var step = session.CurrentStepId != null ? $", step '{session.CurrentStepId}'" :
                     session.ActionsStarted > 0 ? $", step '{steps[session.ActionsStarted - 1].Id}'" : "";
-                throw new InvalidOperationException($"{run.Definition.CutsceneId}, {phase}{step}: {error.Message}", error);
+                throw new InvalidOperationException($"{run.Definition.Id}, {phase}{step}: {error.Message}", error);
             }
         }
 
@@ -256,7 +257,7 @@ namespace Core.Scripting
                 {
                     ExecuteImmediate(run, run.Definition.OnComplete.Lua, run.Definition.OnComplete.Steps, "completion");
                     _completionActions.Execute(run.Definition.OnComplete.Actions);
-                    _gameState.Story.CompletedCutscenes.Add(run.Definition.CutsceneId);
+                    _gameState.Story.CompletedCutscenes.Add(run.Definition.Id);
                 }
                 return completed;
             }

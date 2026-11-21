@@ -1,3 +1,5 @@
+using Plants;
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +34,7 @@ namespace Plants.Editor
         private GameObject _root;
 
         private PlantManager _plants;
-        private PlantCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private PlantData _data;
         private InventoryTestItem _item;
         private SlotInventory _inventory;
@@ -60,7 +62,7 @@ namespace Plants.Editor
             _onNotification = null;
             _root = Game.Root;
             _data = Game.Asset<PlantData>();
-            TestConfiguration.Set(_data, "plantId", "test:crop");
+            TestConfiguration.Set(_data, "Id", "test:crop");
             var stages = PlantDataTests.Stages(0, 2, 5);
             _sprite = Game.Own(Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero));
             foreach (var stage in stages) Set(stage, "_representation", new SpriteOrPrefab { sprite = _sprite });
@@ -71,11 +73,11 @@ namespace Plants.Editor
             Set(_data, "_harvestItem", _item);
             Set(_data, "_minHarvestQuantity", 3);
             Set(_data, "_maxHarvestQuantity", 3);
-            _catalog = Game.Catalog<PlantCatalog>(_data);
+            _catalog = Game.Catalog<PlantData>(_data);
             _plants = Game.Get<PlantManager>();
             Game.State.Player.Inventory.Slots = new InventorySlotState[2];
             _inventory = Game.Inventory(Game.State.Player.Inventory, id => id == _item.Id ? _item : null);
-            _crop = new PlantState(_data.plantId) { daysPassedSincePlanting = 8 };
+            _crop = new PlantState(_data.Id) { daysPassedSincePlanting = 8 };
             Game.State.World.Set("farm", "plant:1,2", _crop);
             EventBus<PlantHarvestedEvent>.Subscribe(this);
             EventBus<InventoryChangedEvent>.Subscribe(this);
@@ -97,7 +99,7 @@ namespace Plants.Editor
         public void HarvestAwardsTheConfiguredYieldAndRemovesOnlyItsOwnCrop(HarvestMethod method)
         {
             Set(_data, "_harvestMethod", method);
-            var other = new PlantState(_data.plantId) { daysPassedSincePlanting = 8 };
+            var other = new PlantState(_data.Id) { daysPassedSincePlanting = 8 };
             Game.State.World.Set("village", "plant:1,2", other);
             Game.State.World.Set("farm", "farmland:1,2", new FarmlandState { plowed = true, irrigated = true });
             _onNotification = () =>
@@ -258,7 +260,7 @@ namespace Plants.Editor
             var view = Game.Add<FarmablePlant>(root);
             view.Bind("farm", new Vector2Int(1, 2), _data, _crop);
             view.OnEvent(new PlantHarvestedEvent { LocationId = "farm", Position = new Vector2Int(1, 2),
-                Removed = true, State = new PlantState(_data.plantId) });
+                Removed = true, State = new PlantState(_data.Id) });
             Assert.That(root, Is.Not.Null);
             Assert.That(root.GetComponent<PlantHarvestInteractable>().TryHarvest(_inventory), Is.True);
             view.OnEvent(_lastHarvest);

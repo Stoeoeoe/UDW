@@ -45,10 +45,10 @@ Assigning or clearing one never moves items. Removed tools leave empty shortcuts
 shortcuts cannot create items. Starting tools are assigned once. Seeds can be selected
 from the bag without occupying toolbelt cells. Equipment and held items remain save-owned.
 
-Shared discovery populates `Assets/Resources/ItemCatalog.asset` from definitions
-under `ItemCatalog.Path` (currently `Assets`) after import/save and before play/build.
+Shared discovery populates the item family in `Assets/Resources/DefinitionCatalog.asset`
+from definitions throughout `Assets` after import/save and before play/build.
 Use **Tools > Inventory > Rebuild Item Catalog** or **Tools > Catalogs** for authoring.
-Runtime resolves IDs through this single catalog and never scans assets. IDs must
+Runtime uses `DefinitionCatalog.Get<ItemDefinition>(id)` and never scans assets. IDs must
 be unique, non-empty and stable. Renaming them breaks saved references.
 
 Tests cover stack limits, atomic additions, direct mutation, detached snapshots,

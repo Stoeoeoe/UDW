@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,7 @@ namespace Core.Spawning
         public IReadOnlyCollection<SpawnedObject> SpawnedObjects => _instances.Values;
         public IReadOnlyCollection<SpawnedObject> RegisteredPrefabs => _prefabs.Values;
 
-        public WorldObjectSpawner(IObjectResolver resolver, GameState gameState, MapManager mapManager, SpawnableCatalog catalog)
+        public WorldObjectSpawner(IObjectResolver resolver, GameState gameState, MapManager mapManager, DefinitionCatalog catalog)
         {
             _resolver = resolver;
             _gameState = gameState;
@@ -41,7 +42,7 @@ namespace Core.Spawning
             staging.SetActive(false);
             staging.transform.SetParent(_root.transform, false);
             _stagingRoot = staging.transform;
-            foreach (var prefab in catalog.Prefabs) Register(prefab);
+            foreach (var prefab in catalog.All<SpawnedObject>()) Register(prefab);
         }
 
         public void Dispose()
@@ -53,9 +54,9 @@ namespace Core.Spawning
         /// <summary>Register additional content, for example from a mod, before spawning or restoring it.</summary>
         public void Register(SpawnedObject prefab)
         {
-            if (_prefabs.TryGetValue(prefab.PrefabId, out var existing) && existing != prefab)
-                throw new InvalidOperationException($"Duplicate spawnable ID '{prefab.PrefabId}'.");
-            _prefabs[prefab.PrefabId] = prefab;
+            if (_prefabs.TryGetValue(prefab.Id, out var existing) && existing != prefab)
+                throw new InvalidOperationException($"Duplicate spawnable ID '{prefab.Id}'.");
+            _prefabs[prefab.Id] = prefab;
         }
 
         /// <summary>Spawn a registered prefab at an absolute world position; saving is automatic.</summary>
@@ -64,10 +65,10 @@ namespace Core.Spawning
         {
             if (_locationId == null)
                 throw new InvalidOperationException("Enter a location before spawning an object.");
-            if (Resolve(prefab.PrefabId) != prefab)
+            if (Resolve(prefab.Id) != prefab)
                 throw new InvalidOperationException($"'{prefab.name}' is not registered.");
             state ??= prefab.CreateState(_gameState.Time.daysSinceStart);
-            state.prefabId = prefab.PrefabId;
+            state.prefabId = prefab.Id;
             state.position = position;
             state.rotation = prefab.transform.rotation;
             state.authored = false;
@@ -94,9 +95,9 @@ namespace Core.Spawning
         /// <summary>Restores the location and seeds missing authored records from their configured templates.</summary>
         public void EnterLocation(LocationData location, IReadOnlyList<AuthoredSpawnPlacement> placements)
         {
-            if (_locationId == location.id) return;
+            if (_locationId == location.Id) return;
             ClearViews();
-            _locationId = location.id;
+            _locationId = location.Id;
             _locationRoot = new GameObject("Spawned objects").transform;
             _locationRoot.SetParent(_root.transform, false);
             foreach (var placement in placements)
@@ -106,7 +107,7 @@ namespace Core.Spawning
                     _placements.Add(placement.id, placement);
                     if (_gameState.World.TryGet(_locationId, placement.id, out SpawnedObjectState _)) continue;
                     var state = placement.template.CreateState(_gameState.Time.daysSinceStart);
-                    state.prefabId = placement.template.PrefabId;
+                    state.prefabId = placement.template.Id;
                     state.position = placement.template.transform.position;
                     state.rotation = placement.template.transform.rotation;
                     state.authored = true;

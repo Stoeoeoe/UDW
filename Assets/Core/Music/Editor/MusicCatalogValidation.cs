@@ -7,6 +7,7 @@ namespace Core.Music.Editor
     /// <summary>Arrangements of one theme are switched in time with each other, so they must share timing and sample counts.</summary>
     internal static class MusicCatalogValidation
     {
+        [Core.Catalogs.Editor.DefinitionValidation(typeof(MusicCue))]
         public static void Validate(IEnumerable<MusicCue> cues)
         {
             foreach (var group in cues.GroupBy(cue => cue.Theme))

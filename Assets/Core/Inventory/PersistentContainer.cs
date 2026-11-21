@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using Character;
 using Core.Spawning;
@@ -9,8 +10,7 @@ namespace Core.Inventory
     /// <summary>Persistent world view. The spawner binds owner and contents before enabling it.</summary>
     public sealed class PersistentContainer : SpawnedObject
     {
-        [Inject] private ItemCatalog _itemCatalog;
-        [Inject] private CharacterCatalog _characterCatalog;
+        [Inject] private DefinitionCatalog _catalog;
 
         [SerializeField] private CharacterDefinition owner;
         [SerializeField, Min(1)] private int capacity = 20;
@@ -34,11 +34,11 @@ namespace Core.Inventory
                     throw new InvalidOperationException($"Container '{name}' starting contents require registered items and valid stack quantities.");
         }
 
-        public void ValidateConfiguration(ItemCatalog items)
+        public void ValidateConfiguration(DefinitionCatalog items)
         {
             ValidateFields();
             foreach (var stack in startingContents)
-                if (items.Find(stack.Item.Id) != stack.Item)
+                if (items.Get<ItemDefinition>(stack.Item.Id) != stack.Item)
                     throw new InvalidOperationException($"Container '{name}' starting contents require registered items.");
         }
 
@@ -54,10 +54,10 @@ namespace Core.Inventory
 
         protected override void OnStateBound()
         {
-            ValidateConfiguration(_itemCatalog);
+            ValidateConfiguration(_catalog);
             if (State is not ContainerState state)
                 throw new InvalidOperationException($"Container '{PersistentId}' requires ContainerState.");
-            Storage = new ContainerStorage(state, _characterCatalog.Require, _itemCatalog.Find);
+            Storage = new ContainerStorage(state, _catalog.Require<CharacterDefinition>, _catalog.Get<ItemDefinition>);
         }
 
         private void Awake()

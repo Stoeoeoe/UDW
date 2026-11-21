@@ -1,3 +1,5 @@
+using Character;
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -19,7 +21,7 @@ namespace Core.Dialogue.Vulcanus
 
         [Inject] private CharacterManager _characterManager;
 
-        [Inject] private Character.CharacterCatalog _characters;
+        [Inject] private DefinitionCatalog _characters;
 
         [Header("Layout")]
         [SerializeField] private UIDocument document;
@@ -335,7 +337,7 @@ namespace Core.Dialogue.Vulcanus
         {
             // An empty speaker is narration: no portrait or nameplate.
             var hasSpeaker = !string.IsNullOrWhiteSpace(speaker);
-            var character = hasSpeaker ? _characters.Require(speaker) : null;
+            var character = hasSpeaker ? _characters.Require<CharacterDefinition>(speaker) : null;
             var portrait = character ? character.PortraitFor(emotion) : null;
 
             _speakerLabel.text = character ? character.Name : string.Empty;

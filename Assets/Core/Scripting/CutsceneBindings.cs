@@ -41,7 +41,7 @@ namespace Core.Scripting
                 throw new InvalidOperationException("Cutscene binding requires the initialized map.");
             var map = runtime.Maps.CurrentMap;
             if (definition.MapId != map.MapId)
-                throw new InvalidOperationException($"Cutscene '{definition.CutsceneId}' belongs to map '{definition.MapId}', not the current map '{map.MapId}'.");
+                throw new InvalidOperationException($"Cutscene '{definition.Id}' belongs to map '{definition.MapId}', not the current map '{map.MapId}'.");
 
             try
             {
@@ -59,7 +59,7 @@ namespace Core.Scripting
             }
             catch (Exception error)
             {
-                throw new InvalidOperationException($"Cutscene '{definition.CutsceneId}': {error.Message}", error);
+                throw new InvalidOperationException($"Cutscene '{definition.Id}': {error.Message}", error);
             }
         }
 

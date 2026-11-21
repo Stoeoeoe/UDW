@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections;
 using Core.Common;
@@ -19,7 +20,7 @@ namespace Core.TimeAndWeather
     {
         [Inject] private GameClock _clock;
         [Inject] private GameState _gameState;
-        [Inject] private WeatherCatalog _catalog;
+        [Inject] private DefinitionCatalog _catalog;
         private SeasonData _season;
         private float _dayProgress;
 
@@ -71,7 +72,7 @@ namespace Core.TimeAndWeather
             var session = _gameState.Session;
             var resumed = session.WeatherDay == _gameState.Time.daysSinceStart && !string.IsNullOrEmpty(session.WeatherId);
             SetWeather(resumed
-                ? _catalog.Get(session.WeatherId)
+                ? _catalog.Get<WeatherData>(session.WeatherId)
                   ?? throw new InvalidOperationException($"The saved weather '{session.WeatherId}' is not a registered, enabled weather.")
                 : season.weatherData.GetRandomItem());
             RefreshDaylight();
@@ -90,7 +91,7 @@ namespace Core.TimeAndWeather
             weather.RequireValidConfiguration();
             if (!_effectsRoot || !isActiveAndEnabled)
                 throw new InvalidOperationException("The weather manager is not initialized and active.");
-            _gameState.Session.WeatherId = weather.id;
+            _gameState.Session.WeatherId = weather.Id;
             _gameState.Session.WeatherDay = _gameState.Time.daysSinceStart;
             StartCoroutine(ApplyWeather(weather));
         }

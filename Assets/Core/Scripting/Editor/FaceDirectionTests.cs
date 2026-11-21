@@ -581,7 +581,7 @@ namespace Core.Scripting.Editor
             var useStandIn = (Action)(() => Set(_api, "_worldObjectSpawner", spawner));
             useStandIn(); // The API plans spawns against the authored spawner unless it is replaced.
             var location = Game.Asset<LocationData>();
-            location.id = "test:characters";
+            location.SetId("test:characters");
             spawner.EnterLocation(location, Array.Empty<AuthoredSpawnPlacement>());
             var point = new MapPosition(168, 104);
             _api.ValidateSpawn("guest", PrototypeCharacterId, point);
@@ -591,7 +591,7 @@ namespace Core.Scripting.Editor
             var lua = CutsceneSequenceCompiler.Compile(new JArray(new JObject { ["id"] = "turn", ["action"] = "characters.faceDirection",
                 ["arguments"] = new JObject { ["character"] = "guest", ["direction"] = "East" } }), "spawn.json", out var steps);
             var definition = Game.Asset<CutsceneDefinition>();
-            definition.Configure("test:spawn", location.id, lua, steps, true,
+            definition.Configure("test:spawn", location.Id, lua, steps, true,
                 new CutsceneCompletion(Array.Empty<CutsceneCharacterPlacement>(), "", "", Array.Empty<CutsceneStep>()), "", Array.Empty<CutsceneStep>());
             var variables = new CutsceneVariables(definition.Variables);
             using var sequence = VulcanusLuaEngine.StartSession(bindings, lua, "spawn.json", variables: variables);
@@ -614,14 +614,14 @@ namespace Core.Scripting.Editor
             sequence.Tick(0);
             Assert.That(character.Orientation.FacingDirection, Is.EqualTo(Vector2.right));
             var id = spawn.PersistentId;
-            Assert.That(Game.State.World.TryGet(location.id, id, out SpawnedObjectState state), Is.True);
+            Assert.That(Game.State.World.TryGet(location.Id, id, out SpawnedObjectState state), Is.True);
             Assert.That(state.position, Is.EqualTo(spawn.transform.position));
             character.SetControlBlocked(run, false);
             // These callbacks were invoked explicitly in OnStateBound, so release their EditMode bindings explicitly too.
             GameTestFixture.Invoke(character.PerformPrimaryAction, "OnDestroy");
             GameTestFixture.Invoke(character, "OnDestroy");
             Call(_api, "FinishSpawns", keep);
-            Assert.That(Game.State.World.TryGet(location.id, id, out SpawnedObjectState _), Is.EqualTo(keep));
+            Assert.That(Game.State.World.TryGet(location.Id, id, out SpawnedObjectState _), Is.EqualTo(keep));
             Assert.That(spawner.SpawnedObjects.Count, Is.EqualTo(keep ? 1 : 0));
         }
 

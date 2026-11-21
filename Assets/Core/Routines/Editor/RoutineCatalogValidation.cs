@@ -1,3 +1,5 @@
+using Core.Routines;
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,11 +17,12 @@ namespace Core.Routines.Editor
     /// </summary>
     internal static class RoutineCatalogValidation
     {
+        [Core.Catalogs.Editor.DefinitionValidation(typeof(RoutineDefinition))]
         public static void Validate(IReadOnlyCollection<RoutineDefinition> routines)
         {
             // The routine decides what its character says, so the character's prefab must not fix a dialogue of its own.
             var fixedDialogues = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var prefab in CatalogAssetDiscovery.Find(SpawnableCatalog.PrefabFolder, typeof(SpawnedObject)).Cast<SpawnedObject>())
+            foreach (var prefab in CatalogAssetDiscovery.Find(DefinitionCatalog.DiscoveryPath(typeof(SpawnedObject)), typeof(SpawnedObject)).Cast<SpawnedObject>())
             {
                 var character = prefab.GetComponentInChildren<GameCharacter>(true);
                 var talk = prefab.GetComponentInChildren<ShowVulcanusDialogueInteractable>(true);

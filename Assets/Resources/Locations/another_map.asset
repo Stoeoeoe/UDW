@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8504c6c9aab64da6a9f15cde1799e928, type: 3}
   m_Name: another_map
   m_EditorClassIdentifier: Assembly-CSharp::Core.Common.LocationData
-  id: another_map
+  <Id>k__BackingField: another_map
   label: Outdoor Test Scene
   locationType: 1

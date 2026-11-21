@@ -1,3 +1,4 @@
+using Core.Quests;
 using System;
 using System.Linq;
 using Core.Common.Editor;
@@ -24,7 +25,7 @@ namespace Core.Quests.Editor
                         { id: 'a', kind: 'condition', condition: 'true' },
                         { id: 'b', kind: 'condition', condition: 'true' } ] },
                     { id: 'second', objectives: [ { id: 'c', kind: 'condition', condition: 'true' } ] } ] }");
-            Game.Catalog<QuestCatalog>(quest);
+            Game.Catalog<QuestDefinition>(quest);
             _quests = Game.Get<QuestService>();
         }
 

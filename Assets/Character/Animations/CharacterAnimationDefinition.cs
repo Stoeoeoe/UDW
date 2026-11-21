@@ -4,12 +4,10 @@ using UnityEngine;
 namespace Character.Animations
 {
     /// <summary>Identifies an authored animation or animation set; assets hold no character playback state.</summary>
-    public abstract class CharacterAnimationDefinition : ValidatedScriptableObject<CharacterAnimationValidator>
+    [Core.Catalogs.DefinitionResource]
+    [Core.Scripting.LuaResource("animation")]
+    public abstract class CharacterAnimationDefinition : Core.Catalogs.DefinitionScriptableObject<CharacterAnimationValidator>
     {
-        [SerializeField, Validation.NamespacedId(Lowercase = true)]
-        private string animationId;
-
-        public string Id => animationId;
         public abstract CharacterAnimation BaseAnimation { get; }
     }
 }

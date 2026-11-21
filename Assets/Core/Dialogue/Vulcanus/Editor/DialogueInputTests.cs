@@ -1,5 +1,8 @@
+using Core.Dialogue.Vulcanus;
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Character;
 using Core.Common.Editor;
@@ -24,7 +27,7 @@ namespace Core.Dialogue.Vulcanus.Editor
         private UrGUIManager _gui;
         private MainCharacter _character;
         private VulcanusDialogueRunner _runner;
-        private DialogueCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private VulcanusDialogueUIDocumentPresenter _presenter;
         private UIDocument _document;
         private readonly List<UnityEngine.Camera> _sceneMainCameras = new();
@@ -40,7 +43,7 @@ namespace Core.Dialogue.Vulcanus.Editor
             _document = root.AddComponent<UIDocument>();
             _presenter = root.AddComponent<VulcanusDialogueUIDocumentPresenter>();
             Game.Use<IDialoguePresenter>(_presenter);
-            _catalog = Game.Catalog<DialogueCatalog>();
+            _catalog = Game.Catalog<VulcanusDialogueAsset>();
 
             Game.Root.SetActive(true);
             _input = UIScreenPauseTests.CreateScreenServices(Game);
@@ -92,7 +95,8 @@ namespace Core.Dialogue.Vulcanus.Editor
                 : $"{{ id: 'entry', type: 'line', speaker: '{speaker}', text: 'A line of dialogue.', next: 'end' }}";
             var dialogue = VulcanusJson.Populate(Game.Asset<VulcanusDialogueAsset>(),
                 $"{{ id: 'test:dialogue', startNodeId: 'entry', nodes: [{entry}, {{ id: 'end', type: 'end' }}] }}");
-            _catalog.Synchronize(new[] { dialogue });
+            _catalog.Synchronize(_catalog.Entries.Where(entry => entry.Definition is not VulcanusDialogueAsset)
+                .Select(entry => entry.Definition).Append(dialogue));
             Assert.That(_runner.StartDialogue(dialogue.Id, _character), Is.True);
             Assert.That(_input.PlayerControls.enabled, Is.False);
             Assert.That(_input.ActiveMapName, Is.EqualTo("UI"));

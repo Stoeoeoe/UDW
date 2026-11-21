@@ -30,18 +30,23 @@ namespace Core.Scripting.Editor
         public void UnknownResourceTypeFailsExportInsteadOfPublishingAnUnusableSelector()
         {
             var manifest = LuaBindingRegistry.DescribeTypes(typeof(ResourceApi));
-            Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, Array.Empty<DefinitionCatalog>()),
-                Throws.InvalidOperationException.With.Message.Contains("No resources exported for type 'custom'"));
+            var catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
+            try
+            {
+                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, catalog, Array.Empty<Type>()),
+                    Throws.InvalidOperationException.With.Message.Contains("No resources exported for type 'custom'"));
+            }
+            finally { Object.DestroyImmediate(catalog); }
         }
 
         [Test]
         public void DuplicateResourceCatalogsFailExport()
         {
             var manifest = LuaBindingRegistry.DescribeTypes(typeof(ResourceApi));
-            var catalog = ScriptableObject.CreateInstance<SoundCatalog>();
+            var catalog = ScriptableObject.CreateInstance<DefinitionCatalog>();
             try
             {
-                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, new[] { catalog, catalog }),
+                Assert.That(() => LuaBindingManifestExporter.PopulateResources(manifest, catalog, new[] { typeof(SoundDefinition), typeof(SoundDefinition) }),
                     Throws.InvalidOperationException.With.Message.Contains("Duplicate Lua resource catalog for type 'sound'"));
             }
             finally { Object.DestroyImmediate(catalog); }
@@ -71,19 +76,19 @@ namespace Core.Scripting.Editor
                 Assert.That(LuaBindingManifestExporter.WriteIfChanged(path, manifest), Is.False);
                 var json = JObject.Parse(File.ReadAllText(path));
                 Assert.That(json["resources"]["emote"].Select(resource => (string)resource["id"]),
-                    Is.EquivalentTo(Resources.Load<EmoteCatalog>(EmoteCatalog.ResourceName).EnabledDefinitions.Select(emote => emote.Id)));
+                    Is.EquivalentTo(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).All<EmoteDefinition>().Select(emote => emote.Id)));
                 Assert.That(json["resources"]["deity"].Select(resource => (string)resource["id"]),
-                    Is.EquivalentTo(Resources.Load<DeityCatalog>(DeityCatalog.ResourceName).EnabledDefinitions.Select(deity => deity.Id)));
+                    Is.EquivalentTo(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).All<DeityDefinition>().Select(deity => deity.Id)));
                 Assert.That(json["resources"]["deity"].Select(resource => (string)resource["description"]),
-                    Is.EqualTo(Resources.Load<DeityCatalog>(DeityCatalog.ResourceName).EnabledDefinitions.OrderBy(deity => deity.Id, StringComparer.Ordinal).Select(deity => deity.DisplayName)));
+                    Is.EqualTo(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).All<DeityDefinition>().OrderBy(deity => deity.Id, StringComparer.Ordinal).Select(deity => deity.DisplayName)));
                 var favour = json["modules"].SelectMany(module => module["methods"])
                     .Single(method => (string)method["action"]?["id"] == "divinity.addFavour");
                 Assert.That((string)favour["parameters"].Single(parameter => (string)parameter["name"] == "deityId")["resourceType"], Is.EqualTo("deity"));
                 Assert.That(json["resources"]["weather"].Select(resource => (string)resource["id"]),
-                    Is.EquivalentTo(Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName).EnabledDefinitions.Select(weather => weather.id)));
+                    Is.EquivalentTo(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).All<WeatherData>().Select(weather => weather.Id)));
                 Assert.That(json["resources"]["weather"].Select(resource => (string)resource["id"]), Does.Contain("Sunny"));
                 Assert.That(json["resources"]["weather"].Select(resource => (string)resource["description"]),
-                    Is.EqualTo(Resources.Load<WeatherCatalog>(WeatherCatalog.ResourceName).EnabledDefinitions.OrderBy(weather => weather.id, StringComparer.Ordinal).Select(weather => weather.label)));
+                    Is.EqualTo(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName).All<WeatherData>().OrderBy(weather => weather.Id, StringComparer.Ordinal).Select(weather => weather.label)));
                 var weatherAction = json["modules"].SelectMany(module => module["methods"])
                     .Single(method => (string)method["action"]?["id"] == "weather.setWeather");
                 Assert.That((string)weatherAction["parameters"].Single()["resourceType"], Is.EqualTo("weather"));

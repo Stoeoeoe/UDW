@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8504c6c9aab64da6a9f15cde1799e928, type: 3}
   m_Name: new_map
   m_EditorClassIdentifier: Assembly-CSharp::Core.Common.LocationData
-  id: new_map
+  <Id>k__BackingField: new_map
   label: Indoor Test
   locationType: 0

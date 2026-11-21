@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -26,9 +27,9 @@ namespace Plants
 
         private const string PlantObjectPrefix = "plant:";
 
-        private readonly PlantCatalog _catalog;
+        private readonly DefinitionCatalog _catalog;
 
-        public PlantManager(GameState state, PlantCatalog catalog, LocationContext location, ItemManager items)
+        public PlantManager(GameState state, DefinitionCatalog catalog, LocationContext location, ItemManager items)
         {
             _gameState = state;
             _catalog = catalog;
@@ -42,7 +43,7 @@ namespace Plants
         /// <summary>Looks up an enabled plant definition in the shared catalog.</summary>
         public bool TryGetPlantData(string id, out PlantData data)
         {
-            data = _catalog.Get(id);
+            data = _catalog.Get<PlantData>(id);
             return data;
         }
 
@@ -250,7 +251,7 @@ namespace Plants
         /// <summary>Sows directly on the current map without consuming a seed; occupied crop tiles are unchanged.</summary>
         public void SowPlantOnCurrentMap(Vector2Int position, string plantId)
         {
-            string locationId = _locationContext.Location.id;
+            string locationId = _locationContext.Location.Id;
             SowPlantOnMap(locationId, position, plantId);
         }
 
@@ -260,14 +261,14 @@ namespace Plants
             if (string.IsNullOrEmpty(locationId) || tile?.FarmlandData is not { IsPlowed: true } ||
                 tile.PlacedObject || slotIndex < 0 || slotIndex >= inventory.Capacity ||
                 inventory.GetSlot(slotIndex).Item is not SeedItem seed ||
-                !TryGetPlantData(seed.PlantData.plantId, out _) ||
+                !TryGetPlantData(seed.PlantData.Id, out _) ||
                 HasPlantAt(locationId, tile.Coordinates)) return false;
             var stack = inventory.GetSlot(slotIndex);
             var remaining = stack.Quantity > 1 ? new ItemStack(seed, stack.Quantity - 1) : ItemStack.Empty;
             inventory.Storage.SetSlot(slotIndex, remaining);
             // Both live states are complete before a listener can move inventory or start a transition.
-            _gameState.World.Set(locationId, PlantObjectId(tile.Coordinates), new PlantState(seed.PlantData.plantId));
-            var sow = new SowPlantEvent { Position = tile.Coordinates, PlantId = seed.PlantData.plantId, LocationId = locationId };
+            _gameState.World.Set(locationId, PlantObjectId(tile.Coordinates), new PlantState(seed.PlantData.Id));
+            var sow = new SowPlantEvent { Position = tile.Coordinates, PlantId = seed.PlantData.Id, LocationId = locationId };
             EventBus<SowPlantEvent>.Raise(sow);
             InventoryChangedEvent.Trigger(inventory);
             return true;
@@ -291,7 +292,7 @@ namespace Plants
         /// <summary>Checks for a saved crop at the tile in the current location.</summary>
         public bool HasPlantAtCurrentMap(Vector2Int position)
         {
-            string locationId = _locationContext.Location.id;
+            string locationId = _locationContext.Location.Id;
             return HasPlantAt(locationId, position);
         }
 

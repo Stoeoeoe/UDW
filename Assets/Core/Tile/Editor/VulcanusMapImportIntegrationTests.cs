@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -94,14 +95,14 @@ namespace Core.Tile.Editor
                 "\"objects\":[{\"id\":\"test:chair\",\"tiles\":[{\"x\":0,\"y\":0,\"tileIndex\":0}]}]}");
 
             // Read the project's registered prefab; do not mutate a shared authoring catalog.
-            var spawnCatalog = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>(SpawnableCatalogEditor.CatalogPath);
+            var spawnCatalog = AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(SpawnableCatalogEditor.CatalogPath);
             Assert.That(spawnCatalog, Is.Not.Null);
-            var sourcePrefab = spawnCatalog.Prefabs.FirstOrDefault();
+            var sourcePrefab = spawnCatalog.All<SpawnedObject>().FirstOrDefault();
             Assert.That(sourcePrefab, Is.Not.Null, "The shipped spawnable catalog must contain a persistent prefab.");
-            _sourcePrefabId = sourcePrefab.PrefabId;
+            _sourcePrefabId = sourcePrefab.Id;
 
             _target = ScriptableObject.CreateInstance<LocationData>();
-            _target.id = "test:target";
+            _target.SetId("test:target");
             AssetDatabase.CreateAsset(_target, _root + "/target.asset");
             _catalog = ScriptableObject.CreateInstance<VulcanusWorldCatalog>();
             _catalog.ApplySyncData(null, new[] { new VulcanusWorldCatalog.MapBinding("test:target", null, _target) });
@@ -152,7 +153,7 @@ namespace Core.Tile.Editor
             {
                 AssetDatabase.DeleteAsset(Path.GetDirectoryName(_musicFixturePath));
                 _musicFixturePath = null;
-                CatalogDiscovery.Refresh(Resources.Load<MusicCatalog>(MusicCatalog.ResourceName));
+                CatalogDiscovery.Refresh(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName));
             }
         }
 
@@ -163,7 +164,7 @@ namespace Core.Tile.Editor
             var location = ImportedLocation();
             Assert.That(map.MapId, Is.EqualTo("test:map"));
             Assert.That(map.MapName, Is.EqualTo("A display name"));
-            Assert.That(location.id, Is.EqualTo(map.MapId));
+            Assert.That(location.Id, Is.EqualTo(map.MapId));
             Assert.That(location.scenePath, Is.EqualTo(_scenePath));
             Assert.That(location.locationType, Is.EqualTo(LocationType.Indoor));
             Assert.That(location.muteWeatherAudio, Is.True);
@@ -178,15 +179,15 @@ namespace Core.Tile.Editor
         public void MapMusicUsesTheAuthoredCueAndPresetAcrossReimports()
         {
             var fixture = MusicFixture();
-            _mapJson["metadata"]["musicCue"] = fixture.id;
+            _mapJson["metadata"]["musicCue"] = fixture.Id;
             _mapJson["metadata"]["musicPreset"] = "full";
             var music = ImportMap().GetComponent<MusicEnvironment>();
-            Assert.That(music.cue.id, Is.EqualTo(fixture.id));
+            Assert.That(music.cue.Id, Is.EqualTo(fixture.Id));
             Assert.That(music.preset, Is.EqualTo("full"));
             music.cue.RequireValidConfiguration();
             var dependencies = VulcanusImporterCoordinator.GatherDependenciesFromSourceFile(_mapPath);
             Assert.That(dependencies, Does.Contain(AssetDatabase.GetAssetPath(fixture)));
-            Assert.That(dependencies, Does.Not.Contain("Assets/Resources/MusicCatalog.asset"), "The catalog is refreshed after imports.");
+            Assert.That(dependencies, Does.Not.Contain("Assets/Resources/DefinitionCatalog.asset"), "The catalog is refreshed after imports.");
             var cue = music.cue;
             Assert.That(ImportMap().GetComponent<MusicEnvironment>().cue, Is.SameAs(cue));
         }
@@ -666,7 +667,7 @@ namespace Core.Tile.Editor
             var map = ImportMap();
             var placement = map.PersistentEntities.Single();
             Assert.That(placement.id, Is.EqualTo("crate-1"));
-            Assert.That(placement.template.PrefabId, Is.EqualTo(_sourcePrefabId));
+            Assert.That(placement.template.Id, Is.EqualTo(_sourcePrefabId));
             Assert.That(placement.template.gameObject.activeSelf, Is.True);
             Assert.That(placement.template.transform.parent.gameObject.activeSelf, Is.False);
             Assert.That(placement.template.State, Is.Null);
@@ -830,10 +831,10 @@ namespace Core.Tile.Editor
                     _mapJson["metadata"]["musicPreset"] = "full";
                     message = "references missing music cue"; break;
                 case "missing-music-preset":
-                    _mapJson["metadata"]["musicCue"] = MusicFixture().id;
+                    _mapJson["metadata"]["musicCue"] = MusicFixture().Id;
                     message = "requires musicPreset"; break;
                 case "unknown-music-preset":
-                    _mapJson["metadata"]["musicCue"] = MusicFixture().id;
+                    _mapJson["metadata"]["musicCue"] = MusicFixture().Id;
                     _mapJson["metadata"]["musicPreset"] = "missing";
                     message = "references unknown music preset"; break;
                 default: ((JArray)_mapJson["entities"]).Add(_mapJson["entities"][0].DeepClone()); message = "Duplicate persistent entity ID"; break;
@@ -854,11 +855,10 @@ namespace Core.Tile.Editor
         [UnityTest]
         public IEnumerator LocationCatalogAutomaticallyTracksImportedMapsWithoutManagerAssignments()
         {
-            var catalog = ScriptableObject.CreateInstance<LocationCatalog>();
-            AssetDatabase.CreateAsset(catalog, _root + "/locations.asset");
+            var catalog = DefaultCatalogAssets.Load();
             ImportMap();
-            yield return AwaitCatalog(() => catalog.Get("test:map"));
-            Assert.That(catalog.Get("test:map"), Is.SameAs(ImportedLocation()));
+            yield return AwaitCatalog(() => catalog.Get<LocationData>("test:map"));
+            Assert.That(catalog.Get<LocationData>("test:map"), Is.SameAs(ImportedLocation()));
 
             var owner = new GameObject("Location lookup");
             owner.SetActive(false);
@@ -869,17 +869,17 @@ namespace Core.Tile.Editor
 
             _mapJson["id"] = "test:renamed";
             ImportMap();
-            yield return AwaitCatalog(() => catalog.Get("test:renamed") && !catalog.Get("test:map"));
-            Assert.That(catalog.Get("test:renamed"), Is.SameAs(ImportedLocation()));
+            yield return AwaitCatalog(() => catalog.Get<LocationData>("test:renamed") && !catalog.Get<LocationData>("test:map"));
+            Assert.That(catalog.Get<LocationData>("test:renamed"), Is.SameAs(ImportedLocation()));
             AssetDatabase.DeleteAsset(_mapPath);
-            yield return AwaitCatalog(() => !catalog.Get("test:renamed"));
+            yield return AwaitCatalog(() => !catalog.Get<LocationData>("test:renamed"));
         }
 
         [UnityTest]
         public IEnumerator CatalogAutomaticallyDiscoversImportsAndReimportsWithoutChangingManualAssignments()
         {
             BindCatalogProject();
-            var prefab = AssetDatabase.LoadAssetAtPath<SpawnableCatalog>(SpawnableCatalogEditor.CatalogPath).Prefabs.First().gameObject;
+            var prefab = AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(SpawnableCatalogEditor.CatalogPath).All<SpawnedObject>().First().gameObject;
             var manualEntity = new VulcanusProject.EntityPrefabMapping { entityTypeId = "test:manual", prefab = prefab };
             _catalog.ApplySyncData(new[] { manualEntity }, _catalog.MapBindings);
             ImportMap();
@@ -963,7 +963,7 @@ namespace Core.Tile.Editor
         {
             var cue = ApolloCueImporterTests.CreateFixture("map-import-" + Guid.NewGuid().ToString("N"));
             _musicFixturePath = AssetDatabase.GetAssetPath(cue);
-            CatalogDiscovery.Refresh(Resources.Load<MusicCatalog>(MusicCatalog.ResourceName));
+            CatalogDiscovery.Refresh(Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName));
             return cue;
         }
 

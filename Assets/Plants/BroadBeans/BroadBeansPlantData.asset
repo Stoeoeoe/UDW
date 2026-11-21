@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a0a485f742f4553884da6ca441525ba, type: 3}
   m_Name: BroadBeansPlantData
   m_EditorClassIdentifier: Assembly-CSharp::Plants.PlantData
-  _plantId: base:broad_beans
+  <Id>k__BackingField: base:broad_beans
   _label: Broad Beans
   _description: Hardy beans that grow tall and carry fat pods.
   growingSeasons: 0000000001000000i

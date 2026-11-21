@@ -1,3 +1,5 @@
+using Plants;
+using Core.Catalogs;
 using System;
 using System.Reflection;
 using Core.Common;
@@ -31,7 +33,7 @@ namespace Plants.Editor
         private FarmablePlant _view;
 
         private PlantState _state;
-        private PlantCatalog _catalog;
+        private DefinitionCatalog _catalog;
         private Sprite _sprite;
 
         [SetUp]
@@ -40,14 +42,14 @@ namespace Plants.Editor
 
             _state = new PlantState("test:crop");
             _data = Game.Asset<PlantData>();
-            ConfigurationTestData.Set(_data, "plantId", _state.plantID);
+            ConfigurationTestData.Set(_data, "Id", _state.plantID);
             _sprite = Game.Own(Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero));
             var stages = PlantDataTests.Stages(0, 2);
             foreach (var stage in stages)
                 stage.GetType().GetField("_representation", BindingFlags.Instance | BindingFlags.NonPublic)
                     .SetValue(stage, new SpriteOrPrefab { sprite = _sprite });
             Set(_data, "growthStages", stages);
-            _catalog = Game.Catalog<PlantCatalog>(_data);
+            _catalog = Game.Catalog<PlantData>(_data);
             _view = Game.Create<FarmablePlant>();
             _root = _view.gameObject;
             Game.State.World.Set("farm", "plant:1,1", _state);

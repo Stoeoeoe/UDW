@@ -2,7 +2,7 @@
 
 Create an emote with **Assets > Create > Game > Character > Emote**. Give it a
 stable namespaced ID, a positive duration in scaled seconds, and a character
-animation, a callout sprite, or both. The shared EmoteCatalog discovers definitions
+animation, a callout sprite, or both. The shared DefinitionCatalog discovers emote definitions
 throughout Assets; its enabled entries appear in Vulcanus's emote selector after
 the Lua bindings export. Emotes are presentation content, not saved player state.
 

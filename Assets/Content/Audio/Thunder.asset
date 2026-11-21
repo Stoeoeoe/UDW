@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eef382cf69e179842be21e5ad52f563b, type: 3}
   m_Name: Thunder
   m_EditorClassIdentifier: Assembly-CSharp::Core.Scripting.SoundDefinition
-  soundId: base:thunder
+  <Id>k__BackingField: base:thunder
   clip: {fileID: 8300000, guid: 6c1292b278c594147baefdc4ccaebc47, type: 3}

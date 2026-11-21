@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System.Collections;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -37,16 +38,16 @@ namespace Core.Scripting.Editor
         {
             var emote = ScriptableObject.CreateInstance<EmoteDefinition>();
             var animation = ScriptableObject.CreateInstance<CharacterAnimation>();
-            Set(animation, "animationId", "fixture:missing-emote-animation");
+            Set(animation, "Id", "fixture:missing-emote-animation");
             Set(animation, "memaoAction", "MissingEmoteAnimation");
-            Set(emote, "emoteId", "fixture:emote");
+            Set(emote, "Id", "fixture:emote");
             Set(emote, "duration", 1f);
             Set(emote, "animation", animation);
             var icon = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/InventoryScreen/UseIcon.png");
             Assert.That(icon, Is.Not.Null);
             Set(emote, "calloutIcon", icon);
             emote.RequireValidConfiguration();
-            var catalog = Resources.Load<EmoteCatalog>(EmoteCatalog.ResourceName);
+            var catalog = Resources.Load<DefinitionCatalog>(DefinitionCatalog.ResourceName);
             var previous = catalog.Entries.Select(entry => entry.Definition).ToArray();
             catalog.Synchronize(previous.Append(emote));
             var actor = LiveGame.Player;

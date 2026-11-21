@@ -29,7 +29,7 @@ namespace Core.Game.Editor
             Game.State.Time.dayOfSeason = 1;
             Game.State.Time.hour = 6;
             var location = Game.Asset<LocationData>();
-            location.id = "test:farm";
+            location.SetId("test:farm");
             Game.Location = location;
         }
 
@@ -101,7 +101,7 @@ namespace Core.Game.Editor
         [Test]
         public void QuickLoadOfAnUnregisteredLocationFailsBeforeChangingAnything()
         {
-            Game.Location.id = "missing-mod:cave";
+            Game.Location.SetId("missing-mod:cave");
             BecomeReady();
             Assert.That(_session.QuickSave(), Is.True);
             Game.State.Time.hour = 11;

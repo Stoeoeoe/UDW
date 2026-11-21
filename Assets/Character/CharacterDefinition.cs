@@ -10,10 +10,9 @@ namespace Character
 {
     /// <summary>Imported Vulcanus character identity, available without a prefab or loaded scene view.</summary>
     [ImportedData]
-    public sealed class CharacterDefinition : ValidatedScriptableObject<CharacterDefinitionValidator>
+    [Core.Catalogs.DefinitionResource]
+    public sealed class CharacterDefinition : Core.Catalogs.DefinitionScriptableObject<CharacterDefinitionValidator>
     {
-        [field: SerializeField, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
-        public string Id { get; private set; }
         [field: SerializeField, Validation.Required("The source requires a display name.")] public string Name { get; private set; }
         /// <summary>Typewriter sound used for this character's lines unless an emotion overrides it. Empty uses the dialogue's default.</summary>
         [field: SerializeField] public string TypewriterSound { get; private set; }

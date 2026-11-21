@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 051f4b7d258f4b94982057c8ff13b6f9, type: 3}
   m_Name: Shrug
   m_EditorClassIdentifier: Assembly-CSharp::Character.Animations.EmoteDefinition
-  emoteId: base:shrug
+  <Id>k__BackingField: base:shrug
   duration: 1
   playbackSpeed: 0.5
   animation: {fileID: 11400000, guid: e5ba9285631398a428acf53a3f8c1d32, type: 2}

@@ -1,3 +1,4 @@
+using Core.Catalogs;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -18,7 +19,7 @@ namespace Core.Dialogue.Vulcanus
     {
         private const int MaxStepsWithoutInput = 256;
 
-        private readonly DialogueCatalog _catalog;
+        private readonly DefinitionCatalog _catalog;
         private readonly IDialoguePresenter _presenter;
         private readonly VulcanusLuaDialogueScriptEngine _scriptEngine;
         private readonly GameClock _clock;
@@ -26,7 +27,7 @@ namespace Core.Dialogue.Vulcanus
         private VulcanusDialogueExecutionContext _activeContext;
         private Action _onCompleted;
 
-        public VulcanusDialogueRunner(DialogueCatalog catalog, IDialoguePresenter presenter, LuaRuntime lua, GameClock clock)
+        public VulcanusDialogueRunner(DefinitionCatalog catalog, IDialoguePresenter presenter, LuaRuntime lua, GameClock clock)
         {
             _catalog = catalog;
             _clock = clock;
@@ -67,7 +68,7 @@ namespace Core.Dialogue.Vulcanus
 
         private (VulcanusDialogueAsset Dialogue, VulcanusDialogueNode StartNode) ResolveDialogue(string dialogueId)
         {
-            var dialogue = _catalog.Get(dialogueId)
+            var dialogue = _catalog.Get<VulcanusDialogueAsset>(dialogueId)
                 ?? throw new InvalidOperationException($"Dialogue '{dialogueId}' was not found in the dialogue catalog.");
             if (!dialogue.TryGetNode(dialogue.StartNodeId, out var startNode))
                 throw new InvalidOperationException($"Dialogue '{dialogueId}' has no valid start node.");
@@ -205,7 +206,7 @@ namespace Core.Dialogue.Vulcanus
             if (string.IsNullOrWhiteSpace(jump.TargetDialogueId))
                 return ResolveLocalNode(context.CurrentDialogue, jump.TargetNodeId);
 
-            var targetDialogue = _catalog.Get(jump.TargetDialogueId)
+            var targetDialogue = _catalog.Get<VulcanusDialogueAsset>(jump.TargetDialogueId)
                 ?? throw new InvalidOperationException($"Jump '{jump.Id}' references unknown dialogue '{jump.TargetDialogueId}'.");
             context.CurrentDialogue = targetDialogue;
             return ResolveLocalNode(targetDialogue, jump.TargetNodeId);

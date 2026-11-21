@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a0a485f742f4553884da6ca441525ba, type: 3}
   m_Name: LentilsPlantData
   m_EditorClassIdentifier: Assembly-CSharp::Plants.PlantData
-  _plantId: lentils
+  <Id>k__BackingField: lentils
   _label: Lentils
   _description: Lentils
   growingSeasons: 0000000001000000i

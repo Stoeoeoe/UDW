@@ -15,10 +15,9 @@ namespace Core.Shops
 
     /// <summary>A static shop authored in Vulcanus: a fixed list of items at fixed prices, and whether it buys goods.</summary>
     [ImportedData]
-    public sealed class Shop : ValidatedScriptableObject<ShopValidator>
+    [Core.Catalogs.DefinitionResource]
+    public sealed class Shop : Core.Catalogs.DefinitionScriptableObject<ShopValidator>
     {
-        [field: SerializeField, Validation.NamespacedId("The source requires a lowercase namespace:name ID.", Lowercase = true)]
-        public string Id { get; private set; }
         [field: SerializeField, Validation.Required("The source requires a display name.")] public string Name { get; private set; }
         /// <summary>Whether the shop pays the item's sell price for the player's goods.</summary>
         [field: SerializeField] public bool BuysGoods { get; private set; }

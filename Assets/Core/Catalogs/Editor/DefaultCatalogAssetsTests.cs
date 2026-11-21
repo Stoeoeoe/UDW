@@ -29,9 +29,8 @@ namespace Core.Catalogs.Editor
         public void ReturnsOnlyNewCatalogsAndDoesNotRecreateExistingAssets()
         {
             var created = DefaultCatalogAssets.CreateMissingCatalogs(_folder);
-            Assert.That(created.OfType<ItemCatalog>().Single(), Is.Not.Null);
-            Assert.That(created.OfType<EmoteCatalog>().Single(), Is.Not.Null);
-            Assert.That(created.OfType<SpawnableCatalog>().Single(), Is.Not.Null);
+            Assert.That(created.Count, Is.EqualTo(1));
+            Assert.That(created.Single(), Is.TypeOf<DefinitionCatalog>());
             Assert.That(DefaultCatalogAssets.CreateMissingCatalogs(_folder), Is.Empty);
             foreach (var catalog in created)
                 Assert.That(AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(catalog)), Is.SameAs(catalog));
@@ -40,7 +39,7 @@ namespace Core.Catalogs.Editor
         [Test]
         public void ExistingSelectionsAreNotTouched()
         {
-            var catalog = DefaultCatalogAssets.CreateMissingCatalogs(_folder).OfType<ItemCatalog>().Single();
+            var catalog = DefaultCatalogAssets.CreateMissingCatalogs(_folder).Single();
             var item = ScriptableObject.CreateInstance<InventoryTestItem>();
             AssetDatabase.CreateAsset(item, _folder + "/Item.asset");
             catalog.Synchronize(new[] { item });
@@ -53,8 +52,8 @@ namespace Core.Catalogs.Editor
         [Test]
         public void AnOccupiedPathIsNotOverwritten()
         {
-            var other = ScriptableObject.CreateInstance<PlantCatalog>();
-            var path = _folder + "/ItemCatalog.asset";
+            var other = ScriptableObject.CreateInstance<PlantData>();
+            var path = _folder + "/DefinitionCatalog.asset";
             AssetDatabase.CreateAsset(other, path);
             Assert.Throws<InvalidOperationException>(() => DefaultCatalogAssets.CreateMissingCatalogs(_folder));
             Assert.That(AssetDatabase.LoadMainAssetAtPath(path), Is.SameAs(other));

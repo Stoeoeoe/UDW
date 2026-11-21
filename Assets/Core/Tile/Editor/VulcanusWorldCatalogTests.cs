@@ -70,8 +70,8 @@ namespace Core.Tile.Editor
         public void SceneRoutingUsesExplicitPathOrHandAuthoredLocationId(string path)
         {
             _village.scenePath = path;
-            Assert.That(_village.ScenePath, Is.EqualTo(string.IsNullOrEmpty(path) ? _village.id : path));
-            Assert.That(_village.id, Is.EqualTo("base:village"));
+            Assert.That(_village.ScenePath, Is.EqualTo(string.IsNullOrEmpty(path) ? _village.Id : path));
+            Assert.That(_village.Id, Is.EqualTo("base:village"));
         }
 
         [Test]
@@ -85,7 +85,7 @@ namespace Core.Tile.Editor
         [Test]
         public void LocationLookupSupportsBoundAssetsWithoutAnId()
         {
-            _village.id = null;
+            _village.SetId(null);
             Sync(new VulcanusWorldCatalog.MapBinding("base:map-1", _prefab, _village));
             Assert.That(_catalog.TryGetMapPrefabForLocation(_village, out var prefab), Is.True);
             Assert.That(prefab, Is.SameAs(_prefab));
@@ -173,7 +173,7 @@ namespace Core.Tile.Editor
         private LocationData Location(string id)
         {
             var location = Asset<LocationData>();
-            location.id = id;
+            location.SetId(id);
             return location;
         }
 
