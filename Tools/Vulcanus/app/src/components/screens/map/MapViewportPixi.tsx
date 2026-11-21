@@ -37,6 +37,17 @@ export const MapViewportPixi: React.FC = () => {
   const showMapTestMode = useEditorStore((state) => state.showMapTestMode);
   const initialCameraRef = useRef(camera);
 
+  // The map is drawn on demand, at most once per frame, instead of by Pixi's ticker every frame.
+  const renderQueuedRef = useRef(false);
+  const requestRender = useCallback(() => {
+    if (renderQueuedRef.current) return;
+    renderQueuedRef.current = true;
+    requestAnimationFrame(() => {
+      renderQueuedRef.current = false;
+      appRef.current?.render();
+    });
+  }, []);
+
   useEffect(() => {
     initialCameraRef.current = camera;
   }, [camera]);
@@ -58,6 +69,7 @@ export const MapViewportPixi: React.FC = () => {
           antialias: false,
           resolution: window.devicePixelRatio || 1,
           autoDensity: true,
+          autoStart: false,
         });
 
         if (destroyed) {
@@ -67,6 +79,9 @@ export const MapViewportPixi: React.FC = () => {
 
         container.appendChild(app.canvas);
         appRef.current = app;
+        // Tools redraw hover and previews straight from pointer and key input.
+        for (const type of ['pointermove', 'pointerdown', 'pointerup', 'pointerleave', 'wheel'])
+          app.canvas.addEventListener(type, requestRender);
 
         // Pre-install crisp pixel font for entity labels
         try {
@@ -215,6 +230,7 @@ export const MapViewportPixi: React.FC = () => {
       applyCamera(newViewport);
 
       newViewport.on('zoomed', () => {
+        requestRender();
         setZoomLevel(newViewport.scale.x);
         requestAnimationFrame(() => {
           try {
@@ -230,6 +246,7 @@ export const MapViewportPixi: React.FC = () => {
       });
 
       newViewport.on('moved', () => {
+        requestRender();
         requestAnimationFrame(() => {
           try {
             useEditorStore
@@ -281,8 +298,20 @@ export const MapViewportPixi: React.FC = () => {
     renderLocationLinks,
     renderHover,
     renderPreview,
-  } = useMapRenderer({ viewport });
+  } = useMapRenderer({ viewport, onSceneChange: requestRender });
   useMapTools({ viewport });
+
+  // Whatever changes the scene goes through the store, input on the canvas or a React update of this view.
+  useEffect(() => useEditorStore.subscribe(requestRender), [requestRender]);
+  useEffect(() => {
+    window.addEventListener('keydown', requestRender);
+    window.addEventListener('keyup', requestRender);
+    return () => {
+      window.removeEventListener('keydown', requestRender);
+      window.removeEventListener('keyup', requestRender);
+    };
+  }, [requestRender]);
+  useEffect(() => requestRender());
 
   // Subscribe to store changes for rendering
   useEffect(() => {

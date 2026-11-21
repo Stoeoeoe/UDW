@@ -37,6 +37,8 @@ import type { ToolType } from '../../../types/editor';
 
 interface UseMapRendererProps {
   viewport: Viewport | null;
+  /** Called when the scene changes outside a store update, so the map is drawn again. */
+  onSceneChange: () => void;
 }
 
 type OverlayPoint = { x: number; y: number };
@@ -204,7 +206,7 @@ export function renderCollisionGraphics(
  * Hook that manages rendering of map tiles, entities, and grid onto a Pixi viewport.
  * Returns functions to update the rendering when state changes.
  */
-export function useMapRenderer({ viewport }: UseMapRendererProps) {
+export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps) {
   const containerRef = useRef<Container | null>(null);
   const tileContainerRef = useRef<Container | null>(null);
   const entityContainerRef = useRef<Container | null>(null);
@@ -687,13 +689,8 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
   const renderNavigationCostOverlay = useCallback(() => {
     const g = navigationCostGraphicsRef.current;
     const labels = navigationCostLabelContainerRef.current;
-    const {
-      currentMap,
-      tilesets,
-      activeVariationId,
-      showNavigationCostOverlay,
-      hoveredTile,
-    } = useEditorStore.getState();
+    const { currentMap, tilesets, activeVariationId, showNavigationCostOverlay, hoveredTile } =
+      useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!g || !labels || !currentMap) return;
 
@@ -961,7 +958,10 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         // Render icon inside the box if the entity type has one
         if (type?.icon) {
           const iconSize = Math.min(ew, eh);
-          const iconTex = getIconTexture(type.icon, '#ffffff', renderEntities);
+          const iconTex = getIconTexture(type.icon, '#ffffff', () => {
+            renderEntities();
+            onSceneChange();
+          });
           if (iconTex) {
             const iconSprite = new Sprite(iconTex);
             iconSprite.x = ex + (ew - iconSize) / 2;
@@ -1036,7 +1036,7 @@ export function useMapRenderer({ viewport }: UseMapRendererProps) {
         entityContainer.addChild(label);
       }
     });
-  }, [projectTileSize]);
+  }, [projectTileSize, onSceneChange]);
 
   // Render grid
   const renderGrid = useCallback(() => {
