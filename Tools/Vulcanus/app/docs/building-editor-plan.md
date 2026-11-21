@@ -167,8 +167,10 @@ Goal: a kit resolves to pieces with images per variation, and the kit editor sho
     (sheet smaller than the layout, unreadable file).
   - Sheets are loaded with `resolveSpriteAsset` (PNG as is, Aseprite flattened), then cropped per piece; variation
     crops without pixels are dropped, so a piece "has" a variation only where its variation sheet draws something.
-- `store/slices/buildingKitSlice.ts`: `resolvedKits: Map<kitId, ResolvedKit>`, resolved on load and when a sheet file
-  changes (subscribe to the asset file watcher used for tilesets).
+- `store/useResolvedKitsStore.ts`: resolved kits by kit ID, in a store of their own (pixels derived from files, not
+  documents with history), re-read when a kit's sheets change or the asset file watcher reports a changed sheet.
+- `lib/asepriteLayers.ts`: flattening Aseprite files honours hidden groups (the parser library drops layer nesting), so a
+  kit's Aseprite file can keep a hidden `variations` group as a drawing aid.
 - `components/screens/building/BuildingKitEditor.tsx`
   - `EditorDocumentFrame` + `ResizableEditorLayout`; centre: the pieces by group at 3× with names; a variation selector
     (`base`, then each variation) re-renders every piece with that variation over its base.

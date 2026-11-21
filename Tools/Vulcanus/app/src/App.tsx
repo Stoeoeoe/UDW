@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { watchScriptingManifest } from './store/useScriptingManifestStore';
+import { watchBuildingKits } from './store/useResolvedKitsStore';
 import { TopBar } from './components/layout/TopBar';
 import { AppShell } from './components/common/AppShell';
 import { LandingScreen } from './components/startup/LandingScreen';
@@ -22,6 +23,7 @@ import { EditorResizeHandle } from './components/common/EditorWorkspaceShell';
 
 function App() {
   useEffect(watchScriptingManifest, []);
+  useEffect(watchBuildingKits, []);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || event.altKey) return;

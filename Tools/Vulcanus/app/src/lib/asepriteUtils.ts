@@ -4,6 +4,7 @@ import {
   AsepriteLayerBlendMode,
   type AsepritePixel,
 } from '@pixelation/aseprite';
+import { asepriteLayerVisibility } from './asepriteLayers';
 
 const ASEPRITE_EXTENSIONS = ['.ase', '.aseprite'];
 
@@ -35,7 +36,9 @@ export async function resolveSpriteAsset(
 }
 
 async function renderAsepriteToPng(sourceBlob: Blob): Promise<ResolvedSpriteAsset> {
-  const file = new Aseprite(await sourceBlob.arrayBuffer());
+  const buffer = await sourceBlob.arrayBuffer();
+  const file = new Aseprite(buffer);
+  const shown = asepriteLayerVisibility(buffer);
   const frame = file.frames[0];
 
   if (!frame) {
@@ -48,8 +51,8 @@ async function renderAsepriteToPng(sourceBlob: Blob): Promise<ResolvedSpriteAsse
     throw new Error('Failed to create 2D canvas context for Aseprite rendering.');
   }
 
-  for (const layer of frame.layers) {
-    if (!layer.visible || layer.opacity <= 0 || layer.cels.length === 0) continue;
+  for (const [index, layer] of frame.layers.entries()) {
+    if (!shown[index] || layer.opacity <= 0 || layer.cels.length === 0) continue;
 
     const layerBlend = toCanvasBlendMode(layer.blend);
     const sortedCels = [...layer.cels].sort((a, b) => a.z - b.z);
