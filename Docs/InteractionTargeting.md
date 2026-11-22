@@ -32,6 +32,18 @@ within two units of the player's ground anchor (a `Physics2D.OverlapCircle`).
 `CharacterPerformPrimaryActionAbility` picks the button; the mode resolver still picks the
 action. Leaving a seat accepts either button.
 
+## Prompt
+
+`InteractionPromptPresenter` (on SystemRoot, with the HUD) shows the Interact button and
+the target's verb above the target's art, e.g. `[E] Open`. The glyphs follow the device in
+use: the keyboard-and-mouse list, or the Xbox, PlayStation (DualShock/DualSense) or Switch
+gamepad glyph. They come from the CC0 `gdb` button sheets in `Assets/UI/Prompts/Glyphs`;
+assign other sprites in the presenter's lists.
+
+Each interactable kind names its verb by overriding `AbstractInteractable.Verb` (default
+"Use"). An `InteractionVerb` has a stable message key, `interaction.verb.<name>`, and its
+English text; translation is tracked in STO-110.
+
 ## Authoring
 
 Set **Target** on every interactable that has art of its own. It is the object holding the

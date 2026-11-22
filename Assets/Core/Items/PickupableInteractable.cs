@@ -12,6 +12,8 @@ namespace Core.Items
     /// <summary>A forage stack collected deliberately, rather than by the dropped-item magnet.</summary>
     public sealed class PickupableInteractable : AbstractInteractable, IEventListener<InventoryChangedEvent>
     {
+        public override InteractionVerb Verb => InteractionVerb.PickUp;
+
         [Inject] private ItemManager _itemManager;
 
         [SerializeField] private ForageableItem item;

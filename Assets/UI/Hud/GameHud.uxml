@@ -7,4 +7,8 @@
         <ui:Instance template="Stamina" picking-mode="Ignore" />
     </ui:VisualElement>
     <ui:Label name="questNotice" class="quest-notice" picking-mode="Ignore" />
+    <ui:VisualElement name="interactionPrompt" class="interaction-prompt" picking-mode="Ignore">
+        <ui:VisualElement name="interactionPromptGlyphs" class="interaction-prompt__glyphs" picking-mode="Ignore" />
+        <ui:Label name="interactionPromptVerb" class="interaction-prompt__verb" picking-mode="Ignore" />
+    </ui:VisualElement>
 </ui:UXML>

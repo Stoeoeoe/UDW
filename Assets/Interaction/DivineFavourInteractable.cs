@@ -9,6 +9,8 @@ namespace Interaction
     /// <summary>Grants favour for a selected deity when used.</summary>
     public sealed class DivineFavourInteractable : AbstractInteractable
     {
+        public override InteractionVerb Verb => InteractionVerb.Pray;
+
         [Inject] private DivineFavour _divineFavour;
 
         [SerializeField] private DeityDefinition deity;

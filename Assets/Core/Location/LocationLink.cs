@@ -12,6 +12,8 @@ namespace Core.Location
     /// </summary>
     public class LocationLink : ILocationLink
     {
+        public override Interaction.InteractionVerb Verb => Interaction.InteractionVerb.Enter;
+
         [SerializeField] private LocationData targetLocation;
         [SerializeField] private string targetLocationId;
         [SerializeField] private string targetEntryKey;

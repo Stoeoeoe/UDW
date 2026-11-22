@@ -2132,6 +2132,7 @@ GameObject:
   - component: {fileID: 979660742405634151}
   - component: {fileID: 8182699520042792453}
   - component: {fileID: 2204457955985606839}
+  - component: {fileID: 191015407926135637}
   m_Layer: 0
   m_Name: SystemRoot
   m_TagString: Untagged
@@ -2392,6 +2393,28 @@ MonoBehaviour:
   secondsShown: 3
 --- !u!1 &1124810803398170432
 GameObject:
+--- !u!114 &191015407926135637
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893779559843713635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2842bf22c69efe468457fd601897ec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.Hud.InteractionPromptPresenter
+  keyboardMouse:
+  - {fileID: -4156247463131373841, guid: c02b5447c822b0b4681b5292cfbbea83, type: 3}
+  - {fileID: -6837806662979014076, guid: c02b5447c822b0b4681b5292cfbbea83, type: 3}
+  xbox:
+  - {fileID: 246077574704974851, guid: 85c1a4e5795085d47ace625b2faf3e81, type: 3}
+  playStation:
+  - {fileID: -7621540373723568720, guid: 26f309acf3278d5419d59ce3c14704e4, type: 3}
+  nintendoSwitch:
+  - {fileID: 1254774588608704883, guid: c9315977c33b87040a4cf0869fcd2f1a, type: 3}
+  worldGap: 0.25
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -7187,6 +7210,7 @@ MonoBehaviour:
   cursorHotspot: {x: 0, y: 0}
 --- !u!1 &2516256580491792791
 GameObject:
+  cursorScale: 0.5
 --- !u!114 &6663335756228956678
 MonoBehaviour:
   m_ObjectHideFlags: 0

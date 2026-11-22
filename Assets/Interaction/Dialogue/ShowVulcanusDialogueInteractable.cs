@@ -12,6 +12,8 @@ namespace Interaction.Dialogue
 {
     public class ShowVulcanusDialogueInteractable : AbstractInteractable
     {
+        public override InteractionVerb Verb => InteractionVerb.Talk;
+
         [SerializeField] private string dialogueId;
         [SerializeField] private DialogueOptions options = new();
         [Inject] private VulcanusDialogueRunner _dialogue;

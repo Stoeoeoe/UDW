@@ -7,6 +7,8 @@ namespace Interaction
     /// <summary>Lets the normal interaction action enter one seat; the seated character requests its own exit.</summary>
     public sealed class SeatInteractable : AbstractInteractable
     {
+        public override InteractionVerb Verb => InteractionVerb.Sit;
+
         [SerializeField] private InteractionSlot slot;
 
         public override bool CanInteract => base.CanInteract && slot.IsAvailable;

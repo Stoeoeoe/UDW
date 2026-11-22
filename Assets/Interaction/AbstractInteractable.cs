@@ -147,6 +147,8 @@ namespace Interaction
 #endif
 
         public virtual bool RequiresButtonPress => requiresButtonPress;
+        /// <summary>What the Interact button does to this target, shown in the prompt.</summary>
+        public virtual InteractionVerb Verb => InteractionVerb.Use;
         public virtual bool CanInteract => EvaluateState(out _) == InteractionState.Ready;
 
         /// <summary>Uses left; -1 means unlimited.</summary>
@@ -167,6 +169,22 @@ namespace Interaction
         {
             result.Clear();
             if (target) target.GetComponentsInChildren(false, result);
+        }
+
+        /// <summary>World bounds of what the player sees: the target's active sprites, or the interaction collider without art.</summary>
+        public Bounds GetVisibleBounds()
+        {
+            GetTargetSprites(TargetSprites);
+            var bounds = _interactionCollider.bounds;
+            var first = true;
+            foreach (var sprite in TargetSprites)
+            {
+                if (!sprite.enabled || !sprite.sprite) continue;
+                if (first) bounds = sprite.bounds;
+                else bounds.Encapsulate(sprite.bounds);
+                first = false;
+            }
+            return bounds;
         }
 
         /// <summary>Whether the point is over a visible pixel of the target's sprites, or inside the interaction collider without a target.</summary>

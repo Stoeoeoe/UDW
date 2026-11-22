@@ -10,6 +10,8 @@ namespace Interaction
     [RequireComponent(typeof(PersistentContainer))]
     public sealed class ContainerInteractable : AbstractInteractable
     {
+        public override InteractionVerb Verb => InteractionVerb.Open;
+
         [Inject] private ContainerScreen _screen;
         private PersistentContainer _container;
         protected override void Awake()

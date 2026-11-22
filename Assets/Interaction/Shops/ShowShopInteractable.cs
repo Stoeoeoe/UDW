@@ -8,6 +8,8 @@ namespace Interaction.Shops
 {
     public sealed class ShowShopInteractable : AbstractInteractable
     {
+        public override InteractionVerb Verb => InteractionVerb.Shop;
+
         [SerializeField] private string shopId;
         [Inject] private ShopService _shops;
 

@@ -36,6 +36,7 @@ namespace Plants
         }
 
         public override bool RequiresButtonPress => true;
+        public override InteractionVerb Verb => CanClearWilted ? InteractionVerb.Clear : InteractionVerb.Harvest;
         // A replaced crop at the same tile is a different target, even before this view is destroyed.
         private bool IsCurrentCrop => _plantManager.GetPlantState(_locationId, _position) == _state;
         private bool CanClearWilted => IsCurrentCrop && _state.condition == PlantCondition.Wilted;

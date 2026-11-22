@@ -9,6 +9,8 @@ namespace Interaction
     /// </summary>
     public class AdvanceDayInteractable : AbstractInteractable
     {
+        public override InteractionVerb Verb => InteractionVerb.Sleep;
+
         [Inject] private OvernightTransition _overnight;
 
         protected override bool Interact(GameCharacter instigator)
