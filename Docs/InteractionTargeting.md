@@ -8,36 +8,39 @@ interactables, such as portals, still trigger on contact and are never targeted.
 around it (the 3×3). The footprint is the set of tiles under the target object's enabled
 solid (non-trigger) colliders. Without any, it is the interaction collider.
 
-**Picking:** the input device picks the target (`InputManager.UsesPointer`):
+**Picking:** there are two possible targets.
 
-- **Keyboard and mouse:** the interactable under the pointer. The pointer must be over a
-  visible pixel of one of the target object's sprites. Where several overlap, the one lowest
-  on screen wins. Nothing is used when nothing is hovered, even if something is in front of
-  the player.
-- **Gamepad:** the interactable closest to the facing direction (at most 90° away), then
-  the nearest. The direction is measured to the closest point of its footprint.
+- **Hovered** (keyboard and mouse play only, `InputManager.UsesPointer`): the interactable
+  under the pointer. The pointer must be over a visible pixel of one of the target object's
+  sprites. Where several overlap, the one lowest on screen wins.
+- **In front** (always): the interactable closest to the facing direction (at most 90° away),
+  then the nearest. The direction is measured to the closest point of its footprint.
 
 `InteractionSensor` makes both picks from the interaction colliders on the Interactable layer
-within two units of the player's ground anchor (a `Physics2D.OverlapCircle`).
-`PlayerInteractionContextSnapshot.ActionableInteractable` is the result.
+within two units of the player's ground anchor (a `Physics2D.OverlapCircle`). The snapshot
+exposes them as `HoveredTarget` and `FrontTarget`; `ActionableInteractable`, the outlined
+target, is the hovered one if any, else the one in front.
 
 ## Buttons
 
-- **Interact** (right click, E, Space; gamepad South) uses the target: talk, open, pick, sit.
-  Without a target it does nothing. It reacts to the press only, never to the release.
-- **Action** (left click, Q; gamepad West) uses the held tool or seed. While something is
-  targeted it does nothing, so a tool never hits or reaches past what the player aims at.
-  With the mouse that means hovering a target; on gamepad, a target in front.
+- **Interact**: right click uses the hovered target; E, Space and gamepad South use the
+  target in front. With no such target the press does nothing. It reacts to the press only.
+- **Action** (left click, Q; gamepad West) uses the held tool or seed, but never on what is
+  outlined: a tool aiming at the pointer (and seeds) does nothing while a target is hovered;
+  a tool aiming in front (`ToolTargeting.Facing`) does nothing while a target is in front.
+  Clicking soil next to a chest still hoes it.
 
-`CharacterPerformPrimaryActionAbility` picks the button; the mode resolver still picks the
-action. Leaving a seat accepts either button.
+In keyboard and mouse play the outline shows the hovered target, otherwise the one in front.
+`CharacterPerformPrimaryActionAbility.ChooseAttempt` picks the target for each press; the
+attempt then sees only that target (`PlayerInteractionContextSnapshot.WithTargets`), so the
+mode resolver picks the matching action. Leaving a seat accepts either button.
 
 ## Prompt
 
 `InteractionPromptPresenter` (on SystemRoot, with the HUD) shows the Interact button and
-the target's verb above the target's art, e.g. `[E] Open`. The glyphs follow the device in
-use: the keyboard-and-mouse list, or the Xbox, PlayStation (DualShock/DualSense) or Switch
-gamepad glyph. They come from the CC0 `gdb` button sheets in `Assets/UI/Prompts/Glyphs`;
+the target's verb above the target's art, e.g. `[E] Open`. The glyph is the button that uses
+that target: right click for a hovered target, the E key for the target in front in keyboard
+and mouse play, or the Xbox, PlayStation (DualShock/DualSense) or Switch gamepad button. They come from the CC0 `gdb` button sheets in `Assets/UI/Prompts/Glyphs`;
 assign other sprites in the presenter's lists.
 
 Each interactable kind names its verb by overriding `AbstractInteractable.Verb` (default

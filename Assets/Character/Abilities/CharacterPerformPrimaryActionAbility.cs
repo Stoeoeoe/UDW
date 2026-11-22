@@ -3,6 +3,7 @@ using Core.Context;
 using Core.Location;
 using Input;
 using Interaction;
+using Interaction.Tools;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using VContainer;
@@ -16,13 +17,15 @@ namespace Character.Abilities
         public ActionExecutor ActionExecutor { get; internal set; }
         [Inject] private PlayerInteractionContext _context;
         private bool _suppressPrimaryUntilRelease;
+        // How the running attempt sees each moment: only the target its button chose, or none for a tool.
+        private Func<PlayerInteractionContextSnapshot, PlayerInteractionContextSnapshot> _attemptView = snapshot => snapshot;
 
         protected override void Awake()
         {
             base.Awake();
             ActionExecutor = new ActionExecutor(
                 Character,
-                () => _context.CurrentSnapshot
+                () => _attemptView(_context.CurrentSnapshot)
             );
             _context.OnContextChanged += HandleContextChanged;
         }
@@ -71,13 +74,30 @@ namespace Character.Abilities
 
             // Only block starting a new action when the pointer is over UI.
             if (!ActionExecutor.IsIdle || pointerOverUI) return;
-            // Two buttons: Interact only acts on the target; the action button only uses the held tool or seed, and
-            // does nothing while something is targeted, so it never hits or reaches past what the player aims at.
-            var targeted = snapshot.ActionableInteractable;
-            var start = targeted ? input.InteractDown : input.PerformPrimaryActionDown;
-            if (!start) return;
-            var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
-            if (action) RunAction(action);
+            var view = ChooseAttempt(snapshot, input.InteractDown, input.InteractFromMouse, input.PerformPrimaryActionDown);
+            if (view == null) return;
+            var action = Character.ActionRegistry.GetActionForMode(view(snapshot).Mode);
+            if (action) RunAction(action, view);
+        }
+
+        /// <summary>
+        /// How a button press sees the moment for its attempt, or null when the press does nothing. Right click uses the
+        /// hovered target; Interact keys and the gamepad use the one in front. The action button uses the held tool or
+        /// seed but never on what is outlined: aiming at the pointer stops on a hovered target, facing aim on one in front.
+        /// </summary>
+        internal static Func<PlayerInteractionContextSnapshot, PlayerInteractionContextSnapshot> ChooseAttempt(
+            PlayerInteractionContextSnapshot snapshot, bool interactDown, bool interactFromMouse, bool actionDown)
+        {
+            if (interactDown)
+            {
+                if (interactFromMouse)
+                    return snapshot.HoveredTarget ? moment => moment.WithTargets(moment.InteractableUnderPointer, null) : null;
+                return snapshot.FrontTarget ? moment => moment.WithTargets(null, moment.CurrentInteractable) : null;
+            }
+            if (!actionDown) return null;
+            var facing = snapshot.CurrentTool && snapshot.CurrentTool.Targeting == ToolTargeting.Facing;
+            if (facing ? snapshot.FrontTarget : snapshot.HoveredTarget) return null;
+            return moment => moment.WithTargets(null, null);
         }
 
         public override void OnLocationLeave(LocationData location)
@@ -87,10 +107,13 @@ namespace Character.Abilities
         }
 
         // Input callback boundary: observe failures after the executor has released its resources.
-        private async void RunAction(AbstractAction action)
+        private async void RunAction(AbstractAction action,
+            Func<PlayerInteractionContextSnapshot, PlayerInteractionContextSnapshot> view)
         {
+            _attemptView = view;
             try { await ActionExecutor.RunAsync(action, !action.HasPreparationPhase); }
             catch (Exception error) { Debug.LogException(error, this); }
+            finally { _attemptView = snapshot => snapshot; }
         }
 
         /// <summary>Cancels the attempt and synchronously releases its action and control ownership.</summary>

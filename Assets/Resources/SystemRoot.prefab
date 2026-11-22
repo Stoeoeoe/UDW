@@ -2391,8 +2391,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Hud.QuestNoticePresenter
   secondsShown: 3
---- !u!1 &1124810803398170432
-GameObject:
 --- !u!114 &191015407926135637
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2405,10 +2403,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2842bf22c69efe468457fd601897ec2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Hud.InteractionPromptPresenter
-  keyboardMouse:
+  mouse:
   - {fileID: -4156247463131373841, guid: c02b5447c822b0b4681b5292cfbbea83, type: 3}
   - {fileID: -6837806662979014076, guid: c02b5447c822b0b4681b5292cfbbea83, type: 3}
   xbox:
+  keyboard:
   - {fileID: 246077574704974851, guid: 85c1a4e5795085d47ace625b2faf3e81, type: 3}
   playStation:
   - {fileID: -7621540373723568720, guid: 26f309acf3278d5419d59ce3c14704e4, type: 3}
@@ -2417,6 +2416,8 @@ MonoBehaviour:
   worldGap: 0.25
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
+--- !u!1 &1124810803398170432
+GameObject:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
@@ -7208,8 +7209,6 @@ MonoBehaviour:
   placeItemCursor: {fileID: 2800000, guid: 1578bd72bf85da94e82cdb6f9fcf5eca, type: 3}
   dialogueCursor: {fileID: 2800000, guid: bb93388d2253d0f4f817624eec4e3fe0, type: 3}
   cursorHotspot: {x: 0, y: 0}
---- !u!1 &2516256580491792791
-GameObject:
   cursorScale: 0.5
 --- !u!114 &6663335756228956678
 MonoBehaviour:
@@ -7226,6 +7225,8 @@ MonoBehaviour:
   highlightMaterial: {fileID: 2100000, guid: 29120cadcdfef10499784131c610e4d9, type: 2}
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
+--- !u!1 &2516256580491792791
+GameObject:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6

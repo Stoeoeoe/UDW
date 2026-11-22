@@ -1,13 +1,16 @@
 using System;
 using Character;
+using Character.Abilities;
 using Core.Common.Editor;
 using Core.Context;
 using Input;
+using Interaction.Tools;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using InteractionMode = Core.Context.InteractionMode;
 using Object = UnityEngine.Object;
 using static Core.Common.Editor.Reflect;
 
@@ -82,6 +85,52 @@ namespace Interaction.Editor
             }
             finally { runtimeType.GetMethod("TearDown").Invoke(runtime, null); }
         }
+
+        [Test]
+        public void RightClickUsesTheHoveredTargetAndKeysTheOneInFront()
+        {
+            var player = Game.CreatePlayer();
+            var stall = Chest();
+            var chest = Chest();
+            var moment = MousePlay(player) with { InteractableUnderPointer = stall, CurrentInteractable = chest };
+
+            var rightClick = CharacterPerformPrimaryActionAbility.ChooseAttempt(moment, true, true, false)(moment);
+            Assert.That(rightClick.ActionableInteractable, Is.SameAs(stall));
+            Assert.That(rightClick.Mode, Is.EqualTo(InteractionMode.Interact));
+
+            var key = CharacterPerformPrimaryActionAbility.ChooseAttempt(moment, true, false, false)(moment);
+            Assert.That(key.ActionableInteractable, Is.SameAs(chest), "E and Space use the one in front, even while hovering another.");
+
+            var nothingHovered = moment with { InteractableUnderPointer = null };
+            Assert.That(CharacterPerformPrimaryActionAbility.ChooseAttempt(nothingHovered, true, true, false), Is.Null);
+            var nothingInFront = moment with { CurrentInteractable = null };
+            Assert.That(CharacterPerformPrimaryActionAbility.ChooseAttempt(nothingInFront, true, false, false), Is.Null);
+        }
+
+        [Test]
+        public void ToolsNeverActOnWhatTheyAimAt()
+        {
+            var player = Game.CreatePlayer();
+            var hoe = Game.Asset<ToolData>();
+            var moment = MousePlay(player) with { CurrentTool = hoe, CurrentlyHeldItem = hoe };
+            var chest = Chest();
+
+            Set(hoe, "Targeting", ToolTargeting.Pointer);
+            var tool = CharacterPerformPrimaryActionAbility.ChooseAttempt(moment with { CurrentInteractable = chest }, false, false, true);
+            Assert.That(tool, Is.Not.Null, "Clicking a tile elsewhere works next to a chest.");
+            Assert.That(tool(moment with { CurrentInteractable = chest }).Mode, Is.EqualTo(InteractionMode.Tool));
+            Assert.That(CharacterPerformPrimaryActionAbility.ChooseAttempt(moment with { InteractableUnderPointer = chest }, false, false, true),
+                Is.Null, "Clicking the chest itself does nothing.");
+
+            Set(hoe, "Targeting", ToolTargeting.Facing);
+            Assert.That(CharacterPerformPrimaryActionAbility.ChooseAttempt(moment with { CurrentInteractable = chest }, false, false, true),
+                Is.Null, "A swing in front would land on the chest.");
+            Assert.That(CharacterPerformPrimaryActionAbility.ChooseAttempt(moment with { InteractableUnderPointer = chest }, false, false, true),
+                Is.Not.Null, "Hovering elsewhere does not stop a swing in front.");
+        }
+
+        private static PlayerInteractionContextSnapshot MousePlay(MainCharacter player) =>
+            PlayerInteractionContextSnapshot.Empty() with { SceneReady = true, Character = player, UsesPointer = true };
 
         private static void Press(Keyboard keyboard, Key key, MainCharacter player)
         {

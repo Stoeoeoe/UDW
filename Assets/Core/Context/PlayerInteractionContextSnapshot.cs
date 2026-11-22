@@ -24,19 +24,27 @@ namespace Core.Context
     )
     {
         public bool WorldInteractionBlocked { get; init; }
-        /// <summary>Keyboard and mouse play: only the hovered target is used, never the one in front.</summary>
+        /// <summary>Keyboard and mouse play, where the mouse can hover a target besides the one in front.</summary>
         public bool UsesPointer { get; init; }
         public bool CanInteractWithWorld => SceneReady && !WorldInteractionBlocked;
 
-        /// <summary>The hovered target in pointer play, otherwise the one in front; either only while it is ready.</summary>
-        public AbstractInteractable ActionableInteractable
+        /// <summary>The ready target under the pointer in keyboard and mouse play; right click uses it.</summary>
+        public AbstractInteractable HoveredTarget => UsesPointer ? Ready(InteractableUnderPointer) : null;
+
+        /// <summary>The ready target in front of the character; keyboard and gamepad Interact use it.</summary>
+        public AbstractInteractable FrontTarget => Ready(CurrentInteractable);
+
+        /// <summary>The outlined target: the hovered one, else the one in front.</summary>
+        public AbstractInteractable ActionableInteractable => HoveredTarget ? HoveredTarget : FrontTarget;
+
+        private AbstractInteractable Ready(AbstractInteractable target) =>
+            CanInteractWithWorld && target && target.CanInteract ? target : null;
+
+        /// <summary>The same moment with only these targets, so the mode and actions follow the chosen one.</summary>
+        public PlayerInteractionContextSnapshot WithTargets(AbstractInteractable hovered, AbstractInteractable front)
         {
-            get
-            {
-                if (!CanInteractWithWorld) return null;
-                var target = UsesPointer ? InteractableUnderPointer : CurrentInteractable;
-                return target && target.CanInteract ? target : null;
-            }
+            var narrowed = this with { InteractableUnderPointer = hovered, CurrentInteractable = front };
+            return narrowed with { Mode = InteractionModeResolver.Resolve(narrowed) };
         }
 
         public static PlayerInteractionContextSnapshot Empty()

@@ -141,20 +141,23 @@ namespace Interaction.Editor
         }
 
         [Test]
-        public void PointerPlayUsesOnlyTheHoveredTargetAndFacingPlayOnlyTheOneInFront()
+        public void TheHoveredTargetIsOutlinedFirstThenTheOneInFront()
         {
             var inFront = Probe(new Vector2Int(0, 1));
-            var snapshot = PlayerInteractionContextSnapshot.Empty() with
-            {
-                SceneReady = true, Character = _player, CurrentInteractable = inFront
-            };
-            Assert.That(snapshot.ActionableInteractable, Is.SameAs(inFront));
-            Assert.That((snapshot with { UsesPointer = true }).ActionableInteractable, Is.Null);
-
             var hovered = Probe(new Vector2Int(1, 0));
-            Assert.That((snapshot with { UsesPointer = true, InteractableUnderPointer = hovered }).ActionableInteractable,
-                Is.SameAs(hovered));
-            Assert.That((snapshot with { InteractableUnderPointer = hovered }).ActionableInteractable, Is.SameAs(inFront));
+            var mousePlay = PlayerInteractionContextSnapshot.Empty() with
+            {
+                SceneReady = true, Character = _player, CurrentInteractable = inFront, UsesPointer = true
+            };
+            Assert.That(mousePlay.ActionableInteractable, Is.SameAs(inFront), "Nothing hovered: the one in front.");
+            var hovering = mousePlay with { InteractableUnderPointer = hovered };
+            Assert.That(hovering.ActionableInteractable, Is.SameAs(hovered));
+            Assert.That(hovering.HoveredTarget, Is.SameAs(hovered));
+            Assert.That(hovering.FrontTarget, Is.SameAs(inFront));
+
+            var gamepadPlay = hovering with { UsesPointer = false };
+            Assert.That(gamepadPlay.HoveredTarget, Is.Null, "A gamepad has no pointer, whatever the mouse last hovered.");
+            Assert.That(gamepadPlay.ActionableInteractable, Is.SameAs(inFront));
         }
 
         private AbstractInteractable Face(Vector2 direction)

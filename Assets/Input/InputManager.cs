@@ -39,6 +39,8 @@ namespace Input
         public bool InteractPressed => _playerControls["Interact"].WasPerformedThisFrame();
         /// <summary>The Interact button went down this frame; unlike <see cref="InteractPressed"/>, never on release.</summary>
         public bool InteractDown => _playerControls["Interact"].WasPressedThisFrame();
+        /// <summary>The current Interact press came from the mouse (right click), which uses the hovered target.</summary>
+        public bool InteractFromMouse => _playerControls["Interact"].activeControl?.device is Mouse;
         public bool PausePressed => _global["Pause"].WasPerformedThisFrame();
         public bool OpenInventoryPressed => _global["OpenInventory"].WasPerformedThisFrame();
         public bool SkipCutscenePressed => _ui["Cancel"].WasPerformedThisFrame();

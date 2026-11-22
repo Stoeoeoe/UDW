@@ -1,6 +1,5 @@
 using System;
 using Core.Context;
-using Input;
 using Interaction;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,16 +11,19 @@ namespace UI.Hud
 {
     /// <summary>
     /// Shows the Interact button and the target's verb above the player's current interaction target, such as
-    /// "[E] Open". The button glyphs follow the device the player is using.
+    /// "[E] Open". The glyph is the button that uses this target: right click for a hovered target, the Interact key
+    /// for the one in front in keyboard and mouse play, or the gamepad's button.
     /// </summary>
     [RequireComponent(typeof(UIDocument)), DisallowMultipleComponent]
     public sealed class InteractionPromptPresenter : MonoBehaviour
     {
         [Inject] private PlayerInteractionContext _context;
-        [Inject] private InputManager _input;
 
         [Header("Interact button glyphs")]
-        [SerializeField] private Sprite[] keyboardMouse = Array.Empty<Sprite>();
+        [Tooltip("Right click: the hovered target.")]
+        [SerializeField] private Sprite[] mouse = Array.Empty<Sprite>();
+        [Tooltip("Interact key: the target in front, in keyboard and mouse play.")]
+        [SerializeField] private Sprite[] keyboard = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] xbox = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] playStation = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] nintendoSwitch = Array.Empty<Sprite>();
@@ -35,7 +37,7 @@ namespace UI.Hud
 
         private void OnEnable()
         {
-            if (keyboardMouse.Length == 0 || xbox.Length == 0 || playStation.Length == 0 || nintendoSwitch.Length == 0)
+            if (mouse.Length == 0 || keyboard.Length == 0 || xbox.Length == 0 || playStation.Length == 0 || nintendoSwitch.Length == 0)
                 throw new InvalidOperationException("The interaction prompt requires glyphs for every device.");
             var root = GetComponent<UIDocument>().rootVisualElement;
             _prompt = root.Q("interactionPrompt") ?? throw new InvalidOperationException("The HUD requires its interactionPrompt.");
@@ -47,14 +49,15 @@ namespace UI.Hud
 
         private void LateUpdate()
         {
-            var target = _context.CurrentSnapshot.ActionableInteractable;
+            var snapshot = _context.CurrentSnapshot;
+            var target = snapshot.ActionableInteractable;
             if (!target)
             {
                 _prompt.style.display = DisplayStyle.None;
                 return;
             }
 
-            ShowGlyphs(CurrentGlyphs());
+            ShowGlyphs(GlyphsFor(snapshot));
             _verb.text = target.Verb.Text;
             var bounds = target.GetVisibleBounds();
             var anchor = new Vector3(bounds.center.x, bounds.max.y + worldGap, bounds.center.z);
@@ -64,9 +67,10 @@ namespace UI.Hud
             _prompt.style.display = DisplayStyle.Flex;
         }
 
-        private Sprite[] CurrentGlyphs()
+        private Sprite[] GlyphsFor(PlayerInteractionContextSnapshot snapshot)
         {
-            if (_input.UsesPointer) return keyboardMouse;
+            if (snapshot.HoveredTarget) return mouse;
+            if (snapshot.UsesPointer) return keyboard;
             return Gamepad.current switch
             {
                 DualShockGamepad => playStation, // Also DualSense.
