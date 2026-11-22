@@ -37,6 +37,8 @@ namespace Input
         public bool RunHeld => _playerControls["Run"].IsPressed();
         public bool DashPressed => _playerControls["Dash"].WasPerformedThisFrame();
         public bool InteractPressed => _playerControls["Interact"].WasPerformedThisFrame();
+        /// <summary>The Interact button went down this frame; unlike <see cref="InteractPressed"/>, never on release.</summary>
+        public bool InteractDown => _playerControls["Interact"].WasPressedThisFrame();
         public bool PausePressed => _global["Pause"].WasPerformedThisFrame();
         public bool OpenInventoryPressed => _global["OpenInventory"].WasPerformedThisFrame();
         public bool SkipCutscenePressed => _ui["Cancel"].WasPerformedThisFrame();
@@ -50,14 +52,6 @@ namespace Input
         public bool PerformPrimaryActionDown => _playerControls["PerformPrimaryAction"].WasPressedThisFrame();
         public bool PerformPrimaryActionHeld => _playerControls["PerformPrimaryAction"].IsPressed();
         public bool PerformPrimaryActionReleased => _playerControls["PerformPrimaryAction"].WasReleasedThisFrame();
-
-        public bool PerformSecondaryActionDown =>
-            _playerControls["PerformSecondaryAction"].WasPerformedThisFrame();
-
-        public bool PerformSecondaryActionHeld => _playerControls["PerformSecondaryAction"].IsPressed();
-
-        public bool PerformSecondaryActionReleased =>
-            _playerControls["PerformSecondaryAction"].WasReleasedThisFrame();
 
         private void BindActions()
         {

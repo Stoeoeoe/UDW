@@ -70,11 +70,14 @@ namespace Character.Abilities
             if (!AbilityAuthorized && ActionExecutor.State != ActionExecutionState.Preparing) return;
 
             // Only block starting a new action when the pointer is over UI.
-            if (input.PerformPrimaryActionDown && ActionExecutor.IsIdle && !pointerOverUI)
-            {
-                var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
-                if (action) RunAction(action);
-            }
+            if (!ActionExecutor.IsIdle || pointerOverUI) return;
+            // Two buttons: Interact only acts on the target; the action button only uses the held tool or seed, and
+            // does nothing while something is targeted, so it never hits or reaches past what the player aims at.
+            var targeted = snapshot.ActionableInteractable;
+            var start = targeted ? input.InteractDown : input.PerformPrimaryActionDown;
+            if (!start) return;
+            var action = Character.ActionRegistry.GetActionForMode(snapshot.Mode);
+            if (action) RunAction(action);
         }
 
         public override void OnLocationLeave(LocationData location)

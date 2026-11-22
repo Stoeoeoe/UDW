@@ -21,6 +21,17 @@ solid (non-trigger) colliders. Without any, it is the interaction collider.
 within two units of the player's ground anchor (a `Physics2D.OverlapCircle`).
 `PlayerInteractionContextSnapshot.ActionableInteractable` is the result.
 
+## Buttons
+
+- **Interact** (right click, E, Space; gamepad South) uses the target: talk, open, pick, sit.
+  Without a target it does nothing. It reacts to the press only, never to the release.
+- **Action** (left click, Q; gamepad West) uses the held tool or seed. While something is
+  targeted it does nothing, so a tool never hits or reaches past what the player aims at.
+  With the mouse that means hovering a target; on gamepad, a target in front.
+
+`CharacterPerformPrimaryActionAbility` picks the button; the mode resolver still picks the
+action. Leaving a seat accepts either button.
+
 ## Authoring
 
 Set **Target** on every interactable that has art of its own. It is the object holding the
