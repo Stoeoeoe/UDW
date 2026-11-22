@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../../Schemas/object.schema.json",
+  "formatVersion": 1,
+  "id": "base:tree",
+  "name": "Pine Tree",
+  "tilesetId": "base:villagetileset",
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "tileIndex": 28
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "tileIndex": 29
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "tileIndex": 60
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "tileIndex": 61
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "tileIndex": 92
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "tileIndex": 93
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "tileIndex": 124
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "tileIndex": 125
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "tileIndex": 156
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "tileIndex": 157
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "tileIndex": 188
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "tileIndex": 189
+    }
+  ],
+  "folderPath": ""
+}

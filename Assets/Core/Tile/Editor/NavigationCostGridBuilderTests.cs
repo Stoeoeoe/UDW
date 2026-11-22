@@ -17,23 +17,20 @@ namespace Core.Tile.Editor
 
         private readonly List<Object> _assets = new();
         private VulcanusTilesetAsset _tileset;
+        private VulcanusObjectAsset _rug;
 
         [SetUp]
         public void SetUp()
         {
             var tiles = new[] { Tile(0, 1), Tile(1, 9), Tile(2, 0), Tile(3, 5) };
             _tileset = Create<VulcanusTilesetAsset>();
-            _tileset.Configure("base:nav", "Nav", null, 1, 4, TileSize, tiles, new[]
+            _tileset.Configure("base:nav", "Nav", null, 1, 4, TileSize, tiles);
+            _rug = Create<VulcanusObjectAsset>();
+            _rug.Configure("test:rug", "Rug", _tileset, new[]
             {
-                new VulcanusTilesetAsset.ObjectDefinition
-                {
-                    id = "base:rug", tiles = new[]
-                    {
-                        new VulcanusTilesetAsset.ObjectTile { x = 0, y = 0, tileIndex = Rug },
-                        new VulcanusTilesetAsset.ObjectTile { x = 1, y = 0, tileIndex = Decoration }
-                    }
-                }
-            });
+                new VulcanusObjectAsset.ObjectTile { x = 0, y = 0, tileIndex = Rug },
+                new VulcanusObjectAsset.ObjectTile { x = 1, y = 0, tileIndex = Decoration }
+            }, 2, 1, null);
         }
 
         [TearDown]
@@ -124,7 +121,7 @@ namespace Core.Tile.Editor
                 Kind = "object", ZOrder = 3,
                 ObjectInstances = new List<MapObjectInstanceDto>
                 {
-                    new() { Id = "r", TilesetId = "base:nav", ObjectDefinitionId = "base:rug", X = 16, Y = 16 }
+                    new() { Id = "r", ObjectId = "test:rug", X = 16, Y = 16 }
                 }
             };
             var grid = Build(Layer("terrain", 0, Rows((2, 1, Road))), objects);
@@ -133,7 +130,8 @@ namespace Core.Tile.Editor
         }
 
         private NavigationCostGrid Build(params LayerDto[] layers) =>
-            NavigationCostGridBuilder.Build(layers, new[] { _tileset }, new List<MapCollisionDto>(), Width, Height, TileSize);
+            NavigationCostGridBuilder.Build(layers, new[] { _tileset },
+                new Dictionary<string, VulcanusObjectAsset> { [_rug.ObjectId] = _rug }, new List<MapCollisionDto>(), Width, Height, TileSize);
 
         private static LayerDto Layer(string kind, int zOrder, JArray data) =>
             new() { Kind = kind, ZOrder = zOrder, Data = data };

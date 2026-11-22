@@ -7,18 +7,19 @@ using UnityEngine;
 
 namespace Core.Tile.Editor.Vulcanus
 {
-    [ScriptedImporter(28, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "runtime.dialogue.json", "runtime.cutscene.json", "npc.json", "character.json", "shop.json", "routine.json", "quest.json" }, 6100)]
+    [ScriptedImporter(29, new[] { "vproj", "vts", "vmap", "vitm", "entity.json", "object.json", "runtime.dialogue.json", "runtime.cutscene.json", "npc.json", "character.json", "shop.json", "routine.json", "quest.json" }, 6100)]
     public class VulcanusImporterCoordinator : ScriptedImporter
     {
         [SerializeField, Range(1, 128), Tooltip("Maximum baked shoreline distance in logical pixels. Appearance widths can change within this range without recalculating distances.")]
         private int shorelineDistancePixels = 32;
         // Declare source-derived artifact dependencies before Unity chooses import order.
-        // A fresh project must import its project and tileset assets before its maps.
+        // A fresh project must import its project and tileset assets before its objects, and those before its maps.
         internal static string[] GatherDependenciesFromSourceFile(string assetPath)
         {
             var isMap = assetPath.EndsWith(".vmap", StringComparison.OrdinalIgnoreCase);
             var isTileset = assetPath.EndsWith(".vts", StringComparison.OrdinalIgnoreCase);
-            if (!isMap && !isTileset) return Array.Empty<string>();
+            var isObject = assetPath.EndsWith(".object.json", StringComparison.OrdinalIgnoreCase);
+            if (!isMap && !isTileset && !isObject) return Array.Empty<string>();
             var dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
             {
@@ -35,6 +36,10 @@ namespace Core.Tile.Editor.Vulcanus
                     }
                     foreach (var id in map.TilesetRefs)
                         if (!string.IsNullOrWhiteSpace(id) && paths.TryGetValue(id, out var path)) dependencies.Add(path);
+                    var objectPaths = VulcanusImportHelpers.BuildObjectIndex(assetPath, projectPath);
+                    foreach (var layer in map.Layers)
+                        foreach (var placed in layer.ObjectInstances)
+                            if (objectPaths.TryGetValue(placed.ObjectId, out var path)) dependencies.Add(path);
                     var triggers = map.SpatialPrimitives?.Triggers;
                     if (triggers != null && triggers.Exists(trigger => trigger.Type == "cutscene"))
                     {
@@ -42,6 +47,12 @@ namespace Core.Tile.Editor.Vulcanus
                         foreach (var trigger in triggers)
                             if (trigger.Type == "cutscene" && sources.TryGetValue(trigger.CutsceneId, out var source)) dependencies.Add(source);
                     }
+                }
+                else if (isObject)
+                {
+                    var tilesetId = VulcanusImportHelpers.LoadDto<ObjectDto>(assetPath).TilesetId;
+                    if (VulcanusImportHelpers.BuildTilesetIndex(assetPath, projectPath).TryGetValue(tilesetId, out var path))
+                        dependencies.Add(path);
                 }
                 else
                 {
@@ -109,6 +120,12 @@ namespace Core.Tile.Editor.Vulcanus
                 if (ctx.assetPath.EndsWith(".vproj", StringComparison.OrdinalIgnoreCase))
                 {
                     ProjectImporter.ImportProject(ctx);
+                    return;
+                }
+
+                if (ctx.assetPath.EndsWith(".object.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    ObjectImporter.ImportObject(ctx);
                     return;
                 }
 

@@ -86,7 +86,6 @@ namespace Core.Tile.Editor.Vulcanus
 
         // Keyed by tile-index string ("16", "17", …); sparse — missing entries are default tiles.
         [JsonProperty("tiles")] public Dictionary<string, TileMetaDto> Tiles { get; set; } = new();
-        [JsonProperty("objects")] public List<TilesetObjectDefinitionDto> Objects { get; set; } = new();
         [JsonProperty("folderPath")] public string FolderPath { get; set; } = "";
     }
 
@@ -237,7 +236,6 @@ namespace Core.Tile.Editor.Vulcanus
 
         [JsonProperty("entities")] public List<EntityInstanceDto> Entities { get; set; } = new();
 
-        [JsonProperty("objectGroups")] public List<ObjectGroupDto> ObjectGroups { get; set; } = new();
         // Object layers (kind == "object")
         [JsonProperty("objectInstances")] public List<MapObjectInstanceDto> ObjectInstances { get; set; } = new();
     }
@@ -272,37 +270,23 @@ namespace Core.Tile.Editor.Vulcanus
         [JsonProperty("speed")] public float Speed { get; set; }
     }
 
-    internal class ObjectGroupDto
-    {
-        [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("tiles")] public List<ObjectGroupTileDto> Tiles { get; set; } = new();
-    }
-
-    internal class ObjectGroupTileDto
-    {
-        [JsonProperty("x")] public int X { get; set; }
-        [JsonProperty("y")] public int Y { get; set; }
-        [JsonProperty("tilesetId")] public string TilesetId { get; set; }
-        [JsonProperty("tileIndex")] public int TileIndex { get; set; }
-    }
-
     internal class MapObjectInstanceDto
     {
         [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("tilesetId")] public string TilesetId { get; set; }
-        [JsonProperty("objectDefinitionId")] public string ObjectDefinitionId { get; set; }
+        [JsonProperty("objectId")] public string ObjectId { get; set; }
         [JsonProperty("x")] public int X { get; set; }
         [JsonProperty("y")] public int Y { get; set; }
     }
 
-    internal class TilesetObjectDefinitionDto
+    internal class ObjectDto
     {
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("tiles")] public List<TilesetObjectTileDto> Tiles { get; set; } = new();
+        [JsonProperty("tilesetId")] public string TilesetId { get; set; }
+        [JsonProperty("tiles")] public List<ObjectTileDto> Tiles { get; set; } = new();
     }
 
-    internal class TilesetObjectTileDto
+    internal class ObjectTileDto
     {
         [JsonProperty("x")] public int X { get; set; }
         [JsonProperty("y")] public int Y { get; set; }

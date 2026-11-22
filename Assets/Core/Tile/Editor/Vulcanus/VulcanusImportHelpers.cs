@@ -150,12 +150,8 @@ namespace Core.Tile.Editor.Vulcanus
         // Scan and deserialize once per map import, independent of filenames and namespaces.
         public static Dictionary<string, string> BuildTilesetIndex(string mapAssetPath, string projectAssetPath)
         {
-            var mapFolder = Path.GetDirectoryName(ToAbsolutePath(mapAssetPath));
-            var projectRoot = !string.IsNullOrEmpty(projectAssetPath)
-                ? Path.GetDirectoryName(ToAbsolutePath(projectAssetPath))
-                : Path.GetDirectoryName(mapFolder) ?? mapFolder;
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var filePath in Directory.GetFiles(projectRoot, "*.vts", SearchOption.AllDirectories)
+            foreach (var filePath in Directory.GetFiles(ProjectRoot(mapAssetPath, projectAssetPath), "*.vts", SearchOption.AllDirectories)
                          .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
                 TilesetDto dto;
@@ -166,6 +162,29 @@ namespace Core.Tile.Editor.Vulcanus
                     throw new InvalidOperationException($"Duplicate tileset ID '{dto.Id}' in '{result[dto.Id]}' and '{path}'.");
             }
             return result;
+        }
+
+        /// <summary>Object source paths by object ID, across the project of <paramref name="assetPath"/>.</summary>
+        public static Dictionary<string, string> BuildObjectIndex(string assetPath, string projectAssetPath)
+        {
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var filePath in Directory.GetFiles(ProjectRoot(assetPath, projectAssetPath), "*.object.json", SearchOption.AllDirectories)
+                         .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!TryAbsoluteToAssetPath(filePath, out var path)) continue;
+                var id = LoadDto<ObjectDto>(filePath).Id;
+                if (!result.TryAdd(id, path))
+                    throw new InvalidOperationException($"Duplicate object ID '{id}' in '{result[id]}' and '{path}'.");
+            }
+            return result;
+        }
+
+        // The project folder, or the parent of the asset's folder outside a project.
+        private static string ProjectRoot(string assetPath, string projectAssetPath)
+        {
+            if (!string.IsNullOrEmpty(projectAssetPath)) return Path.GetDirectoryName(ToAbsolutePath(projectAssetPath));
+            var folder = Path.GetDirectoryName(ToAbsolutePath(assetPath));
+            return Path.GetDirectoryName(folder) ?? folder;
         }
 
         public static string ResolveAssetReferencePath(string ownerAssetPath, string relativePath,

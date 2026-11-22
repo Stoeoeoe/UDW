@@ -70,9 +70,9 @@ namespace Core.Tile.Editor
         public void ObjectsStandOnTheDrawnTilesVulcanusShowsThemOn()
         {
             var tree = _source["layers"]!.SelectMany(layer => layer["objectInstances"] ?? new JArray())
-                .First(instance => (string)instance["objectDefinitionId"] == "tree");
+                .First(instance => (string)instance["objectId"] == "test:tree");
             var renderer = _map.GetComponentsInChildren<SpriteRenderer>(true)
-                .Single(each => each.name == $"tree_{(string)tree["id"]}");
+                .Single(each => each.name == $"test:tree_{(string)tree["id"]}");
             var heightTiles = renderer.bounds.size.y;
             // Its bottom edge is where Vulcanus draws the bottom of the object's footprint.
             var bottom = DrawnPixel((float)tree["x"]!, (float)tree["y"]! + heightTiles * TileSize - 0.01f).y;

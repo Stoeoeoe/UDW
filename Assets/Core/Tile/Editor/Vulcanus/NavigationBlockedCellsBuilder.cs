@@ -21,7 +21,7 @@ namespace Core.Tile.Editor.Vulcanus
 
         /// <summary>Blocked cells in Unity cell order (row 0 is the map's bottom row), like <see cref="NavigationCostGrid"/>.</summary>
         public static bool[] Build(IReadOnlyList<LayerDto> layers, IList<VulcanusTilesetAsset> tilesetsByIndex,
-            IReadOnlyList<MapCollisionDto> collisions, int width, int height, int tileSize)
+            IReadOnlyDictionary<string, VulcanusObjectAsset> objectsById, IReadOnlyList<MapCollisionDto> collisions, int width, int height, int tileSize)
         {
             // Geometry uses Vulcanus cells (row 0 at the top); store flags in Unity cell order.
             var blocked = new bool[width * height];
@@ -64,15 +64,11 @@ namespace Core.Tile.Editor.Vulcanus
                 else if (IsKind(layer, "object"))
                     foreach (var instance in layer.ObjectInstances)
                     {
-                        var tileset = tilesetsByIndex.FirstOrDefault(candidate =>
-                            candidate && candidate.TilesetId == instance.TilesetId);
-                        if (!tileset || !tileset.TryGetObjectDefinition(instance.ObjectDefinitionId, out var definition))
-                            throw new InvalidOperationException(
-                                $"Object '{instance.Id}' references missing tileset or object '{instance.TilesetId}/{instance.ObjectDefinitionId}'.");
+                        var placed = objectsById[instance.ObjectId];
                         // Objects stand at their exact pixel position, which need not be a whole tile.
                         var origin = new Vector2(instance.X, instance.Y) / tileSize;
-                        foreach (var part in definition.tiles)
-                            if (tileset.TryGetTile(part.tileIndex, out var tile))
+                        foreach (var part in placed.Tiles)
+                            if (placed.Tileset.TryGetTile(part.tileIndex, out var tile))
                                 foreach (var polygon in TilePolygons(tile, origin + new Vector2(part.x, part.y))) BlockUnder(polygon);
                     }
                 else if (IsKind(layer, "water") && layer.WaterMask != null)

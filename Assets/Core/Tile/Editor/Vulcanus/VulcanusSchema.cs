@@ -25,6 +25,7 @@ namespace Core.Tile.Editor.Vulcanus
             [".character.json"] = "character",
             [".routine.json"] = "routine",
             [".entity.json"] = "entity-type",
+            [".object.json"] = "object",
             [".quest.json"] = "quest",
             [".shop.json"] = "shop",
             [".i18n.json"] = "quest-i18n",

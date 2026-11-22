@@ -40,6 +40,7 @@ namespace Core.Tile.Editor
         private string _mapPath;
         private string _scenePath;
         private string _tilesetPath;
+        private string _objectPath;
         private EditorBuildSettingsScene[] _buildScenes;
         private string _sourcePrefabId;
         private LocationData _target;
@@ -91,8 +92,10 @@ namespace Core.Tile.Editor
             textureImporter.SaveAndReimport();
             _tilesetPath = _root + "/arbitrary-filename.vts";
             WriteAndImport(_tilesetPath, "{\"id\":\"test:tiles\",\"spriteSheet\":\"sheet.png\",\"columns\":1,\"tileCount\":1," +
-                "\"tiles\":{\"0\":{\"collision\":{\"type\":\"full\"}}}," +
-                "\"objects\":[{\"id\":\"test:chair\",\"tiles\":[{\"x\":0,\"y\":0,\"tileIndex\":0}]}]}");
+                "\"tiles\":{\"0\":{\"collision\":{\"type\":\"full\"}}}}");
+            _objectPath = _root + "/chair.object.json";
+            WriteAndImport(_objectPath, "{\"formatVersion\":1,\"id\":\"test:chair\",\"name\":\"Chair\",\"tilesetId\":\"test:tiles\"," +
+                "\"tiles\":[{\"x\":0,\"y\":0,\"tileIndex\":0}]}");
 
             // Read the project's registered prefab; do not mutate a shared authoring catalog.
             var spawnCatalog = AssetDatabase.LoadAssetAtPath<DefinitionCatalog>(SpawnableCatalogEditor.CatalogPath);
@@ -115,8 +118,8 @@ namespace Core.Tile.Editor
                 'layers':[
                     {'name':'Terrain','kind':'terrain','data':[[0]],'terrainData':[[0]],'terrainPalette':['dirt']},
                     {'name':'Furniture','kind':'object','zOrder':7,'objectInstances':[
-                        {'id':'chair-1','tilesetId':'test:tiles','objectDefinitionId':'test:chair','x':16,'y':16},
-                        {'id':'chair-2','tilesetId':'test:tiles','objectDefinitionId':'test:chair','x':32,'y':16}]}
+                        {'id':'chair-1','objectId':'test:chair','x':16,'y':16},
+                        {'id':'chair-2','objectId':'test:chair','x':32,'y':16}]}
                 ],
                 'entities':[{'id':'crate-1','typeId':'test:crate','position':[16,32],'rotation':90,'properties':{'prefabId':'wrong:identity'}}],
                 'spatialPrimitives':{
@@ -571,17 +574,16 @@ namespace Core.Tile.Editor
         }
 
         [Test]
-        public void ObjectInstancesShareTilesetSpriteAndKeepPrefabCollidersAndPlacement()
+        public void ObjectInstancesShareTheObjectSpriteAndKeepPrefabCollidersAndPlacement()
         {
             var map = ImportMap();
             var objects = map.transform.Find("Furniture");
-            var tileset = AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(_tilesetPath);
-            var definition = tileset.ObjectDefinitions.Single();
+            var sprite = AssetDatabase.LoadAssetAtPath<VulcanusObjectAsset>(_objectPath).Prefab.GetComponent<SpriteRenderer>().sprite;
             Assert.That(objects.childCount, Is.EqualTo(2));
             Assert.That(objects.GetChild(0).localPosition, Is.EqualTo(new Vector3(1.5f, 2f, 0f) + (Vector3)Core.Tile.MapManager.TileVisualOffset));
             foreach (Transform obj in objects)
             {
-                Assert.That(obj.GetComponent<SpriteRenderer>().sprite, Is.SameAs(definition.sprite));
+                Assert.That(obj.GetComponent<SpriteRenderer>().sprite, Is.SameAs(sprite));
                 Assert.That(obj.GetComponent<SpriteRenderer>().sortingOrder, Is.EqualTo(7));
                 Assert.That(obj.GetComponent<PolygonCollider2D>(), Is.Not.Null);
                 Assert.That(obj.GetComponent<YSortByPosition>(), Is.Not.Null);
@@ -824,7 +826,7 @@ namespace Core.Tile.Editor
             switch (fault)
             {
                 case "missing-tileset": _mapJson["tilesetRefs"] = new JArray("missing"); message = "references missing tileset"; break;
-                case "missing-object": _mapJson["layers"][1]["objectInstances"][0]["objectDefinitionId"] = "missing"; message = "requires imported prefab"; break;
+                case "missing-object": _mapJson["layers"][1]["objectInstances"][0]["objectId"] = "test:missing"; message = "references missing object"; break;
                 case "missing-persistent-id": _mapJson["entities"][0]["id"] = ""; message = "needs an authored instance ID"; break;
                 case "missing-music-cue":
                     _mapJson["metadata"]["musicCue"] = "test:missing-music";

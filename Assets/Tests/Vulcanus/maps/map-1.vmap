@@ -3141,36 +3141,31 @@
       "objectInstances": [
         {
           "id": "inst_efa87a257be6",
-          "tilesetId": "test:villagetileset",
-          "objectDefinitionId": "tree",
+          "objectId": "test:tree",
           "x": 88,
           "y": 218
         },
         {
           "id": "inst_cde709a0d18d",
-          "tilesetId": "test:villagetileset",
-          "objectDefinitionId": "tree",
+          "objectId": "test:tree",
           "x": 368,
           "y": 112
         },
         {
           "id": "inst_cb49f64a549c",
-          "tilesetId": "test:villagetileset",
-          "objectDefinitionId": "tree",
+          "objectId": "test:tree",
           "x": 368,
           "y": 256
         },
         {
           "id": "inst_406b549ba796",
-          "tilesetId": "test:villagetileset",
-          "objectDefinitionId": "tree",
+          "objectId": "test:tree",
           "x": 146,
           "y": 270
         },
         {
           "id": "inst_2446abf49f26",
-          "tilesetId": "test:villagetileset",
-          "objectDefinitionId": "tree",
+          "objectId": "test:tree",
           "x": 272,
           "y": 0
         }

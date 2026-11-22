@@ -35,7 +35,7 @@ namespace Core.Tile.Editor
             };
             _tileset = ScriptableObject.CreateInstance<VulcanusTilesetAsset>();
             _assets.Add(_tileset);
-            _tileset.Configure("base:nav", "Nav", null, 1, 5, TileSize, tiles, null);
+            _tileset.Configure("base:nav", "Nav", null, 1, 5, TileSize, tiles);
         }
 
         [TearDown]
@@ -118,7 +118,7 @@ namespace Core.Tile.Editor
         }
 
         private NavigationCostGrid Build(LayerDto[] layers, List<MapCollisionDto> collisions = null) =>
-            NavigationCostGridBuilder.Build(layers, new[] { _tileset }, collisions ?? new List<MapCollisionDto>(), Width, Height, TileSize);
+            NavigationCostGridBuilder.Build(layers, new[] { _tileset }, new Dictionary<string, VulcanusObjectAsset>(), collisions ?? new List<MapCollisionDto>(), Width, Height, TileSize);
 
         /// <summary>Blocked flags of one Vulcanus row (0 at the top).</summary>
         private static bool[] BlockedRow(NavigationCostGrid grid, int vulcanusRow) =>

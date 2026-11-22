@@ -17,6 +17,7 @@ namespace Core.Tile.Editor.Vulcanus
         public static NavigationCostGrid Build(
             IReadOnlyList<LayerDto> layers,
             IList<VulcanusTilesetAsset> tilesetsByIndex,
+            IReadOnlyDictionary<string, VulcanusObjectAsset> objectsById,
             IReadOnlyList<MapCollisionDto> collisions,
             int width,
             int height,
@@ -31,12 +32,12 @@ namespace Core.Tile.Editor.Vulcanus
 
             foreach (var layer in tileLayers.Where(layer => layer != terrain).OrderBy(layer => layer.ZOrder))
             {
-                if (IsKind(layer, "object")) ApplyObjectLayer(layer, tilesetsByIndex, costs, width, height, tileSize);
+                if (IsKind(layer, "object")) ApplyObjectLayer(layer, objectsById, costs, width, height, tileSize);
                 else if (layer.Data != null) ApplyTileLayer(layer, tilesetsByIndex, costs, width, height);
             }
 
             return new NavigationCostGrid(width, height, costs,
-                NavigationBlockedCellsBuilder.Build(layers, tilesetsByIndex, collisions, width, height, tileSize));
+                NavigationBlockedCellsBuilder.Build(layers, tilesetsByIndex, objectsById, collisions, width, height, tileSize));
         }
 
         private static bool IsKind(LayerDto layer, params string[] kinds) =>
@@ -69,25 +70,20 @@ namespace Core.Tile.Editor.Vulcanus
         }
 
         private static void ApplyObjectLayer(
-            LayerDto layer, IList<VulcanusTilesetAsset> tilesetsByIndex, byte[] costs, int width, int height, int tileSize)
+            LayerDto layer, IReadOnlyDictionary<string, VulcanusObjectAsset> objectsById, byte[] costs, int width, int height, int tileSize)
         {
             var claimed = new HashSet<(int, int)>(); // the first instance covering a cell wins
             foreach (var instance in layer.ObjectInstances)
             {
-                var tileset = tilesetsByIndex.FirstOrDefault(candidate =>
-                    candidate && candidate.TilesetId == instance.TilesetId);
-                if (!tileset || !tileset.TryGetObjectDefinition(instance.ObjectDefinitionId, out var definition))
-                    throw new InvalidOperationException(
-                        $"Object '{instance.Id}' references missing tileset or object '{instance.TilesetId}/{instance.ObjectDefinitionId}'.");
-
+                var placed = objectsById[instance.ObjectId];
                 var originX = FloorDiv(instance.X, tileSize);
                 var originY = FloorDiv(instance.Y, tileSize);
-                foreach (var tile in definition.tiles)
+                foreach (var tile in placed.Tiles)
                 {
                     var x = originX + tile.x;
                     var y = originY + tile.y;
                     if (!claimed.Add((x, y))) continue;
-                    if (tileset.TryGetTile(tile.tileIndex, out var vulcanusTile) && vulcanusTile.TryGetNavigationCost(out var cost))
+                    if (placed.Tileset.TryGetTile(tile.tileIndex, out var vulcanusTile) && vulcanusTile.TryGetNavigationCost(out var cost))
                         SetCost(costs, width, height, x, y, cost);
                 }
             }

@@ -62,6 +62,22 @@ namespace Core.Tile.Editor.Vulcanus
                 tilesetsByIndex.Add(tileset);
             }
 
+            var objectPaths = VulcanusImportHelpers.BuildObjectIndex(ctx.assetPath, projectAssetPath);
+            var objectsById = new Dictionary<string, VulcanusObjectAsset>(StringComparer.Ordinal);
+            foreach (var placed in dto.Layers.SelectMany(layer => layer.ObjectInstances))
+            {
+                if (objectsById.ContainsKey(placed.ObjectId)) continue;
+                if (!objectPaths.TryGetValue(placed.ObjectId, out var objectPath))
+                    throw new InvalidOperationException($"Object '{placed.Id}' references missing object '{placed.ObjectId}'.");
+                VulcanusImportHelpers.AddDependency(ctx, objectPath);
+                var placedObject = AssetDatabase.LoadAssetAtPath<VulcanusObjectAsset>(objectPath);
+                if (!placedObject)
+                    throw new InvalidOperationException($"Object '{placed.ObjectId}' at '{objectPath}' has not imported successfully.");
+                if (!placedObject.Prefab)
+                    throw new InvalidOperationException($"Object '{placed.Id}' places '{placed.ObjectId}', which has no tiles.");
+                objectsById.Add(placed.ObjectId, placedObject);
+            }
+
             var mapRoot = new GameObject(string.IsNullOrEmpty(mapName) ? mapId : mapName);
             try
             {
@@ -89,7 +105,7 @@ namespace Core.Tile.Editor.Vulcanus
 
                     if (string.Equals(layer.Kind, "object", StringComparison.OrdinalIgnoreCase))
                     {
-                        SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, tilesetsByIndex);
+                        SpawnObjectLayer(mapRoot.transform, layer, height, tileSize, objectsById);
                         continue;
                     }
 
@@ -133,7 +149,7 @@ namespace Core.Tile.Editor.Vulcanus
                 }
 
                 mapComponent.SetNavigationCostGrid(
-                    NavigationCostGridBuilder.Build(dto.Layers, tilesetsByIndex,
+                    NavigationCostGridBuilder.Build(dto.Layers, tilesetsByIndex, objectsById,
                         dto.SpatialPrimitives?.Collisions ?? new List<MapCollisionDto>(), width, height, tileSize));
 
                 WaterTilemapImporter.ImportAll(ctx, waterSources, tileSize, width, height, shorelineDistancePixels, drawnWater,
@@ -412,6 +428,7 @@ namespace Core.Tile.Editor.Vulcanus
                 instance.transform.localPosition = worldPos;
                 instance.transform.localRotation = worldRot;
                 VulcanusEntityInitializer.InitializeEntity(instance, entityData);
+                instance.AddComponent<VulcanusMapEntity>().Configure(entityData.id);
                 if (persistent)
                 {
                     // JSON properties configure gameplay fields, never the shared prefab identity.
@@ -439,27 +456,21 @@ namespace Core.Tile.Editor.Vulcanus
             LayerDto layer,
             int mapHeight,
             int tileSize,
-            IList<VulcanusTilesetAsset> tilesetsByIndex)
+            IReadOnlyDictionary<string, VulcanusObjectAsset> objectsById)
         {
-            if (layer.ObjectInstances == null || layer.ObjectInstances.Count == 0) return;
+            if (layer.ObjectInstances.Count == 0) return;
 
             var group = new GameObject(layer.Name);
             group.transform.SetParent(mapRoot, false);
 
-            var tilesetById = IdIndex.FirstWins(tilesetsByIndex,
-                tileset => tileset ? tileset.TilesetId : null, StringComparer.Ordinal);
             foreach (var inst in layer.ObjectInstances)
             {
-                if (string.IsNullOrWhiteSpace(inst.TilesetId) || !tilesetById.TryGetValue(inst.TilesetId, out var tileset))
-                    throw new InvalidOperationException($"Object '{inst.Id}' references missing tileset '{inst.TilesetId}'.");
-                if (!tileset.TryGetObjectDefinition(inst.ObjectDefinitionId, out var def) || !def.prefab)
-                    throw new InvalidOperationException($"Object '{inst.Id}' requires imported prefab '{inst.ObjectDefinitionId}' from tileset '{inst.TilesetId}'. Reimport the tileset.");
-
-                var instance = Object.Instantiate(def.prefab, group.transform);
-                instance.name = $"{def.id}_{inst.Id}";
+                var placed = objectsById[inst.ObjectId];
+                var instance = Object.Instantiate(placed.Prefab, group.transform);
+                instance.name = $"{placed.ObjectId}_{inst.Id}";
                 // The object's bottom-centre, lined up with the drawn tiles like every pixel-placed item.
                 instance.transform.localPosition = VulcanusMapTriggerImporter.PixelToLocalPosition(
-                    inst.X + def.widthTiles * 0.5f * tileSize, inst.Y + def.heightTiles * tileSize, mapHeight, tileSize);
+                    inst.X + placed.WidthTiles * 0.5f * tileSize, inst.Y + placed.HeightTiles * tileSize, mapHeight, tileSize);
                 ApplyObjectSorting(instance, layer.ZOrder);
             }
         }
