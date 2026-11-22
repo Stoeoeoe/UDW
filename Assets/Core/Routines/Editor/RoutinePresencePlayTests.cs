@@ -17,14 +17,15 @@ using Object = UnityEngine.Object;
 namespace Core.Routines.Editor
 {
     /// <summary>
-    /// Fabia's authored routine: from home in the house, Fabia walks to a spot on map-1 with an activity, then back home.
-    /// These tests watch map-1. Times and places are read from Fabia's timetable, so they follow edits to the routine file.
+    /// Fabia's routine in the Vulcanus test project: from home in the house, Fabia walks to a spot on map-1 with an
+    /// activity, then back home. These tests watch the test project's map-1, whose scene plays with test content only,
+    /// so editing the game's own Fabia never breaks them. Times and places are read from the test timetable.
     /// </summary>
     public sealed class RoutinePresencePlayTests
     {
-        private const string MapScene = "Assets/Scenes/Maps/map-1.unity";
-        private const string Map = "base:map-1";
-        private const string Fabia = "base:fabia";
+        private const string MapScene = "Assets/Tests/Scenes/map-1.unity";
+        private const string Map = "test:map-1";
+        private const string Fabia = "test:fabia";
 
         [UnityTest]
         public IEnumerator EnteringTheMapPlacesFabiaWhereTheTimetableSays()
