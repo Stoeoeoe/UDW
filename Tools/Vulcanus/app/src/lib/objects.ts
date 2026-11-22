@@ -47,3 +47,29 @@ export function projectTags(objects: ObjectDefinition[], tilesets: Iterable<Tile
       for (const tag of tile.tags ?? []) tags.add(tag);
   return [...tags].sort((a, b) => a.localeCompare(b));
 }
+
+/** The object that uses a cell of its tileset's sheet, if any. */
+export function objectAtSheetCell(
+  objects: ObjectDefinition[],
+  tileIndex: number,
+): ObjectDefinition | null {
+  return (
+    objects.find((object) => object.tiles.some((tile) => tile.tileIndex === tileIndex)) ?? null
+  );
+}
+
+/** The rectangle of sheet cells an object's tiles come from. */
+export function objectSheetBounds(
+  object: ObjectDefinition,
+  columns: number,
+): { minCol: number; minRow: number; maxCol: number; maxRow: number } | null {
+  if (!object.tiles.length) return null;
+  const cols = object.tiles.map((tile) => tile.tileIndex % columns);
+  const rows = object.tiles.map((tile) => Math.floor(tile.tileIndex / columns));
+  return {
+    minCol: Math.min(...cols),
+    minRow: Math.min(...rows),
+    maxCol: Math.max(...cols),
+    maxRow: Math.max(...rows),
+  };
+}

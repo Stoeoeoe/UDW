@@ -30,6 +30,7 @@ export const PropertiesPanel: React.FC = () => {
   const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
   const selectedLayerId = useEditorStore((state) => state.selectedLayerId);
   const tilesets = useEditorStore((state) => state.tilesets);
+  const objects = useEditorStore((state) => state.objects);
   const moveEntity = useEditorStore((state) => state.moveEntity);
   const updateEntityLabel = useEditorStore((state) => state.updateEntityLabel);
   const renameEntity = useEditorStore((state) => state.renameEntity);
@@ -53,13 +54,11 @@ export const PropertiesPanel: React.FC = () => {
     selectedObjectLayer?.objectInstances?.find(
       (instance) => instance.id === selectedObjectInstanceId,
     ) ?? null;
-  const selectedObjectTileset = selectedObjectInstance
-    ? (tilesets.get(selectedObjectInstance.tilesetId) ?? null)
-    : null;
   const selectedObjectDefinition =
-    selectedObjectTileset?.objects?.find(
-      (objectDefinition) => objectDefinition.id === selectedObjectInstance?.objectDefinitionId,
-    ) ?? null;
+    objects.find((object) => object.id === selectedObjectInstance?.objectId) ?? null;
+  const selectedObjectTileset = selectedObjectDefinition
+    ? (tilesets.get(selectedObjectDefinition.tilesetId) ?? null)
+    : null;
 
   React.useEffect(() => {
     if (!selectedEntity && !selectedObjectInstance) {
@@ -140,7 +139,7 @@ export const PropertiesPanel: React.FC = () => {
 
   const handleDeleteSelectedObject = () => {
     if (!selectedObjectInstance || !selectedLayerId) return;
-    const label = selectedObjectDefinition?.name || selectedObjectInstance.objectDefinitionId;
+    const label = selectedObjectDefinition?.name || selectedObjectInstance.objectId;
     if (!confirm(`Delete object "${label}"?`)) return;
     removeObjectInstance(selectedLayerId, selectedObjectInstance.id);
     selectObjectInstance(null);
@@ -316,7 +315,7 @@ export const PropertiesPanel: React.FC = () => {
             <FormControl>
               <FormLabel>Object ID</FormLabel>
               <Input
-                value={selectedObjectDefinition?.id ?? selectedObjectInstance.objectDefinitionId}
+                value={selectedObjectInstance.objectId}
                 isReadOnly
                 fontFamily="mono"
               />
@@ -376,7 +375,7 @@ export const PropertiesPanel: React.FC = () => {
             <FormControl>
               <FormLabel>Tileset</FormLabel>
               <Input
-                value={selectedObjectTileset?.name ?? selectedObjectInstance.tilesetId}
+                value={selectedObjectTileset?.name ?? selectedObjectDefinition?.tilesetId ?? ''}
                 isReadOnly
               />
             </FormControl>

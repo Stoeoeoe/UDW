@@ -8,6 +8,7 @@ import {
 } from './navigationPath';
 import type { NavigationCostGrid } from './navigationCost';
 import type { Layer, Map as GameMap, MapCollision, Tileset } from '../types/schema';
+import { indexObjects } from './mapObjects';
 
 const TILE = 16;
 
@@ -65,9 +66,17 @@ const tileset: Tileset = {
       },
     },
   },
-  objects: [{ id: 'stone', name: 'Stone', tiles: [{ x: 0, y: 0, tileIndex: 2 }] }],
 } as unknown as Tileset;
 const tilesets = new Map([[tileset.id, tileset]]);
+const objects = indexObjects([
+  {
+    formatVersion: 1,
+    id: 'test:stone',
+    name: 'Stone',
+    tilesetId: tileset.id,
+    tiles: [{ x: 0, y: 0, tileIndex: 2 }],
+  },
+]);
 
 /** A map from rows of characters: . grass, = road, # wall, o fence post, ~ hedge, b bench. */
 function makeMap(rows: string[], collisions: MapCollision[] = []): GameMap {
@@ -106,12 +115,12 @@ const open = (w: number, h: number) =>
 
 describe('computeBlockedGrid', () => {
   it('blocks full-collision tiles and polygons that reach the middle of a cell', () => {
-    const blocked = computeBlockedGrid(makeMap(['.#o~']), tilesets, TILE);
+    const blocked = computeBlockedGrid(makeMap(['.#o~']), tilesets, objects, TILE);
     expect(blocked[0]).toEqual([false, true, true, false]); // a hedge on the tile's edge leaves the middle free
   });
 
   it('counts rectangle shapes, as Unity does', () => {
-    expect(computeBlockedGrid(makeMap(['b.']), tilesets, TILE)[0]).toEqual([true, false]);
+    expect(computeBlockedGrid(makeMap(['b.']), tilesets, objects, TILE)[0]).toEqual([true, false]);
   });
 
   it('blocks under placed objects at their exact position, also between tiles', () => {
@@ -125,11 +134,9 @@ describe('computeBlockedGrid', () => {
       locked: false,
       opacity: 1,
       zOrder: 1,
-      objectInstances: [
-        { id: 's', tilesetId: tileset.id, objectDefinitionId: 'stone', x: 24, y: 8 },
-      ],
+      objectInstances: [{ id: 's', objectId: 'test:stone', x: 24, y: 8 }],
     } as unknown as Layer);
-    expect(computeBlockedGrid(map, tilesets, TILE)).toEqual([
+    expect(computeBlockedGrid(map, tilesets, objects, TILE)).toEqual([
       [false, true, true, false],
       [false, true, true, false],
     ]);
@@ -150,7 +157,7 @@ describe('computeBlockedGrid', () => {
       waterBodies: [{ id: 'pond', name: 'Pond' }],
       waterMask: { width: 4 * TILE, height: 2 * TILE, rle },
     } as unknown as Layer);
-    expect(computeBlockedGrid(map, tilesets, TILE)).toEqual([
+    expect(computeBlockedGrid(map, tilesets, objects, TILE)).toEqual([
       [true, true, false, false],
       [true, true, false, false],
     ]);
@@ -164,7 +171,7 @@ describe('computeBlockedGrid', () => {
         { id: 'circle', shape: 'circle', position: [56, 24], radius: 6 },
       ],
     );
-    expect(computeBlockedGrid(map, tilesets, TILE)).toEqual([
+    expect(computeBlockedGrid(map, tilesets, objects, TILE)).toEqual([
       [true, true, false, false],
       [false, false, false, true],
     ]);
@@ -185,14 +192,14 @@ describe('computeBlockedGrid', () => {
         ['.'],
         [{ id: 'rect', shape: 'rectangle', position: [x, y], size: [w, h] }],
       );
-      expect(computeBlockedGrid(map, tilesets, TILE)[0][0]).toBe(expected);
+      expect(computeBlockedGrid(map, tilesets, objects, TILE)[0][0]).toBe(expected);
     },
   );
 
   it('ignores hidden layers', () => {
     const map = makeMap(['#']);
     map.layers[0].visible = false;
-    expect(computeBlockedGrid(map, tilesets, TILE)).toEqual([[false]]);
+    expect(computeBlockedGrid(map, tilesets, objects, TILE)).toEqual([[false]]);
   });
 });
 
@@ -300,7 +307,12 @@ describe('findGridPath', () => {
 describe('planRoute', () => {
   it('goes from the exact start through turning cell middles to the exact destination', () => {
     const map = makeMap(['...', '.#.', '...']);
-    const route = planRoute(computeMapNavigation(map, tilesets, TILE), [8, 8], [40, 44], TILE);
+    const route = planRoute(
+      computeMapNavigation(map, tilesets, objects, TILE),
+      [8, 8],
+      [40, 44],
+      TILE,
+    );
     expect(route?.[0]).toEqual([0.5, 0.5]);
     expect(route?.[route.length - 1]).toEqual([2.5, 2.75]);
     expect(route?.slice(1, -1).every(([x, y]) => x % 1 === 0.5 && y % 1 === 0.5)).toBe(true);
@@ -308,6 +320,8 @@ describe('planRoute', () => {
 
   it('is null when no route exists', () => {
     const map = makeMap(['.#.']);
-    expect(planRoute(computeMapNavigation(map, tilesets, TILE), [8, 8], [40, 8], TILE)).toBeNull();
+    expect(
+      planRoute(computeMapNavigation(map, tilesets, objects, TILE), [8, 8], [40, 8], TILE),
+    ).toBeNull();
   });
 });

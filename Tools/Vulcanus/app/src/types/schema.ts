@@ -83,13 +83,6 @@ export interface Tileset extends NamedEditorResource {
   tileCount: number; // Total number of tiles
   tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)
   wangSets?: WangSet[]; // Modern autotiling logic (Tiled-compatible)
-  objects?: TilesetObjectDefinition[]; // Reusable multi-tile object definitions (trees, bushes, etc.)
-}
-
-export interface TilesetObjectDefinition {
-  id: string;
-  name: string;
-  tiles: TilesetObjectTile[];
 }
 
 export interface TilesetObjectTile {
@@ -200,9 +193,7 @@ export interface Layer {
   icon?: string; // Optional icon identifier
   // For tile-like layers this holds encoded tile IDs, row-major [y][x]
   data?: (number | null)[][]; // Encoded tile IDs (tiles only)
-  // For Y-sorted object layers: connected painted tiles stored as first-class groups.
-  objectGroups?: ObjectGroup[];
-  // Explicit placed object instances for object layers.
+  // For object layers: the placed objects.
   objectInstances?: MapObjectInstance[];
 
   // For terrain layers: parallel grid storing the terrain ID painted at each cell.
@@ -252,29 +243,16 @@ export interface FlowStroke {
 
 export type SortingLayer = 'ground' | 'above';
 
-export interface ObjectGroup {
-  id: string;
-  tiles: ObjectGroupTile[];
-}
-
-export interface ObjectGroupTile {
-  x: number;
-  y: number;
-  tilesetId: string;
-  tileIndex: number;
-}
-
 export interface MapObjectInstance {
   id: string;
-  tilesetId: string;
-  objectDefinitionId: string;
+  objectId: string; // The placed object (objects/*.object.json)
   x: number; // Pixel X coordinate of the object's top-left origin; may be negative for overhangs
   y: number; // Pixel Y coordinate of the object's top-left origin; may be negative for overhangs
 }
 
 export type LayerKind =
   | 'visual' // Rendered tile layers
-  | 'object' // Placed reusable object instances
+  | 'object' // Placed objects
   | 'collision' // Collision data
   | 'navigation' // Combined layer for anchors, triggers, and location links
   | 'metadata' // Data-only, invisible

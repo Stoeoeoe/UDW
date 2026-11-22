@@ -286,7 +286,7 @@ export const createToolSlice: ImmerStateCreator<ToolSlice> = (set) => ({
     set((state) => {
       state.selectedTileIndex = null;
       state.selectedTileIndices = [];
-      state.selectedObjectDefinitionId = null;
+      state.selectedObjectId = null;
       state.selectedTerrainId = null;
       state.sampledPattern = null;
     }),

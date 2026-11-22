@@ -28,6 +28,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { DEFAULT_TILE_SIZE } from '../../../config/constants';
 import { EDITOR_CANVAS_HEX } from '../../../lib/editorColors';
 import type { Layer } from '../../../types/schema';
+import { indexObjects, type ObjectIndex } from '../../../lib/mapObjects';
 import { bakeLayerCanvas, configurePixelArtTexture, getRenderableMapLayers } from './mapThreeUtils';
 
 // ─── Layer colour palette (for the legend + wireframe tint) ───────────────────
@@ -121,6 +122,7 @@ function buildLayerMeshes(
   tilesets: ReturnType<typeof useEditorStore.getState>['tilesets'],
   loadedSprites: ReturnType<typeof useEditorStore.getState>['loadedSprites'],
   activeVariationId: string | null,
+  objects: ObjectIndex,
 ): THREE.Mesh[] {
   const visibleLayers = getRenderableMapLayers(layers);
 
@@ -142,6 +144,7 @@ function buildLayerMeshes(
       tilesets,
       loadedSprites,
       activeVariationId,
+      objects,
     );
     const tex = baked ? new THREE.CanvasTexture(baked) : null;
     if (tex) {
@@ -215,6 +218,7 @@ export const Map3DLayerView: React.FC = () => {
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
   const tilesets = useEditorStore((state) => state.tilesets);
+  const objects = useEditorStore((state) => state.objects);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
 
   const [layerGap, setLayerGap] = useState(40);
@@ -298,6 +302,7 @@ export const Map3DLayerView: React.FC = () => {
       tilesets,
       loadedSprites,
       activeVariationId,
+      indexObjects(objects),
     );
 
     // Centre the camera target on the middle of the stack
@@ -315,6 +320,7 @@ export const Map3DLayerView: React.FC = () => {
     projectTileSize,
     layerGap,
     tilesets,
+    objects,
     loadedSprites,
     activeVariationId,
   ]);

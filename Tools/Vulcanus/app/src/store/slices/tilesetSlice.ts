@@ -23,7 +23,7 @@ export interface TilesetSlice {
   activeTilesetId: string | null;
   selectedTileIndex: number | null;
   selectedTileIndices: number[];
-  selectedObjectDefinitionId: string | null;
+  selectedObjectId: string | null;
   mapEditorSelectedTileIndex: number | null;
   mapEditorSelectedTileIndices: number[];
   tilesetEditorSelectedTileIndex: number | null;
@@ -39,7 +39,7 @@ export interface TilesetSlice {
   setActiveTileset: (id: string | null) => void;
   setSelectedTile: (index: number | null) => void;
   setSelectedTiles: (indexes: number[]) => void;
-  setSelectedObjectDefinition: (id: string | null) => void;
+  setSelectedObject: (id: string | null) => void;
   toggleSelectedTile: (index: number) => void;
   setSelectedTerrain: (id: string | null) => void;
   setSampledPattern: (
@@ -73,7 +73,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
   activeTilesetId: null,
   selectedTileIndex: null,
   selectedTileIndices: [],
-  selectedObjectDefinitionId: null,
+  selectedObjectId: null,
   mapEditorSelectedTileIndex: null,
   mapEditorSelectedTileIndices: [],
   tilesetEditorSelectedTileIndex: null,
@@ -86,7 +86,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       state.activeTilesetId = id;
       state.selectedTileIndex = null;
       state.selectedTileIndices = [];
-      state.selectedObjectDefinitionId = null;
+      state.selectedObjectId = null;
       state.selectedTerrainId = null;
     }),
 
@@ -96,7 +96,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       if (index !== null) state.selectedTerrainId = null;
       state.selectedTileIndices = index !== null ? [index] : [];
       if (state.tilesetToolMode !== 'objects') {
-        state.selectedObjectDefinitionId = null;
+        state.selectedObjectId = null;
       }
       state.sampledPattern = null;
     }),
@@ -107,14 +107,14 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
       state.selectedTileIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
       if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
       if (state.tilesetToolMode !== 'objects') {
-        state.selectedObjectDefinitionId = null;
+        state.selectedObjectId = null;
       }
       state.sampledPattern = null;
     }),
 
-  setSelectedObjectDefinition: (id) =>
+  setSelectedObject: (id) =>
     set((state) => {
-      state.selectedObjectDefinitionId = id;
+      state.selectedObjectId = id;
       if (id !== null) {
         state.selectedTileIndex = null;
         state.selectedTileIndices = [];
@@ -133,7 +133,7 @@ export const createTilesetSlice: ImmerStateCreator<TilesetSlice> = (set, get) =>
           : null;
       if (state.selectedTileIndex !== null) state.selectedTerrainId = null;
       if (state.tilesetToolMode !== 'objects') {
-        state.selectedObjectDefinitionId = null;
+        state.selectedObjectId = null;
       }
     }),
 

@@ -1,7 +1,17 @@
-import { Layer, Map as GameMap, Tileset, TilesetObjectDefinition } from '../types/schema';
+import type { Layer, Tileset } from '../types/schema';
+import type { ObjectDefinition } from '../types/object';
 import { createTileRef } from './tileUtils';
-import { getObjectGroupAt, getObjectGroupTileRef } from './objectGroups';
 import { bresenhamLine, circularBrush } from './algorithms';
+
+/** The project's objects by ID. */
+export type ObjectIndex = ReadonlyMap<string, ObjectDefinition>;
+
+/** A placed object: which object, and its top-left corner in map pixels. */
+interface PlacedObject {
+  objectId: string;
+  x: number;
+  y: number;
+}
 
 export interface MapObjectInstanceTile {
   x: number;
@@ -10,11 +20,16 @@ export interface MapObjectInstanceTile {
   tileIndex: number;
 }
 
-export interface MapObjectSpriteTile {
-  x: number;
-  y: number;
-  tilesetId: string;
-  tileIndex: number;
+const indexCache = new WeakMap<readonly ObjectDefinition[], ObjectIndex>();
+
+/** The objects by ID, built once per version of the store's list. */
+export function indexObjects(objects: readonly ObjectDefinition[]): ObjectIndex {
+  let index = indexCache.get(objects);
+  if (!index) {
+    index = new Map(objects.map((object) => [object.id, object]));
+    indexCache.set(objects, index);
+  }
+  return index;
 }
 
 export function createMapObjectInstanceId(): string {
@@ -24,54 +39,37 @@ export function createMapObjectInstanceId(): string {
   return `inst_${Math.random().toString(36).slice(2, 14)}`;
 }
 
-export function getObjectDefinition(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
-): TilesetObjectDefinition | null {
-  const tileset = tilesets.get(tilesetId);
-  return (
-    tileset?.objects?.find((objectDefinition) => objectDefinition.id === objectDefinitionId) ?? null
-  );
-}
-
-export function getObjectDefinitionDimensions(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
+/** An object's size in tiles, or null when it is unknown or has no tiles. */
+export function getObjectDimensions(
+  objects: ObjectIndex,
+  objectId: string,
 ): { width: number; height: number } | null {
-  const objectDefinition = getObjectDefinition(tilesets, tilesetId, objectDefinitionId);
-  if (!objectDefinition || objectDefinition.tiles.length === 0) return null;
-
-  const width = Math.max(...objectDefinition.tiles.map((tile) => tile.x)) + 1;
-  const height = Math.max(...objectDefinition.tiles.map((tile) => tile.y)) + 1;
-  return { width, height };
-}
-
-export function getObjectDefinitionPixelSize(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
-  tileSize: number,
-): { width: number; height: number } | null {
-  const dimensions = getObjectDefinitionDimensions(tilesets, tilesetId, objectDefinitionId);
-  if (!dimensions) return null;
+  const object = objects.get(objectId);
+  if (!object || object.tiles.length === 0) return null;
   return {
-    width: dimensions.width * tileSize,
-    height: dimensions.height * tileSize,
+    width: Math.max(...object.tiles.map((tile) => tile.x)) + 1,
+    height: Math.max(...object.tiles.map((tile) => tile.y)) + 1,
   };
 }
 
+function getObjectPixelSize(
+  objects: ObjectIndex,
+  objectId: string,
+  tileSize: number,
+): { width: number; height: number } | null {
+  const dimensions = getObjectDimensions(objects, objectId);
+  return dimensions && { width: dimensions.width * tileSize, height: dimensions.height * tileSize };
+}
+
 export function getCenteredObjectPlacementOrigin(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
+  objects: ObjectIndex,
+  objectId: string,
   cursorX: number,
   cursorY: number,
   mapWidth?: number,
   mapHeight?: number,
 ): { x: number; y: number } {
-  const dimensions = getObjectDefinitionDimensions(tilesets, tilesetId, objectDefinitionId);
+  const dimensions = getObjectDimensions(objects, objectId);
   if (!dimensions) {
     return { x: cursorX, y: cursorY };
   }
@@ -90,16 +88,15 @@ export function getCenteredObjectPlacementOrigin(
 }
 
 export function getCenteredObjectPlacementPixelOrigin(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
+  objects: ObjectIndex,
+  objectId: string,
   cursorX: number,
   cursorY: number,
   tileSize: number,
   mapPixelWidth?: number,
   mapPixelHeight?: number,
 ): { x: number; y: number } {
-  const pixelSize = getObjectDefinitionPixelSize(tilesets, tilesetId, objectDefinitionId, tileSize);
+  const pixelSize = getObjectPixelSize(objects, objectId, tileSize);
   if (!pixelSize) {
     return { x: Math.round(cursorX), y: Math.round(cursorY) };
   }
@@ -122,21 +119,16 @@ export function collectObjectPlacementOrigins(
   start: { x: number; y: number },
   end: { x: number; y: number },
   brushSize: number,
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
+  objects: ObjectIndex,
+  objectId: string,
   mapWidth?: number,
   mapHeight?: number,
 ): Array<{ x: number; y: number }> {
-  const dimensions = getObjectDefinitionDimensions(tilesets, tilesetId, objectDefinitionId) ?? {
-    width: 1,
-    height: 1,
-  };
+  const dimensions = getObjectDimensions(objects, objectId) ?? { width: 1, height: 1 };
 
   const baseOrigin = getCenteredObjectPlacementOrigin(
-    tilesets,
-    tilesetId,
-    objectDefinitionId,
+    objects,
+    objectId,
     start.x,
     start.y,
     mapWidth,
@@ -147,9 +139,8 @@ export function collectObjectPlacementOrigins(
 
   const add = (cursorX: number, cursorY: number) => {
     const centeredOrigin = getCenteredObjectPlacementOrigin(
-      tilesets,
-      tilesetId,
-      objectDefinitionId,
+      objects,
+      objectId,
       cursorX,
       cursorY,
       mapWidth,
@@ -166,9 +157,8 @@ export function collectObjectPlacementOrigins(
         Math.max(1, dimensions.height);
 
     const clampedOrigin = getCenteredObjectPlacementOrigin(
-      tilesets,
-      tilesetId,
-      objectDefinitionId,
+      objects,
+      objectId,
       snappedX + Math.floor(dimensions.width / 2),
       snappedY + Math.floor(dimensions.height / 2),
       mapWidth,
@@ -223,75 +213,60 @@ export function collectObjectPlacementOrigins(
   return Array.from(positions.values());
 }
 
+/** The map cells a placed object covers, each with its tile. */
 export function expandObjectInstanceTiles(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
-  x: number,
-  y: number,
+  objects: ObjectIndex,
+  placed: PlacedObject,
   tileSize: number,
 ): MapObjectInstanceTile[] {
-  const objectDefinition = getObjectDefinition(tilesets, tilesetId, objectDefinitionId);
-  if (!objectDefinition) return [];
+  const object = objects.get(placed.objectId);
+  if (!object) return [];
 
-  return objectDefinition.tiles.map((tile) => ({
-    x: Math.floor(x / tileSize) + tile.x,
-    y: Math.floor(y / tileSize) + tile.y,
-    tilesetId,
+  return object.tiles.map((tile) => ({
+    x: Math.floor(placed.x / tileSize) + tile.x,
+    y: Math.floor(placed.y / tileSize) + tile.y,
+    tilesetId: object.tilesetId,
     tileIndex: tile.tileIndex,
   }));
 }
 
+/** A placed object's tiles at their pixel positions on the map. */
 export function expandObjectInstanceSpriteTiles(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
-  x: number,
-  y: number,
+  objects: ObjectIndex,
+  placed: PlacedObject,
   tileSize: number,
-): MapObjectSpriteTile[] {
-  const objectDefinition = getObjectDefinition(tilesets, tilesetId, objectDefinitionId);
-  if (!objectDefinition) return [];
+): MapObjectInstanceTile[] {
+  const object = objects.get(placed.objectId);
+  if (!object) return [];
 
-  return objectDefinition.tiles.map((tile) => ({
-    x: x + tile.x * tileSize,
-    y: y + tile.y * tileSize,
-    tilesetId,
+  return object.tiles.map((tile) => ({
+    x: placed.x + tile.x * tileSize,
+    y: placed.y + tile.y * tileSize,
+    tilesetId: object.tilesetId,
     tileIndex: tile.tileIndex,
   }));
 }
 
 export function getObjectInstanceBounds(
-  tilesets: Map<string, Tileset>,
-  objectInstance: { tilesetId: string; objectDefinitionId: string; x: number; y: number },
+  objects: ObjectIndex,
+  placed: PlacedObject,
   tileSize: number,
 ): { x: number; y: number; width: number; height: number } | null {
-  const pixelSize = getObjectDefinitionPixelSize(
-    tilesets,
-    objectInstance.tilesetId,
-    objectInstance.objectDefinitionId,
-    tileSize,
-  );
+  const pixelSize = getObjectPixelSize(objects, placed.objectId, tileSize);
   if (!pixelSize) return null;
-  return {
-    x: objectInstance.x,
-    y: objectInstance.y,
-    width: pixelSize.width,
-    height: pixelSize.height,
-  };
+  return { x: placed.x, y: placed.y, width: pixelSize.width, height: pixelSize.height };
 }
 
 export function objectPlacementIntersectsMap(
-  tilesets: Map<string, Tileset>,
-  tilesetId: string,
-  objectDefinitionId: string,
+  objects: ObjectIndex,
+  objectId: string,
   x: number,
   y: number,
   tileSize: number,
   mapWidth: number,
   mapHeight: number,
 ): boolean {
-  const pixelSize = getObjectDefinitionPixelSize(tilesets, tilesetId, objectDefinitionId, tileSize);
+  const pixelSize = getObjectPixelSize(objects, objectId, tileSize);
   if (!pixelSize) return false;
 
   const mapPixelWidth = mapWidth * tileSize;
@@ -302,49 +277,34 @@ export function objectPlacementIntersectsMap(
   );
 }
 
+/** The tile a placed object shows at a map cell, as a tile reference. */
 export function resolveObjectInstanceTileAt(
   layer: Layer,
   x: number,
   y: number,
-  tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize = 16,
 ): string | null {
   for (const objectInstance of layer.objectInstances ?? []) {
-    const tiles = expandObjectInstanceTiles(
-      tilesets,
-      objectInstance.tilesetId,
-      objectInstance.objectDefinitionId,
-      objectInstance.x,
-      objectInstance.y,
-      tileSize,
+    const tile = expandObjectInstanceTiles(objects, objectInstance, tileSize).find(
+      (entry) => entry.x === x && entry.y === y,
     );
-    const matchingTile = tiles.find((tile) => tile.x === x && tile.y === y);
-    if (matchingTile) {
-      return createTileRef(matchingTile.tilesetId, matchingTile.tileIndex);
-    }
+    if (tile) return createTileRef(tile.tilesetId, tile.tileIndex);
   }
-
-  return getObjectGroupTileRef(layer, x, y);
+  return null;
 }
 
 export function getObjectInstanceAtTile(
   layer: Layer,
   x: number,
   y: number,
-  tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize = 16,
 ) {
   const objectInstances = layer.objectInstances ?? [];
   for (let instanceIndex = objectInstances.length - 1; instanceIndex >= 0; instanceIndex -= 1) {
     const objectInstance = objectInstances[instanceIndex];
-    const tiles = expandObjectInstanceTiles(
-      tilesets,
-      objectInstance.tilesetId,
-      objectInstance.objectDefinitionId,
-      objectInstance.x,
-      objectInstance.y,
-      tileSize,
-    );
+    const tiles = expandObjectInstanceTiles(objects, objectInstance, tileSize);
     if (tiles.some((tile) => tile.x === x && tile.y === y)) {
       return objectInstance;
     }
@@ -357,20 +317,13 @@ export function getObjectInstanceAtWorldPosition(
   layer: Layer,
   worldX: number,
   worldY: number,
-  tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize: number,
 ) {
   const objectInstances = layer.objectInstances ?? [];
   for (let instanceIndex = objectInstances.length - 1; instanceIndex >= 0; instanceIndex -= 1) {
     const objectInstance = objectInstances[instanceIndex];
-    const tiles = expandObjectInstanceSpriteTiles(
-      tilesets,
-      objectInstance.tilesetId,
-      objectInstance.objectDefinitionId,
-      objectInstance.x,
-      objectInstance.y,
-      tileSize,
-    );
+    const tiles = expandObjectInstanceSpriteTiles(objects, objectInstance, tileSize);
     if (
       tiles.some(
         (tile) =>
@@ -391,10 +344,10 @@ export function removeObjectInstanceAtTile(
   layer: Layer,
   x: number,
   y: number,
-  tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize = 16,
 ) {
-  const hit = getObjectInstanceAtTile(layer, x, y, tilesets, tileSize);
+  const hit = getObjectInstanceAtTile(layer, x, y, objects, tileSize);
   if (!hit) return null;
   layer.objectInstances = (layer.objectInstances ?? []).filter(
     (instance) => instance.id !== hit.id,
@@ -402,82 +355,43 @@ export function removeObjectInstanceAtTile(
   return hit;
 }
 
+/** The depth a placed object sorts at: the lowest ground line of its tiles, after the layer's order. */
 export function computeObjectInstanceSortDepth(
+  objects: ObjectIndex,
   tilesets: Map<string, Tileset>,
   layer: Layer,
-  objectInstance: { tilesetId: string; objectDefinitionId: string; x: number; y: number },
+  placed: PlacedObject,
   tileSize: number,
 ): number {
-  const tiles = expandObjectInstanceSpriteTiles(
-    tilesets,
-    objectInstance.tilesetId,
-    objectInstance.objectDefinitionId,
-    objectInstance.x,
-    objectInstance.y,
-    tileSize,
-  );
+  const tiles = expandObjectInstanceSpriteTiles(objects, placed, tileSize);
   if (!tiles.length) {
-    return objectInstance.y;
+    return placed.y;
   }
 
   let maxDepth = -Infinity;
-  const tileset = tilesets.get(objectInstance.tilesetId);
   for (const tile of tiles) {
-    const pivotY = tileset?.tiles[tile.tileIndex]?.pivotY ?? 1;
+    const pivotY = tilesets.get(tile.tilesetId)?.tiles[tile.tileIndex]?.pivotY ?? 1;
     maxDepth = Math.max(maxDepth, tile.y + pivotY * tileSize);
   }
-
-  if (Number.isFinite(maxDepth)) return maxDepth + layer.zOrder;
-  return objectInstance.y + layer.zOrder;
+  return maxDepth + layer.zOrder;
 }
 
+/** Every map cell covered by a placed object on the layer, with its tile. */
 export function iterateRenderableObjectTiles(
-  map: GameMap,
   layer: Layer,
-  tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize = 16,
 ): MapObjectInstanceTile[] {
-  const tiles: MapObjectInstanceTile[] = [];
-
-  for (const objectInstance of layer.objectInstances ?? []) {
-    tiles.push(
-      ...expandObjectInstanceTiles(
-        tilesets,
-        objectInstance.tilesetId,
-        objectInstance.objectDefinitionId,
-        objectInstance.x,
-        objectInstance.y,
-        tileSize,
-      ),
-    );
-  }
-
-  if (tiles.length > 0) {
-    return tiles;
-  }
-
-  if (layer.objectGroups?.length) {
-    return layer.objectGroups.flatMap((group) => group.tiles);
-  }
-
-  const fallbackTiles: MapObjectInstanceTile[] = [];
-  for (let y = 0; y < map.height; y += 1) {
-    for (let x = 0; x < map.width; x += 1) {
-      const tileRef = getObjectGroupTileRef(layer, x, y);
-      if (!tileRef) continue;
-      const colon = tileRef.lastIndexOf(':');
-      if (colon <= 0) continue;
-      fallbackTiles.push({
-        x,
-        y,
-        tilesetId: tileRef.slice(0, colon),
-        tileIndex: Number.parseInt(tileRef.slice(colon + 1), 10),
-      });
-    }
-  }
-  return fallbackTiles;
+  return (layer.objectInstances ?? []).flatMap((objectInstance) =>
+    expandObjectInstanceTiles(objects, objectInstance, tileSize),
+  );
 }
 
-export function getLegacyObjectGroupAt(layer: Layer, x: number, y: number) {
-  return getObjectGroupAt(layer, x, y);
+/** The maps on which an object is placed. */
+export function mapsPlacingObject<T extends { layers: Layer[] }>(maps: T[], objectId: string): T[] {
+  return maps.filter((map) =>
+    map.layers.some((layer) =>
+      (layer.objectInstances ?? []).some((instance) => instance.objectId === objectId),
+    ),
+  );
 }

@@ -111,17 +111,9 @@ function normalizeLayer(layer: Layer, prefix: string): Layer {
     ...localDefinition(layer),
     definitionId: localReference(layer.definitionId),
     entities: collection(layer.entities, (entity) => normalizeEntityInstance(entity, prefix)),
-    objectGroups: collection(layer.objectGroups, (group) => ({
-      ...localDefinition(group),
-      tiles: group.tiles.map((tile) => ({
-        ...tile,
-        tilesetId: qualifyResourceId(tile.tilesetId, prefix),
-      })),
-    })),
     objectInstances: collection(layer.objectInstances, (instance) => ({
       ...localDefinition(instance),
-      tilesetId: qualifyResourceId(instance.tilesetId, prefix),
-      objectDefinitionId: localReference(instance.objectDefinitionId),
+      objectId: resourceReference(instance.objectId, prefix),
     })),
     terrainData: layer.terrainData?.map((row) =>
       row.map((id) => (typeof id === 'string' ? localReference(id) : id)),
@@ -222,7 +214,6 @@ function normalizeTileset(tileset: Tileset, prefix: string): Tileset {
           },
         ]),
       ),
-    objects: collection(tileset.objects, localDefinition),
     wangSets: collection(tileset.wangSets, localDefinition),
   };
 }

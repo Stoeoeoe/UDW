@@ -31,6 +31,7 @@ import {
   getCenteredObjectPlacementOrigin,
   getCenteredObjectPlacementPixelOrigin,
   getObjectInstanceBounds,
+  indexObjects,
 } from '../../../lib/mapObjects';
 import type { Map as GameMap, Tileset } from '../../../types/schema';
 import type { ToolType } from '../../../types/editor';
@@ -119,7 +120,7 @@ export function computeCollisionOverlay(
 
       for (let y = 0; y < currentMap.height; y++) {
         for (let x = 0; x < currentMap.width; x++) {
-          const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
+          const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
           if (!tileRef) continue;
 
           const [tsId, indexStr] = splitTileRef(tileRef);
@@ -368,7 +369,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
   // Render collision overlay from visual layers
   const renderCollisionOverlay = useCallback(() => {
     const collisionGraphics = collisionGraphicsRef.current;
-    const { currentMap, activeVariationId, tilesets, showCollisionOverlay } =
+    const { currentMap, activeVariationId, tilesets, objects, showCollisionOverlay } =
       useEditorStore.getState();
     const tileSize = projectTileSize;
     if (!collisionGraphics || !currentMap) return;
@@ -389,25 +390,22 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
         )
           return;
 
-        if (layer.kind === 'object' && (layer.objectInstances?.length ?? 0) > 0) {
+        if (layer.kind === 'object') {
           for (const objectInstance of layer.objectInstances ?? []) {
+            const object = indexObjects(objects).get(objectInstance.objectId);
+            if (!object) continue;
             const spriteTiles = expandObjectInstanceSpriteTiles(
-              tilesets,
-              objectInstance.tilesetId,
-              objectInstance.objectDefinitionId,
-              objectInstance.x,
-              objectInstance.y,
+              indexObjects(objects),
+              objectInstance,
               tileSize,
             );
-            const baseTileset = tilesets.get(objectInstance.tilesetId);
+            const baseTileset = tilesets.get(object.tilesetId);
             if (!baseTileset) continue;
 
             let effectiveTileset = baseTileset;
             const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
             if (variation?.tilesetSuffix) {
-              const suffixed = tilesets.get(
-                `${objectInstance.tilesetId}${variation.tilesetSuffix}`,
-              );
+              const suffixed = tilesets.get(`${object.tilesetId}${variation.tilesetSuffix}`);
               if (suffixed) effectiveTileset = suffixed;
             }
 
@@ -445,7 +443,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
-            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
+            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
             if (!tileRef) continue;
 
             const [tsId, indexStr] = splitTileRef(tileRef);
@@ -692,6 +690,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
     const {
       currentMap,
       tilesets,
+      objects,
       activeVariationId,
       showNavigationCostOverlay,
       hoveredTile,
@@ -703,11 +702,17 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
     labels.removeChildren().forEach((child) => child.destroy());
     if (!showNavigationCostOverlay) return;
 
-    const key = [currentMap, tilesets, activeVariationId, tileSize];
+    const key = [currentMap, tilesets, objects, activeVariationId, tileSize];
     const cached = navigationCostGridCache.current;
     let grid = cached && cached.key.every((value, i) => value === key[i]) ? cached.grid : null;
     if (!grid) {
-      grid = computeNavigationCostGrid(currentMap, tilesets, activeVariationId, tileSize);
+      grid = computeNavigationCostGrid(
+        currentMap,
+        tilesets,
+        indexObjects(objects),
+        activeVariationId,
+        tileSize,
+      );
       navigationCostGridCache.current = { key, grid };
     }
 
@@ -777,8 +782,9 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
   // Render tiles
   const renderTiles = useCallback(() => {
     const tileContainer = tileContainerRef.current;
-    const { currentMap, activeVariationId, tilesets, selectedObjectInstanceId } =
+    const { currentMap, activeVariationId, tilesets, objects, selectedObjectInstanceId } =
       useEditorStore.getState();
+    const objectIndex = indexObjects(objects);
     const tileSize = projectTileSize;
     if (!tileContainer || !currentMap) return;
 
@@ -795,14 +801,20 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
         )
           return;
 
-        if (layer.kind === 'object' && (layer.objectInstances?.length ?? 0) > 0) {
+        if (layer.kind === 'object') {
           const objectInstances = layer.objectInstances ?? [];
 
           objectInstances
             .map((objectInstance, index) => ({
               objectInstance,
               index,
-              depth: computeObjectInstanceSortDepth(tilesets, layer, objectInstance, tileSize),
+              depth: computeObjectInstanceSortDepth(
+                objectIndex,
+                tilesets,
+                layer,
+                objectInstance,
+                tileSize,
+              ),
             }))
             .sort((left, right) => {
               if (left.depth !== right.depth) return left.depth - right.depth;
@@ -810,18 +822,15 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
             })
             .forEach(({ objectInstance }) => {
               const objectContainer = new Container();
-              const bounds = getObjectInstanceBounds(tilesets, objectInstance, tileSize);
+              const bounds = getObjectInstanceBounds(objectIndex, objectInstance, tileSize);
               if (bounds) {
                 objectContainer.x = bounds.x;
                 objectContainer.y = bounds.y;
               }
 
               const spriteTiles = expandObjectInstanceSpriteTiles(
-                tilesets,
-                objectInstance.tilesetId,
-                objectInstance.objectDefinitionId,
-                objectInstance.x,
-                objectInstance.y,
+                objectIndex,
+                objectInstance,
                 tileSize,
               );
 
@@ -876,7 +885,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
 
         for (let y = 0; y < currentMap.height; y++) {
           for (let x = 0; x < currentMap.width; x++) {
-            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
+            const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId);
             if (!tileRef) continue;
 
             const [tsId, indexStr] = splitTileRef(tileRef);
@@ -1373,10 +1382,12 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
       sampledPattern,
       selectedTerrainId,
       terrainTypes,
-      selectedObjectDefinitionId,
+      selectedObjectId,
       selectedLayerId,
       entitySnapMode,
+      objects,
     } = useEditorStore.getState();
+    const objectIndex = indexObjects(objects);
     const tileSize = projectTileSize;
     if (!previewContainer) return;
 
@@ -1405,7 +1416,8 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
         return;
       }
 
-      if (!currentMap || !activeTilesetId || !selectedObjectDefinitionId) {
+      const selectedObject = selectedObjectId ? objectIndex.get(selectedObjectId) : undefined;
+      if (!currentMap || !selectedObject) {
         return;
       }
 
@@ -1421,9 +1433,8 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
               drawPreview.start,
               drawPreview.end,
               brushSize || 1,
-              tilesets,
-              activeTilesetId,
-              selectedObjectDefinitionId,
+              objectIndex,
+              selectedObject.id,
             )
           : entitySnapMode === 'pixel'
             ? hoveredWorldPosition
@@ -1437,16 +1448,13 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
         return;
       }
 
-      const ts = tilesets.get(activeTilesetId);
-      const objectDefinition = ts?.objects?.find(
-        (objectDefinition) => objectDefinition.id === selectedObjectDefinitionId,
-      );
-      if (!ts || !objectDefinition) return;
+      const ts = tilesets.get(selectedObject.tilesetId);
+      if (!ts) return;
 
       let effectiveTileset = ts;
       const variation = currentMap.variations?.find((v) => v.id === activeVariationId);
       if (variation?.tilesetSuffix) {
-        const suffixed = tilesets.get(`${activeTilesetId}${variation.tilesetSuffix}`);
+        const suffixed = tilesets.get(`${selectedObject.tilesetId}${variation.tilesetSuffix}`);
         if (suffixed) effectiveTileset = suffixed;
       }
 
@@ -1454,18 +1462,16 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
         const isPixelPointPreview = entitySnapMode === 'pixel' && drawMode === 'point';
         const placementOrigin = isPixelPointPreview
           ? getCenteredObjectPlacementPixelOrigin(
-              tilesets,
-              activeTilesetId,
-              selectedObjectDefinitionId,
+              objectIndex,
+              selectedObject.id,
               origin.x,
               origin.y,
               tileSize,
             )
           : (() => {
               const tileOrigin = getCenteredObjectPlacementOrigin(
-                tilesets,
-                activeTilesetId,
-                selectedObjectDefinitionId,
+                objectIndex,
+                selectedObject.id,
                 origin.x,
                 origin.y,
               );
@@ -1475,7 +1481,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
               };
             })();
 
-        for (const tile of objectDefinition.tiles) {
+        for (const tile of selectedObject.tiles) {
           const texture = getTileTexture(
             effectiveTileset.spriteSheet,
             tile.tileIndex,

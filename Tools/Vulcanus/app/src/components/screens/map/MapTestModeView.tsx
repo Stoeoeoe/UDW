@@ -9,7 +9,8 @@ import { EDITOR_CANVAS_HEX } from '../../../lib/editorColors';
 import {
   computeObjectInstanceSortDepth,
   expandObjectInstanceSpriteTiles,
-  iterateRenderableObjectTiles,
+  indexObjects,
+  type ObjectIndex,
 } from '../../../lib/mapObjects';
 import { resolveMapContext, resolveTileAt } from '../../../lib/mapUtils';
 import type { Map as GameMap, SortingLayer, Tileset } from '../../../types/schema';
@@ -167,6 +168,7 @@ function createObjectTileSprites(
   activeVariationId: string | null,
   projectTileSize: number,
   tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   loadedSprites: ReturnType<typeof useEditorStore.getState>['loadedSprites'],
 ): ObjectTileSprite[] {
   if (!currentMap) return [];
@@ -180,43 +182,21 @@ function createObjectTileSprites(
     const objectDepthByTile = new Map<string, number>();
     for (const objectInstance of layer.objectInstances ?? []) {
       const depth = computeObjectInstanceSortDepth(
+        objects,
         tilesets,
         layer,
         objectInstance,
         projectTileSize,
       );
-      const tiles = expandObjectInstanceSpriteTiles(
-        tilesets,
-        objectInstance.tilesetId,
-        objectInstance.objectDefinitionId,
-        objectInstance.x,
-        objectInstance.y,
-        projectTileSize,
-      );
+      const tiles = expandObjectInstanceSpriteTiles(objects, objectInstance, projectTileSize);
       for (const tile of tiles) {
         objectDepthByTile.set(`${tile.x},${tile.y}`, depth);
       }
     }
 
-    const renderableTiles =
-      (layer.objectInstances?.length ?? 0) > 0
-        ? (layer.objectInstances ?? []).flatMap((objectInstance) =>
-            expandObjectInstanceSpriteTiles(
-              tilesets,
-              objectInstance.tilesetId,
-              objectInstance.objectDefinitionId,
-              objectInstance.x,
-              objectInstance.y,
-              projectTileSize,
-            ),
-          )
-        : iterateRenderableObjectTiles(currentMap, layer, tilesets, projectTileSize).map(
-            (tile) => ({
-              ...tile,
-              x: tile.x * projectTileSize,
-              y: tile.y * projectTileSize,
-            }),
-          );
+    const renderableTiles = (layer.objectInstances ?? []).flatMap((objectInstance) =>
+      expandObjectInstanceSpriteTiles(objects, objectInstance, projectTileSize),
+    );
     for (const tile of renderableTiles) {
       const tileset = tilesets.get(tile.tilesetId);
       if (!tileset) continue;
@@ -277,6 +257,7 @@ function createCollisionBodies(
   visibleLayers: ReturnType<typeof getRenderableMapLayers>,
   activeVariationId: string | null,
   tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize: number,
 ) {
   if (!currentMap) {
@@ -293,7 +274,7 @@ function createCollisionBodies(
 
     for (let y = 0; y < currentMap.height; y += 1) {
       for (let x = 0; x < currentMap.width; x += 1) {
-        const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
+        const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, objects);
         if (!tileRef) {
           continue;
         }
@@ -439,6 +420,7 @@ export const MapTestModeView: React.FC = () => {
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const projectTileSize = useEditorStore((state) => state.project?.tileSize ?? DEFAULT_TILE_SIZE);
   const tilesets = useEditorStore((state) => state.tilesets);
+  const objects = useEditorStore((state) => state.objects);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
 
   const mapWidthPx = (currentMap?.width ?? 0) * projectTileSize;
@@ -467,9 +449,10 @@ export const MapTestModeView: React.FC = () => {
         activeVariationId,
         projectTileSize,
         tilesets,
+        indexObjects(objects),
         loadedSprites,
       ),
-    [activeVariationId, currentMap, loadedSprites, projectTileSize, tilesets, visibleLayers],
+    [activeVariationId, currentMap, loadedSprites, objects, projectTileSize, tilesets, visibleLayers],
   );
   const collisionBodies = useMemo(
     () =>
@@ -478,9 +461,10 @@ export const MapTestModeView: React.FC = () => {
         visibleLayers,
         activeVariationId,
         tilesets,
+        indexObjects(objects),
         projectTileSize,
       ),
-    [activeVariationId, currentMap, projectTileSize, tilesets, visibleLayers],
+    [activeVariationId, currentMap, objects, projectTileSize, tilesets, visibleLayers],
   );
 
   useEffect(() => {

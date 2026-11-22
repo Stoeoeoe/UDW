@@ -373,11 +373,11 @@ export const MapViewportPixi: React.FC = () => {
         // Detect whether any tile layer DATA changed (not just entity positions)
         const tileDataChanged =
           variationChanged ||
+          state.objects !== prevState.objects ||
           state.currentMap?.layers?.some((layer, i) => {
             const prev = prevState.currentMap?.layers?.[i];
             return (
               layer.data !== prev?.data ||
-              layer.objectGroups !== prev?.objectGroups ||
               layer.objectInstances !== prev?.objectInstances ||
               layer.id !== prev?.id ||
               layer.kind !== prev?.kind ||
@@ -506,7 +506,7 @@ export const MapViewportPixi: React.FC = () => {
         state.activeTilesetId !== prevState.activeTilesetId ||
         state.selectedTileIndex !== prevState.selectedTileIndex ||
         state.selectedTileIndices !== prevState.selectedTileIndices ||
-        state.selectedObjectDefinitionId !== prevState.selectedObjectDefinitionId ||
+        state.selectedObjectId !== prevState.selectedObjectId ||
         state.drawPreview !== prevState.drawPreview ||
         state.brushSize !== prevState.brushSize ||
         state.drawMode !== prevState.drawMode

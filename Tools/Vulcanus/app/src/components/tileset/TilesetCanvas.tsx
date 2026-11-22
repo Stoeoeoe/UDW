@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box } from '@chakra-ui/react';
 import { usePanZoom } from '../../hooks/usePanZoom';
 import { ZoomControls } from '../common/ZoomControls';
@@ -8,11 +8,7 @@ import { shapeToNormalizedPolygon } from '../../lib/collisionUtils';
 import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
 import { navigationCostTint } from '../../lib/navigationCost';
 import { useProject } from '../../hooks/useProject';
-import {
-  findObjectDefinitionAtTileIndex,
-  getTileIndicesForObjectDefinition,
-  getTilesetObjectBounds,
-} from '../../lib/tilesetObjects';
+import { objectAtSheetCell, objectSheetBounds } from '../../lib/objects';
 
 interface TilesetCanvasProps {
   tileset: Tileset;
@@ -39,8 +35,13 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
   const sprite = loadedSprites.get(tileset.spriteSheet);
   const setSelectedTiles = useEditorStore((state) => state.setSelectedTiles);
   const selectedTileIndices = useEditorStore((state) => state.selectedTileIndices);
-  const selectedObjectDefinitionId = useEditorStore((state) => state.selectedObjectDefinitionId);
-  const setSelectedObjectDefinition = useEditorStore((state) => state.setSelectedObjectDefinition);
+  const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
+  const setSelectedObject = useEditorStore((state) => state.setSelectedObject);
+  const objects = useEditorStore((state) => state.objects);
+  const tilesetObjects = useMemo(
+    () => objects.filter((object) => object.tilesetId === tileset.id),
+    [objects, tileset.id],
+  );
   const terrainTypes = useEditorStore((state) => state.terrainTypes);
   const selectedTerrainId = useEditorStore((state) => state.selectedTerrainId);
   const setTileCornerTerrain = useEditorStore((state) => state.setTileCornerTerrain);
@@ -254,14 +255,14 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
           index < tileset.tileCount
         ) {
           if (tool === 'objects') {
-            const objectDefinition = findObjectDefinitionAtTileIndex(tileset, index);
-            if (objectDefinition) {
-              setSelectedObjectDefinition(objectDefinition.id);
-              setSelectedTiles(getTileIndicesForObjectDefinition(objectDefinition, tileset));
+            const object = objectAtSheetCell(tilesetObjects, index);
+            if (object) {
+              setSelectedObject(object.id);
+              setSelectedTiles(object.tiles.map((tile) => tile.tileIndex));
               ignoreClickRef.current = true;
               return;
             }
-            setSelectedObjectDefinition(null);
+            setSelectedObject(null);
           }
 
           // If multi-select is disabled, perform single-tile select immediately on mouse down
@@ -297,6 +298,9 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       setTileCornerTerrain,
       enableMultiSelect,
       onSelect,
+      tilesetObjects,
+      setSelectedObject,
+      setSelectedTiles,
     ],
   );
 
@@ -627,11 +631,11 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      for (const objectDefinition of tileset.objects ?? []) {
-        const bounds = getTilesetObjectBounds(objectDefinition, tileset);
+      for (const objectDefinition of tilesetObjects) {
+        const bounds = objectSheetBounds(objectDefinition, tileset.columns);
         if (!bounds) continue;
 
-        const isSelected = objectDefinition.id === selectedObjectDefinitionId;
+        const isSelected = objectDefinition.id === selectedObjectId;
         const fillStyle = isSelected ? 'rgba(72, 187, 120, 0.22)' : 'rgba(72, 187, 120, 0.08)';
         const strokeStyle = isSelected ? 'rgba(104, 211, 145, 0.95)' : 'rgba(104, 211, 145, 0.35)';
         const labelBg = isSelected ? 'rgba(10, 20, 15, 0.95)' : 'rgba(10, 20, 15, 0.72)';
@@ -940,7 +944,8 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     tileset,
     selectedIndex,
     selectedTileIndices,
-    selectedObjectDefinitionId,
+    selectedObjectId,
+    tilesetObjects,
     effectiveZoom,
     camera,
     mode,
@@ -993,10 +998,10 @@ export const TilesetCanvas: React.FC<TilesetCanvasProps> = ({
     const index = row * tileset.columns + col;
     if (col >= 0 && col < tileset.columns && row >= 0 && index >= 0 && index < tileset.tileCount) {
       if (tool === 'objects') {
-        const objectDefinition = findObjectDefinitionAtTileIndex(tileset, index);
-        if (objectDefinition) {
-          setSelectedObjectDefinition(objectDefinition.id);
-          setSelectedTiles(getTileIndicesForObjectDefinition(objectDefinition, tileset));
+        const object = objectAtSheetCell(tilesetObjects, index);
+        if (object) {
+          setSelectedObject(object.id);
+          setSelectedTiles(object.tiles.map((tile) => tile.tileIndex));
           return;
         }
       }

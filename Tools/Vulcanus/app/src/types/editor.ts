@@ -39,7 +39,7 @@ export interface EditorState {
   selectedLayerId: string | null;
   selectedTileIndex: number | null; // Selected index within active tileset
   selectedTileIndices: number[]; // Multiple selected indices for stencil selection
-  selectedObjectDefinitionId?: string | null; // Selected reusable multi-tile object definition
+  selectedObjectId?: string | null; // Selected reusable multi-tile object definition
   selectedObjectInstanceId?: string | null; // Selected placed object instance on the map
   selectedTerrainId: string | null; // Selected terrain for autotiling
   activeTilesetId: string | null; // Currently visible tileset in palette

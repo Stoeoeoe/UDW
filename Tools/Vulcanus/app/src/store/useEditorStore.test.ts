@@ -132,28 +132,26 @@ describe('useEditorStore', () => {
   });
 
   it('should preserve the selected object while selecting tiles in object mode', () => {
-    const { setTilesetToolMode, setSelectedObjectDefinition, setSelectedTiles } =
-      useEditorStore.getState();
+    const { setTilesetToolMode, setSelectedObject, setSelectedTiles } = useEditorStore.getState();
 
     setTilesetToolMode('objects');
-    setSelectedObjectDefinition('tree');
+    setSelectedObject('tree');
     setSelectedTiles([10, 11, 14, 15]);
 
     const state = useEditorStore.getState();
-    expect(state.selectedObjectDefinitionId).toBe('tree');
+    expect(state.selectedObjectId).toBe('tree');
     expect(state.selectedTileIndices).toEqual([10, 11, 14, 15]);
   });
 
   it('should clear the selected object while selecting tiles outside object mode', () => {
-    const { setTilesetToolMode, setSelectedObjectDefinition, setSelectedTiles } =
-      useEditorStore.getState();
+    const { setTilesetToolMode, setSelectedObject, setSelectedTiles } = useEditorStore.getState();
 
     setTilesetToolMode('select');
-    setSelectedObjectDefinition('tree');
+    setSelectedObject('tree');
     setSelectedTiles([7]);
 
     const state = useEditorStore.getState();
-    expect(state.selectedObjectDefinitionId).toBeNull();
+    expect(state.selectedObjectId).toBeNull();
     expect(state.selectedTileIndices).toEqual([7]);
   });
 
@@ -349,37 +347,14 @@ describe('useEditorStore', () => {
 
       useEditorStore.getState().setCurrentMap(objectMap);
       useEditorStore.getState().setActiveVariation(null);
-      useEditorStore.setState((state) => {
-        state.tilesets.set('base:village', {
-          version: 1,
-          id: 'base:village',
-          name: 'Village',
-          spriteSheet: 'village.png',
-          columns: 4,
-          tileCount: 64,
-          tiles: {},
-          objects: [
-            {
-              id: 'tree',
-              name: 'Tree',
-              tiles: [
-                { x: 0, y: 0, tileIndex: 10 },
-                { x: 0, y: 1, tileIndex: 26 },
-              ],
-            },
-          ],
-        });
-      });
-
-      useEditorStore.getState().placeObjectInstance('objects', 48, 80, 'base:village', 'tree');
+      useEditorStore.getState().placeObjectInstance('objects', 48, 80, 'test:tree');
 
       const layer = useEditorStore
         .getState()
         .currentMap?.layers.find((entry) => entry.id === 'objects');
       expect(layer?.objectInstances).toHaveLength(1);
       expect(layer?.objectInstances?.[0]).toMatchObject({
-        tilesetId: 'base:village',
-        objectDefinitionId: 'tree',
+        objectId: 'test:tree',
         x: 48,
         y: 80,
       });
@@ -403,8 +378,7 @@ describe('useEditorStore', () => {
             objectInstances: [
               {
                 id: 'inst_tree',
-                tilesetId: 'base:village',
-                objectDefinitionId: 'tree',
+                objectId: 'test:tree',
                 x: 48,
                 y: 80,
               },

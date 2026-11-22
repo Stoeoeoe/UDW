@@ -5,7 +5,7 @@
 import { DEFAULT_TILE_SIZE } from '../config/constants';
 import type { Layer, Map as GameMap, Tileset } from '../types/schema';
 import { NAVIGATION_COST_CHEAP_COLOR, NAVIGATION_COST_EXPENSIVE_COLOR } from './editorColors';
-import { expandObjectInstanceTiles } from './mapObjects';
+import { expandObjectInstanceTiles, type ObjectIndex } from './mapObjects';
 import { splitTileRef } from './tileRef';
 import { resolveTileAt } from './mapUtils';
 
@@ -35,6 +35,7 @@ export interface NavigationCostGrid {
 export function computeNavigationCostGrid(
   map: GameMap,
   tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   activeVariationId: string | null,
   tileSize: number = DEFAULT_TILE_SIZE,
 ): NavigationCostGrid {
@@ -67,14 +68,7 @@ export function computeNavigationCostGrid(
     const costs = new Map<number, number>();
     const claimed = new Set<number>();
     for (const instance of layer.objectInstances ?? []) {
-      for (const tile of expandObjectInstanceTiles(
-        tilesets,
-        instance.tilesetId,
-        instance.objectDefinitionId,
-        instance.x,
-        instance.y,
-        tileSize,
-      )) {
+      for (const tile of expandObjectInstanceTiles(objects, instance, tileSize)) {
         if (tile.x < 0 || tile.y < 0 || tile.x >= map.width || tile.y >= map.height) continue;
         const key = tile.y * map.width + tile.x;
         if (claimed.has(key)) continue; // first instance wins, as resolveTileAt does

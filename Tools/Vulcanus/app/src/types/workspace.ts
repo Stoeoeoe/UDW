@@ -175,7 +175,7 @@ export interface TilesetTabSession {
   activeTilesetId: string | null;
   selectedTileIndex: number | null;
   selectedTileIndices: number[];
-  selectedObjectDefinitionId: string | null;
+  selectedObjectId: string | null;
   selectedTerrainId: string | null;
   tilesetToolMode: 'select' | 'terrain' | 'objects';
   showTilesetCollisionOverlay: boolean;

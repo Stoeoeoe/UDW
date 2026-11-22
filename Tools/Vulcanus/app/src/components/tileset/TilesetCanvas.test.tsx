@@ -65,17 +65,19 @@ describe('TilesetCanvas object mode', () => {
     columns: 4,
     tileCount: 64,
     tiles: {},
-    objects: [
-      {
-        id: 'tree',
-        name: 'Tree',
-        tiles: [
-          { x: 0, y: 0, tileIndex: 0 },
-          { x: 1, y: 0, tileIndex: 1 },
-        ],
-      },
+  };
+  // An object made from this tileset's first two cells, and one from another tileset on the same cells.
+  const tree = {
+    formatVersion: 1 as const,
+    id: 'test:tree',
+    name: 'Tree',
+    tilesetId: 'village',
+    tiles: [
+      { x: 0, y: 0, tileIndex: 0 },
+      { x: 1, y: 0, tileIndex: 1 },
     ],
   };
+  const elsewhere = { ...tree, id: 'test:elsewhere', tilesetId: 'other' };
 
   beforeEach(() => {
     useEditorStore.getState().closeProject();
@@ -100,7 +102,8 @@ describe('TilesetCanvas object mode', () => {
       state.tilesetToolMode = 'objects';
       state.selectedTileIndex = null;
       state.selectedTileIndices = [];
-      state.selectedObjectDefinitionId = null;
+      state.selectedObjectId = null;
+      state.objects = [elsewhere, tree];
       state.loadedSprites = new Map([
         [
           'village.png',
@@ -132,13 +135,13 @@ describe('TilesetCanvas object mode', () => {
     fireEvent.mouseDown(canvas!, { button: 0, clientX: 4, clientY: 4 });
 
     const state = useEditorStore.getState();
-    expect(state.selectedObjectDefinitionId).toBe('tree');
+    expect(state.selectedObjectId).toBe('test:tree');
     expect(state.selectedTileIndices).toEqual([0, 1]);
   });
 
   it('clears the selected object when starting a new loose-tile selection', () => {
     useEditorStore.setState((state) => {
-      state.selectedObjectDefinitionId = 'tree';
+      state.selectedObjectId = 'test:tree';
       state.selectedTileIndices = [0, 1];
     });
 
@@ -161,7 +164,7 @@ describe('TilesetCanvas object mode', () => {
     fireEvent.mouseUp(canvas!, { button: 0, clientX: 20, clientY: 20 });
 
     const state = useEditorStore.getState();
-    expect(state.selectedObjectDefinitionId).toBeNull();
+    expect(state.selectedObjectId).toBeNull();
     expect(state.selectedTileIndices).toEqual([5]);
   });
 });

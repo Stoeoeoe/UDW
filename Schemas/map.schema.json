@@ -183,16 +183,9 @@
         "waterMask": {
           "$ref": "#/$defs/WaterMask"
         },
-        "objectGroups": {
-          "type": "array",
-          "description": "Connected painted tiles stored as first-class groups for object-sorted layers.",
-          "items": {
-            "$ref": "#/$defs/ObjectGroup"
-          }
-        },
         "objectInstances": {
           "type": "array",
-          "description": "Placed reusable object instances for object-sorted layers. Instance positions are stored in pixels.",
+          "description": "Placed objects on an object layer. Positions are in pixels.",
           "items": {
             "$ref": "#/$defs/MapObjectInstance"
           }
@@ -236,62 +229,19 @@
         }
       }
     },
-    "ObjectGroup": {
-      "type": "object",
-      "required": ["id", "tiles"],
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
-        },
-        "tiles": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ObjectGroupTile"
-          }
-        }
-      }
-    },
-    "ObjectGroupTile": {
-      "type": "object",
-      "required": ["x", "y", "tilesetId", "tileIndex"],
-      "additionalProperties": false,
-      "properties": {
-        "x": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "y": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "tilesetId": {
-          "type": "string",
-          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
-        },
-        "tileIndex": {
-          "type": "integer",
-          "minimum": 0
-        }
-      }
-    },
     "MapObjectInstance": {
       "type": "object",
-      "required": ["id", "tilesetId", "objectDefinitionId", "x", "y"],
+      "required": ["id", "objectId", "x", "y"],
       "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
           "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$"
         },
-        "tilesetId": {
+        "objectId": {
           "type": "string",
-          "pattern": "^(?:[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
-        },
-        "objectDefinitionId": {
-          "type": "string",
-          "pattern": "^(?:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?)?$"
+          "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+          "description": "The placed object (objects/*.object.json)."
         },
         "x": {
           "type": "integer",

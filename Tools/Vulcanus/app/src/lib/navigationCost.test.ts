@@ -5,6 +5,7 @@ import {
   DEFAULT_NAVIGATION_COST,
 } from './navigationCost';
 import type { Layer, Map as GameMap, Tileset } from '../types/schema';
+import { indexObjects } from './mapObjects';
 
 // Tile indices: 0 = road (cost 1), 1 = swamp (cost 9), 2 = decoration (no cost), 3 = rug (cost 5)
 const tileset: Tileset = {
@@ -19,18 +20,20 @@ const tileset: Tileset = {
     1: { navigationCost: 9 },
     3: { navigationCost: 5 },
   },
-  objects: [
-    {
-      id: 'rug',
-      name: 'Rug',
-      tiles: [
-        { x: 0, y: 0, tileIndex: 3 },
-        { x: 1, y: 0, tileIndex: 2 },
-      ],
-    },
-  ],
 };
 const tilesets = new Map([[tileset.id, tileset]]);
+const objects = indexObjects([
+  {
+    formatVersion: 1,
+    id: 'test:rug',
+    name: 'Rug',
+    tilesetId: tileset.id,
+    tiles: [
+      { x: 0, y: 0, tileIndex: 3 },
+      { x: 1, y: 0, tileIndex: 2 },
+    ],
+  },
+]);
 
 // Encoded tile ref: tilesetRefs[0] in the high bits.
 const ref = (index: number) => index;
@@ -59,14 +62,14 @@ function makeMap(layers: Layer[], width = 3, height = 2): GameMap {
   } as unknown as GameMap;
 }
 
-const empty = (w = 3, h = 2) =>
-  Array.from({ length: h }, () => Array<number | null>(w).fill(null));
+const empty = (w = 3, h = 2) => Array.from({ length: h }, () => Array<number | null>(w).fill(null));
 
 describe('computeNavigationCostGrid', () => {
   it('uses the default cost with no source when nothing has a cost', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('terrain', 'terrain', 0, empty())]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[0][0]).toEqual({ cost: DEFAULT_NAVIGATION_COST, sourceLayerId: null });
@@ -78,6 +81,7 @@ describe('computeNavigationCostGrid', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('terrain', 'terrain', 0, data)]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[1][2]).toEqual({ cost: 1, sourceLayerId: 'terrain' });
@@ -92,6 +96,7 @@ describe('computeNavigationCostGrid', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('terrain', 'terrain', 0, t), layer('over', 'visual', 5, v)]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[0][0]).toEqual({ cost: 9, sourceLayerId: 'over' });
@@ -105,6 +110,7 @@ describe('computeNavigationCostGrid', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('terrain', 'terrain', 0, t), layer('deco', 'visual', 5, v)]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[0][0]).toEqual({ cost: 1, sourceLayerId: 'terrain' });
@@ -118,6 +124,7 @@ describe('computeNavigationCostGrid', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('terrain', 'terrain', 0, t), layer('hidden', 'visual', 5, v, false)]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[0][0].cost).toBe(1);
@@ -131,6 +138,7 @@ describe('computeNavigationCostGrid', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('high', 'visual', 9, a), layer('low', 'visual', 2, b)]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[0][0]).toEqual({ cost: 9, sourceLayerId: 'high' });
@@ -144,13 +152,14 @@ describe('computeNavigationCostGrid', () => {
     const grid = computeNavigationCostGrid(
       makeMap([layer('terrain', 'terrain', 50, t), layer('under', 'visual', 1, v)]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[0][0]).toEqual({ cost: 9, sourceLayerId: 'under' });
   });
 
   it('applies costs from placed object-layer instances and skips cost-less object tiles', () => {
-    const objects: Layer = {
+    const objectLayer: Layer = {
       id: 'objs',
       name: 'Objs',
       kind: 'object',
@@ -158,15 +167,14 @@ describe('computeNavigationCostGrid', () => {
       locked: false,
       opacity: 1,
       zOrder: 3,
-      objectInstances: [
-        { id: 'r1', tilesetId: tileset.id, objectDefinitionId: 'rug', x: 16, y: 16 },
-      ],
+      objectInstances: [{ id: 'r1', objectId: 'test:rug', x: 16, y: 16 }],
     };
     const t = empty();
     t[1][2] = ref(0);
     const grid = computeNavigationCostGrid(
-      makeMap([layer('terrain', 'terrain', 0, t), objects]),
+      makeMap([layer('terrain', 'terrain', 0, t), objectLayer]),
       tilesets,
+      objects,
       null,
     );
     expect(grid.cells[1][1]).toEqual({ cost: 5, sourceLayerId: 'objs' });

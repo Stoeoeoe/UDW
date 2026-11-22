@@ -1,220 +1,116 @@
 import React from 'react';
-import { Box, Flex, HStack, Select, Text, VStack, Wrap, WrapItem } from '@chakra-ui/react';
+import { Box, Flex, Input, Text, VStack, Wrap, WrapItem } from '@chakra-ui/react';
 import PanelHeader from '../common/PanelHeader';
 import { CaptionText } from '../common/Typography.tsx';
 import { useEditorStore } from '../../store/useEditorStore';
-import {
-  buildPatternFromObjectDefinition,
-  getTileIndicesForObjectDefinition,
-} from '../../lib/tilesetObjects';
-import type { Tileset, TilesetObjectDefinition } from '../../types/schema';
+import { objectSize } from '../../lib/objects';
+import type { Tileset } from '../../types/schema';
+import type { ObjectDefinition } from '../../types/object';
 
 const PREVIEW_SCALE = 1.25;
 
-function selectObjectDefinition(
-  tileset: Tileset,
-  objectDefinition: TilesetObjectDefinition,
-  setSelectedObjectDefinition: (id: string | null) => void,
-  setSelectedTile: (index: number | null) => void,
-  setSelectedTiles: (indices: number[]) => void,
-  setSampledPattern: ReturnType<typeof useEditorStore.getState>['setSampledPattern'],
-) {
-  const pattern = buildPatternFromObjectDefinition(objectDefinition);
-  if (!pattern) {
-    return;
-  }
-
-  setSelectedTile(null);
-  setSelectedTiles(getTileIndicesForObjectDefinition(objectDefinition, tileset));
-  setSampledPattern({
-    tilesetId: tileset.id,
-    pattern: pattern.pattern,
-    width: pattern.width,
-    height: pattern.height,
-  });
-  setSelectedObjectDefinition(objectDefinition.id);
-}
-
 const ObjectPreviewCanvas: React.FC<{
   tileset: Tileset;
-  objectDefinition: TilesetObjectDefinition;
+  object: ObjectDefinition;
   tileSize: number;
   sprite?: HTMLImageElement;
-}> = ({ tileset, objectDefinition, tileSize, sprite }) => {
+}> = ({ tileset, object, tileSize, sprite }) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
-
-  const bounds = React.useMemo(() => {
-    if (objectDefinition.tiles.length === 0) {
-      return { width: tileSize, height: tileSize };
-    }
-    const maxX = Math.max(...objectDefinition.tiles.map((tile) => tile.x));
-    const maxY = Math.max(...objectDefinition.tiles.map((tile) => tile.y));
-    return {
-      width: (maxX + 1) * tileSize,
-      height: (maxY + 1) * tileSize,
-    };
-  }, [objectDefinition.tiles, tileSize]);
+  const size = objectSize(object.tiles);
+  const width = Math.ceil(Math.max(1, size.width) * tileSize * PREVIEW_SCALE);
+  const height = Math.ceil(Math.max(1, size.height) * tileSize * PREVIEW_SCALE);
 
   React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvasRef.current?.getContext('2d');
     if (!ctx) return;
-
-    const scaledWidth = Math.ceil(bounds.width * PREVIEW_SCALE);
-    const scaledHeight = Math.ceil(bounds.height * PREVIEW_SCALE);
-    canvas.width = scaledWidth;
-    canvas.height = scaledHeight;
-    ctx.clearRect(0, 0, scaledWidth, scaledHeight);
+    ctx.clearRect(0, 0, width, height);
     ctx.imageSmoothingEnabled = false;
-
     if (!sprite) {
       ctx.fillStyle = '#1f2937';
-      ctx.fillRect(0, 0, scaledWidth, scaledHeight);
-      ctx.strokeStyle = '#4b5563';
-      ctx.strokeRect(0.5, 0.5, scaledWidth - 1, scaledHeight - 1);
+      ctx.fillRect(0, 0, width, height);
       return;
     }
-
-    for (const tile of objectDefinition.tiles) {
-      const sourceX = (tile.tileIndex % tileset.columns) * tileSize;
-      const sourceY = Math.floor(tile.tileIndex / tileset.columns) * tileSize;
+    const scaled = tileSize * PREVIEW_SCALE;
+    for (const tile of object.tiles) {
       ctx.drawImage(
         sprite,
-        sourceX,
-        sourceY,
+        (tile.tileIndex % tileset.columns) * tileSize,
+        Math.floor(tile.tileIndex / tileset.columns) * tileSize,
         tileSize,
         tileSize,
-        tile.x * tileSize * PREVIEW_SCALE,
-        tile.y * tileSize * PREVIEW_SCALE,
-        tileSize * PREVIEW_SCALE,
-        tileSize * PREVIEW_SCALE,
+        tile.x * scaled,
+        tile.y * scaled,
+        scaled,
+        scaled,
       );
     }
-  }, [bounds.height, bounds.width, objectDefinition, sprite, tileSize, tileset.columns]);
+  }, [height, object.tiles, sprite, tileSize, tileset.columns, width]);
 
   return (
-    <Box
-      bg="editorCanvasBg"
-      borderRadius="sm"
-      px={1.5}
-      py={1.5}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-    >
-      <canvas
-        ref={canvasRef}
-        className="image-pixelated"
-        width={Math.ceil(bounds.width * PREVIEW_SCALE)}
-        height={Math.ceil(bounds.height * PREVIEW_SCALE)}
-      />
+    <Box bg="editorCanvasBg" borderRadius="sm" p={1.5} display="flex" justifyContent="center">
+      <canvas ref={canvasRef} className="image-pixelated" width={width} height={height} />
     </Box>
   );
 };
 
+/** The project's objects, to choose one to place on the selected object layer. */
 export const ObjectPalette: React.FC = () => {
-  const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
-  const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
-  const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
-  const selectedObjectDefinitionId = useEditorStore((state) => state.selectedObjectDefinitionId);
-  const setSelectedObjectDefinition = useEditorStore((state) => state.setSelectedObjectDefinition);
-  const setSampledPattern = useEditorStore((state) => state.setSampledPattern);
-  const setSelectedTiles = useEditorStore((state) => state.setSelectedTiles);
-  const setSelectedTile = useEditorStore((state) => state.setSelectedTile);
+  const objects = useEditorStore((state) => state.objects);
+  const tilesets = useEditorStore((state) => state.tilesets);
+  const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
+  const setSelectedObject = useEditorStore((state) => state.setSelectedObject);
   const tileSize = useEditorStore((state) => state.project?.tileSize ?? 16);
   const loadedSprites = useEditorStore((state) => state.loadedSprites);
+  const [search, setSearch] = React.useState('');
 
-  const activeTileset = React.useMemo(
-    () => tilesets.find((tileset) => tileset.id === activeTilesetId) ?? tilesets[0] ?? null,
-    [activeTilesetId, tilesets],
-  );
-
-  const objectDefinitions = activeTileset?.objects ?? [];
-  const selectedObjectDefinition =
-    objectDefinitions.find(
-      (objectDefinition) => objectDefinition.id === selectedObjectDefinitionId,
-    ) ?? null;
-
-  React.useEffect(() => {
-    if (!activeTilesetId && activeTileset) {
-      setActiveTileset(activeTileset.id);
-    }
-  }, [activeTileset, activeTilesetId, setActiveTileset]);
-
-  if (tilesets.length === 0) {
-    return (
-      <Flex h="full" align="center" justify="center" p={4} textAlign="center">
-        <Text fontSize="xs" color="gray.600">
-          No tilesets available. Import one in the Tilesets tab first.
-        </Text>
-      </Flex>
-    );
-  }
+  const query = search.trim().toLowerCase();
+  const shown = objects
+    .filter(
+      (object) =>
+        object.tiles.length > 0 &&
+        (!query ||
+          object.name.toLowerCase().includes(query) ||
+          (object.folderPath ?? '').toLowerCase().includes(query) ||
+          (object.tags ?? []).some((tag) => tag.toLowerCase().includes(query))),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const selected = objects.find((object) => object.id === selectedObjectId);
 
   return (
     <Flex direction="column" h="full" overflow="hidden" bg="editorPanelBg">
       <PanelHeader
         left={
-          <HStack spacing={2}>
-            <Select
-              size="xs"
-              variant="filled"
-              bg="editorCanvasBg"
-              borderColor="editorFieldBorder"
-              _hover={{ bg: 'editorShellBorder' }}
-              value={activeTileset?.id ?? ''}
-              onChange={(event) => setActiveTileset(event.target.value)}
-              color="green.300"
-              fontSize="10px"
-              fontWeight="bold"
-              h="6"
-              maxW="180px"
-            >
-              {tilesets.map((tileset) => (
-                <option key={tileset.id} value={tileset.id}>
-                  {tileset.name.toUpperCase()}
-                </option>
-              ))}
-            </Select>
-          </HStack>
+          <Input
+            size="xs"
+            maxW="220px"
+            placeholder="Search objects, folders, tags"
+            aria-label="Search objects"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         }
         actions={
-          selectedObjectDefinition ? (
+          selected ? (
             <Text fontSize="9px" fontWeight="black" color="green.400" textTransform="uppercase">
-              {selectedObjectDefinition.name}
+              {selected.name}
             </Text>
           ) : null
         }
       />
 
-      <Box px={3} py={2} borderBottom="1px" borderColor="editorShellBorder" bg="editorPanelBg">
-        <CaptionText color="gray.500">
-          Select a reusable object, then stamp it into the map as a single placed instance.
-        </CaptionText>
-      </Box>
-
       <Box flex={1} overflowY="auto" px={3} py={3}>
-        {activeTileset && objectDefinitions.length > 0 ? (
+        {shown.length > 0 ? (
           <Wrap spacing={2.5} align="flex-end">
-            {objectDefinitions.map((objectDefinition) => {
-              const isSelected = objectDefinition.id === selectedObjectDefinitionId;
+            {shown.map((object) => {
+              const tileset = tilesets.get(object.tilesetId);
+              const isSelected = object.id === selectedObjectId;
               return (
-                <WrapItem key={objectDefinition.id} alignSelf="flex-end">
+                <WrapItem key={object.id} alignSelf="flex-end">
                   <Box
                     as="button"
                     type="button"
                     textAlign="left"
-                    onClick={() =>
-                      selectObjectDefinition(
-                        activeTileset,
-                        objectDefinition,
-                        setSelectedObjectDefinition,
-                        setSelectedTile,
-                        setSelectedTiles,
-                        setSampledPattern,
-                      )
-                    }
+                    onClick={() => setSelectedObject(object.id)}
                     borderRadius="md"
                     border="1px"
                     borderColor={isSelected ? 'green.400' : 'whiteAlpha.100'}
@@ -227,19 +123,20 @@ export const ObjectPalette: React.FC = () => {
                     transition="border-color 0.1s ease"
                   >
                     <VStack spacing={1.5} align="stretch">
-                      <ObjectPreviewCanvas
-                        tileset={activeTileset}
-                        objectDefinition={objectDefinition}
-                        tileSize={tileSize}
-                        sprite={loadedSprites.get(activeTileset.spriteSheet)}
-                      />
-
+                      {tileset && (
+                        <ObjectPreviewCanvas
+                          tileset={tileset}
+                          object={object}
+                          tileSize={tileSize}
+                          sprite={loadedSprites.get(tileset.spriteSheet)}
+                        />
+                      )}
                       <VStack spacing={0.25} align="stretch">
                         <Text fontSize="10px" fontWeight="bold" color="gray.100" noOfLines={1}>
-                          {objectDefinition.name}
+                          {object.name}
                         </Text>
                         <CaptionText color="gray.500" noOfLines={1}>
-                          {objectDefinition.id}
+                          {object.folderPath || object.id}
                         </CaptionText>
                       </VStack>
                     </VStack>
@@ -252,10 +149,11 @@ export const ObjectPalette: React.FC = () => {
           <Flex h="full" align="center" justify="center" p={4} textAlign="center">
             <VStack spacing={2}>
               <Text fontSize="xs" color="gray.500" fontWeight="bold">
-                No objects in this tileset yet
+                {query ? 'No objects match' : 'No objects yet'}
               </Text>
               <CaptionText color="gray.600">
-                Create objects in the Tileset Editor first, then place them from here.
+                Create objects in the explorer or from tiles in the tileset editor, then place them
+                from here.
               </CaptionText>
             </VStack>
           </Flex>
@@ -264,5 +162,3 @@ export const ObjectPalette: React.FC = () => {
     </Flex>
   );
 };
-
-export default ObjectPalette;

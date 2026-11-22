@@ -3,6 +3,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptingManifestStore } from '../../../store/useScriptingManifestStore';
 import { useProject } from '../../../hooks/useProject';
 import { computeMapNavigation, type MapNavigation } from '../../../lib/navigationPath';
+import { indexObjects, type ObjectIndex } from '../../../lib/mapObjects';
 import { planWorldRoute, routeLength, type WorldLeg } from '../../../lib/worldGraph';
 import { goalRuns, resolvePlace } from '../../../lib/routines';
 import { timeLegs, walkMinutes } from '../../../lib/routineTiming';
@@ -43,15 +44,30 @@ export interface RoutineLeg {
 // Map documents are replaced on every edit, so a map object identifies one version of its navigation data.
 const navigationCache = new WeakMap<
   GameMap,
-  { tilesets: Map<string, Tileset>; tileSize: number; navigation: MapNavigation }
+  {
+    tilesets: Map<string, Tileset>;
+    objects: ObjectIndex;
+    tileSize: number;
+    navigation: MapNavigation;
+  }
 >();
 
-function navigationFor(map: GameMap, tilesets: Map<string, Tileset>, tileSize: number) {
+function navigationFor(
+  map: GameMap,
+  tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
+  tileSize: number,
+) {
   const cached = navigationCache.get(map);
-  if (cached && cached.tilesets === tilesets && cached.tileSize === tileSize)
+  if (
+    cached &&
+    cached.tilesets === tilesets &&
+    cached.objects === objects &&
+    cached.tileSize === tileSize
+  )
     return cached.navigation;
-  const navigation = computeMapNavigation(map, tilesets, tileSize);
-  navigationCache.set(map, { tilesets, tileSize, navigation });
+  const navigation = computeMapNavigation(map, tilesets, objects, tileSize);
+  navigationCache.set(map, { tilesets, objects, tileSize, navigation });
   return navigation;
 }
 
@@ -67,6 +83,7 @@ export function useRoutineLegs(
   const maps = useEditorStore((state) => state.maps);
   const currentMap = useEditorStore((state) => state.currentMap);
   const tilesets = useEditorStore((state) => state.tilesets);
+  const objects = useEditorStore((state) => state.objects);
   const speed = useEditorStore(
     (state) =>
       state.characters.find((character) => character.id === routine.character)?.walkSpeed ??
@@ -96,7 +113,7 @@ export function useRoutineLegs(
       if (start && end) {
         const route: WorldLeg[] | null = planWorldRoute(
           allMaps,
-          (map) => navigationFor(map, tilesets, tileSize),
+          (map) => navigationFor(map, tilesets, indexObjects(objects), tileSize),
           { mapId: from.map, position: start },
           { mapId: to.map, position: end },
           tileSize,
@@ -146,7 +163,7 @@ export function useRoutineLegs(
             : `No walkable route to ${leg.to.map}: check the doors on the way and the collisions around them.`
           : undefined),
     }));
-  }, [routine, goals, preview, maps, currentMap, tilesets, tileSize, speed, clock]);
+  }, [routine, goals, preview, maps, currentMap, tilesets, objects, tileSize, speed, clock]);
 }
 
 /** The doors a walk goes through, as "via "To House" to base:indoor"; null for a walk on one map. */

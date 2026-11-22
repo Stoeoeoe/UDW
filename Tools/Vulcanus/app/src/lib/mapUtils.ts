@@ -1,6 +1,5 @@
-import { EntityInstance, Map as GameMap, Tileset, Variation } from '../types/schema';
-import { getObjectGroupTileRef } from './objectGroups';
-import { resolveObjectInstanceTileAt } from './mapObjects';
+import { EntityInstance, Map as GameMap, Variation } from '../types/schema';
+import { resolveObjectInstanceTileAt, type ObjectIndex } from './mapObjects';
 import { decodeTileRef } from './tileRef';
 
 interface VariationMetadataOverrides {
@@ -52,18 +51,14 @@ export function resolveTileAt(
   x: number,
   y: number,
   variationId: string | null,
-  tilesets?: Map<string, Tileset>,
+  objects?: ObjectIndex,
 ): string | null {
   const chain = getVariationChain(map, variationId).reverse(); // Child to Parent to Base
 
   for (const context of chain) {
     if (context === 'base') {
       const layer = map.layers.find((l) => l.id === layerId);
-      const objectTile = layer
-        ? tilesets
-          ? resolveObjectInstanceTileAt(layer, x, y, tilesets)
-          : getObjectGroupTileRef(layer, x, y)
-        : null;
+      const objectTile = layer && objects ? resolveObjectInstanceTileAt(layer, x, y, objects) : null;
       if (objectTile) return objectTile;
       const cell = layer?.data?.[y]?.[x];
       if (cell === null || cell === undefined) return null;

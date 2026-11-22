@@ -2,6 +2,7 @@ import { resourceFileKey, resourceRegistry } from './resourceRegistry';
 import { fileSystem } from '../lib/fileSystem';
 import { useEditorStore } from '../store/useEditorStore';
 import { useMusicStore } from '../store/useMusicStore';
+import { mapsPlacingObject } from './mapObjects';
 import { WorkspaceDocument } from '../types/workspace';
 import {
   EditorResourceDescriptor,
@@ -397,6 +398,17 @@ export const editorResourceTypes: Record<EditorResourceTypeId, EditorResourceTyp
     deleteResource: async (id) => {
       await useEditorStore.getState().deleteObject(id);
     },
+    deleteRefusal: (id) => {
+      // The open map may have unsaved placements, so it counts as it is in the editor.
+      const { maps: saved, currentMap } = useEditorStore.getState();
+      const all = currentMap
+        ? [...saved.filter((map) => map.id !== currentMap.id), currentMap]
+        : saved;
+      const maps = mapsPlacingObject(all, id);
+      return maps.length
+        ? `The object is placed on ${maps.map((map) => map.name).join(', ')}. Remove it there first.`
+        : null;
+    },
     getFolderPath: (id) =>
       useEditorStore.getState().objects.find((object) => object.id === id)?.folderPath ?? '',
   },
@@ -653,6 +665,14 @@ export function renameEditorResourceDocument(
     return Promise.resolve();
   }
   return definition.renameResource(resourceId, nextName);
+}
+
+export function editorResourceDeleteRefusal(
+  document: WorkspaceDocument | undefined,
+): string | null {
+  const resourceId = getEditorResourceDocumentId(document);
+  const refusal = getEditorResourceTypeForDocument(document)?.deleteRefusal;
+  return refusal && resourceId ? refusal(resourceId) : null;
 }
 
 export function deleteEditorResourceDocument(

@@ -4,6 +4,7 @@ import { MapPreviewAnnotations } from './MapPreviewAnnotations';
 import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveTileAt } from '../../lib/mapUtils';
+import { indexObjects, type ObjectIndex } from '../../lib/mapObjects';
 import { EDITOR_CANVAS_HEX } from '../../lib/editorColors';
 import { Map as GameMap, Tileset } from '../../types/schema';
 import { useProject } from '../../hooks/useProject';
@@ -112,6 +113,7 @@ function renderToCanvas(
   ctx: CanvasRenderingContext2D,
   map: GameMap,
   tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   sprites: Map<string, HTMLImageElement>,
   hovered: [number, number] | null,
   selectedPosition: [number, number] | null | undefined,
@@ -137,7 +139,7 @@ function renderToCanvas(
   for (const layer of layers) {
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
-        const ref = resolveTileAt(map, layer.id, x, y, null, tilesets);
+        const ref = resolveTileAt(map, layer.id, x, y, null, objects);
         if (!ref) continue;
 
         const colonIdx = ref.lastIndexOf(':');
@@ -234,6 +236,7 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const maps = useEditorStore((s) => s.maps);
   const tilesets = useEditorStore((s) => s.tilesets);
+  const objects = useEditorStore((s) => s.objects);
   const loadedSprites = useEditorStore((s) => s.loadedSprites);
 
   const [hovered, setHovered] = useState<[number, number] | null>(null);
@@ -310,9 +313,18 @@ export const MapPreviewPicker: React.FC<MapPreviewPickerProps> = ({
     if (!canvasRef.current || !map) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-    renderToCanvas(ctx, map, tilesets, loadedSprites, hovered, selectedPosition, tileSize);
+    renderToCanvas(
+      ctx,
+      map,
+      tilesets,
+      indexObjects(objects),
+      loadedSprites,
+      hovered,
+      selectedPosition,
+      tileSize,
+    );
     setIsLoading(false);
-  }, [map, tilesets, loadedSprites, hovered, selectedPosition, tileSize]);
+  }, [map, tilesets, objects, loadedSprites, hovered, selectedPosition, tileSize]);
 
   useEffect(() => {
     draw();

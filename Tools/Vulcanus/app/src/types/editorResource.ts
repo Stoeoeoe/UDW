@@ -107,5 +107,7 @@ export interface EditorResourceTypeDefinition {
   fileExplorerPath?: (resourceId: string) => string;
   renameResource?: (resourceId: string, name: string) => Promise<void>;
   deleteResource?: (resourceId: string) => Promise<void>;
+  /** Why the resource cannot be deleted now, or `null` when it can. */
+  deleteRefusal?: (resourceId: string) => string | null;
   getFolderPath?: (resourceId: string) => string;
 }

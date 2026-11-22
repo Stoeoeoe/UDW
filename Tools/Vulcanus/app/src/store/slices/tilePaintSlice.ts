@@ -3,7 +3,11 @@ import { createTileRef } from '../../lib/tileUtils';
 import { sampleRandomTile } from '../../lib/randomUtils';
 import { samplePatternAt } from '../../lib/tileUtils';
 import { floodFillCollect } from '../../lib/algorithms';
-import { createMapObjectInstanceId, removeObjectInstanceAtTile } from '../../lib/mapObjects';
+import {
+  createMapObjectInstanceId,
+  indexObjects,
+  removeObjectInstanceAtTile,
+} from '../../lib/mapObjects';
 import { resolveTileAt } from '../../lib/mapUtils';
 import { setTileInState } from '../storeHelpers';
 import type { EditorStore } from '../useEditorStore';
@@ -22,13 +26,7 @@ export interface TilePaintSlice {
     layerId: string,
     tiles: Array<{ x: number; y: number; tilesetId: string; tileIndex: number }>,
   ) => void;
-  placeObjectInstance: (
-    layerId: string,
-    x: number,
-    y: number,
-    tilesetId: string,
-    objectDefinitionId: string,
-  ) => void;
+  placeObjectInstance: (layerId: string, x: number, y: number, objectId: string) => void;
   removeObjectInstance: (layerId: string, objectInstanceId: string) => void;
   moveObjectInstance: (layerId: string, objectInstanceId: string, x: number, y: number) => void;
   selectObjectInstance: (id: string | null) => void;
@@ -93,25 +91,16 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
       }
     }),
 
-  placeObjectInstance: (layerId, x, y, tilesetId, objectDefinitionId) =>
+  placeObjectInstance: (layerId, x, y, objectId) =>
     set((state) => {
       if (!state.currentMap || state.activeVariationId) return;
       const layer = state.currentMap.layers.find((candidate) => candidate.id === layerId);
       if (!layer || layer.locked) return;
-      if (!state.currentMap.tilesetRefs.includes(tilesetId)) {
-        state.currentMap.tilesetRefs.push(tilesetId);
-      }
       if (!layer.objectInstances) {
         layer.objectInstances = [];
       }
       const objectInstanceId = createMapObjectInstanceId();
-      layer.objectInstances.push({
-        id: objectInstanceId,
-        tilesetId,
-        objectDefinitionId,
-        x,
-        y,
-      });
+      layer.objectInstances.push({ id: objectInstanceId, objectId, x, y });
       delete layer.data;
       state.selectedObjectInstanceId = objectInstanceId;
     }),
@@ -168,7 +157,7 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
         layer,
         x,
         y,
-        state.tilesets,
+        indexObjects(state.objects),
         state.project?.tileSize ?? 16,
       );
       if (hit && state.selectedObjectInstanceId === hit.id) {
@@ -214,7 +203,6 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
         startX,
         startY,
         activeVariationId,
-        state.tilesets,
       );
       if (startTile === targetTileRef) return;
       const cells = floodFillCollect(
@@ -223,7 +211,7 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
         currentMap.width,
         currentMap.height,
         (x, y) =>
-          resolveTileAt(currentMap, layerId, x, y, activeVariationId, state.tilesets) === startTile,
+          resolveTileAt(currentMap, layerId, x, y, activeVariationId) === startTile,
       );
       for (const { x, y } of cells) {
         setTileInState(currentMap, activeVariationId, layerId, x, y, targetTileRef);
@@ -242,7 +230,6 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
         startX,
         startY,
         activeVariationId,
-        state.tilesets,
       );
       const cells = floodFillCollect(
         startX,
@@ -250,7 +237,7 @@ export const createTilePaintSlice: ImmerStateCreator<TilePaintSlice> = (set) => 
         currentMap.width,
         currentMap.height,
         (x, y) =>
-          resolveTileAt(currentMap, layerId, x, y, activeVariationId, state.tilesets) === startTile,
+          resolveTileAt(currentMap, layerId, x, y, activeVariationId) === startTile,
       );
       for (const { x, y } of cells) {
         if (mode === 'erase') {

@@ -5,7 +5,7 @@
 import type { CollisionDefinition, Map as GameMap, MapCollision, Tileset } from '../types/schema';
 import { computeNavigationCostGrid, type NavigationCostGrid } from './navigationCost';
 import { shapeToNormalizedPolygon } from './collisionUtils';
-import { getObjectDefinition } from './mapObjects';
+import type { ObjectIndex } from './mapObjects';
 import { resolveTileAt } from './mapUtils';
 import { splitTileRef } from './tileRef';
 import { getWaterBitmap } from './waterMaskCache';
@@ -31,6 +31,7 @@ export type BlockedGrid = boolean[][];
 export function computeBlockedGrid(
   map: GameMap,
   tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize: number,
 ): BlockedGrid {
   const blocked = Array.from({ length: map.height }, () =>
@@ -69,14 +70,10 @@ export function computeBlockedGrid(
         }
     } else if (layer.kind === 'object') {
       for (const instance of layer.objectInstances ?? []) {
-        const definition = getObjectDefinition(
-          tilesets,
-          instance.tilesetId,
-          instance.objectDefinitionId,
-        );
+        const object = objects.get(instance.objectId);
         // Objects stand at their exact pixel position, which need not be a whole tile.
-        for (const part of definition?.tiles ?? []) {
-          const tile = tilesets.get(instance.tilesetId)?.tiles[part.tileIndex];
+        for (const part of object?.tiles ?? []) {
+          const tile = tilesets.get(object!.tilesetId)?.tiles[part.tileIndex];
           const topLeft: Point = [instance.x / tileSize + part.x, instance.y / tileSize + part.y];
           for (const polygon of tilePolygons(tile?.collision, topLeft, tileSize))
             blockUnder(polygon);
@@ -380,11 +377,12 @@ export interface MapNavigation {
 export function computeMapNavigation(
   map: GameMap,
   tilesets: Map<string, Tileset>,
+  objects: ObjectIndex,
   tileSize: number,
 ): MapNavigation {
   return {
-    costs: computeNavigationCostGrid(map, tilesets, null, tileSize),
-    blocked: computeBlockedGrid(map, tilesets, tileSize),
+    costs: computeNavigationCostGrid(map, tilesets, objects, null, tileSize),
+    blocked: computeBlockedGrid(map, tilesets, objects, tileSize),
   };
 }
 

@@ -2,6 +2,7 @@ import { splitTileRef } from '../../../lib/tileRef';
 import * as THREE from 'three';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { resolveTileAt } from '../../../lib/mapUtils';
+import type { ObjectIndex } from '../../../lib/mapObjects';
 import type { Layer } from '../../../types/schema';
 
 type EditorStoreState = ReturnType<typeof useEditorStore.getState>;
@@ -34,6 +35,7 @@ export function bakeLayerCanvas(
   tilesets: EditorStoreState['tilesets'],
   loadedSprites: EditorStoreState['loadedSprites'],
   activeVariationId: string | null,
+  objects?: ObjectIndex,
 ): HTMLCanvasElement | null {
   const pw = mapW * tileSize;
   const ph = mapH * tileSize;
@@ -48,7 +50,7 @@ export function bakeLayerCanvas(
 
   for (let y = 0; y < mapH; y++) {
     for (let x = 0; x < mapW; x++) {
-      const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, tilesets);
+      const tileRef = resolveTileAt(currentMap, layer.id, x, y, activeVariationId, objects);
       if (!tileRef) continue;
 
       const [tilesetId, indexStr] = splitTileRef(tileRef);

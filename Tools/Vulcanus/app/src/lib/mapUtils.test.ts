@@ -123,36 +123,6 @@ describe('mapUtils', () => {
       expect(resolveTileAt(mockMap, 'l1', 1, 1, 'v3')).toBeNull();
     });
 
-    it('should resolve object-layer tiles from objectGroups', () => {
-      const objectMap: Map = {
-        ...mockMap,
-        layers: [
-          {
-            id: 'objects',
-            name: 'Objects',
-            kind: 'object',
-            visible: true,
-            locked: false,
-            opacity: 1,
-            zOrder: 1,
-            objectGroups: [
-              {
-                id: 'obj_tree',
-                tiles: [
-                  { x: 1, y: 1, tilesetId: 'ts1', tileIndex: 7 },
-                  { x: 1, y: 0, tilesetId: 'ts1', tileIndex: 3 },
-                ],
-              },
-            ],
-          },
-        ],
-      };
-
-      expect(resolveTileAt(objectMap, 'objects', 1, 1, null)).toBe('ts1:7');
-      expect(resolveTileAt(objectMap, 'objects', 1, 0, null)).toBe('ts1:3');
-      expect(resolveTileAt(objectMap, 'objects', 0, 0, null)).toBeNull();
-    });
-
     it('should resolve object-layer tiles from objectInstances', () => {
       const objectMap: Map = {
         ...mockMap,
@@ -168,8 +138,7 @@ describe('mapUtils', () => {
             objectInstances: [
               {
                 id: 'inst_tree',
-                tilesetId: 'ts1',
-                objectDefinitionId: 'tree',
+                objectId: 'test:tree',
                 x: 64,
                 y: 80,
               },
@@ -178,34 +147,27 @@ describe('mapUtils', () => {
         ],
       };
 
-      const tilesets = new globalThis.Map([
+      const objects = new globalThis.Map([
         [
-          'ts1',
+          'test:tree',
           {
-            version: 1,
-            id: 'ts1',
-            name: 'Tileset',
-            spriteSheet: 'ts1.png',
-            columns: 4,
-            tileCount: 16,
-            tiles: {},
-            objects: [
-              {
-                id: 'tree',
-                name: 'Tree',
-                tiles: [
-                  { x: 0, y: 0, tileIndex: 1 },
-                  { x: 0, y: 1, tileIndex: 5 },
-                ],
-              },
+            formatVersion: 1 as const,
+            id: 'test:tree',
+            name: 'Tree',
+            tilesetId: 'ts1',
+            tiles: [
+              { x: 0, y: 0, tileIndex: 1 },
+              { x: 0, y: 1, tileIndex: 5 },
             ],
           },
         ],
       ]);
 
-      expect(resolveTileAt(objectMap, 'objects', 4, 5, null, tilesets)).toBe('ts1:1');
-      expect(resolveTileAt(objectMap, 'objects', 4, 6, null, tilesets)).toBe('ts1:5');
-      expect(resolveTileAt(objectMap, 'objects', 5, 5, null, tilesets)).toBeNull();
+      expect(resolveTileAt(objectMap, 'objects', 4, 5, null, objects)).toBe('ts1:1');
+      expect(resolveTileAt(objectMap, 'objects', 4, 6, null, objects)).toBe('ts1:5');
+      expect(resolveTileAt(objectMap, 'objects', 5, 5, null, objects)).toBeNull();
+      // Without the objects, placed objects are not resolved.
+      expect(resolveTileAt(objectMap, 'objects', 4, 5, null)).toBeNull();
     });
   });
 
