@@ -279,6 +279,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Shops.ShowShopInteractable
   requiresButtonPress: 1
+  target: {fileID: 2644611429007518014}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0

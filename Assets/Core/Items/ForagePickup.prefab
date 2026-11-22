@@ -129,6 +129,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Items.ForagePickup
   prefabId: base:forage-pickup-template
+  authoredId: 
 --- !u!61 &7978465207803460896
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -215,6 +216,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Items.PickupableInteractable
   requiresButtonPress: 1
+  target: {fileID: 4747889149089497013}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0
@@ -231,7 +233,6 @@ MonoBehaviour:
   quantity: 1
   pickupAnimation: {fileID: 11400000, guid: 0df20c764685e534d9719ec770a3c08b, type: 2}
   visual: {fileID: 809279834715803767}
-  interactionDistance: 1.5
   liftDuration: 0.35
   liftHeight: 0.6
 --- !u!1 &8785196315349251298

@@ -44,6 +44,9 @@ namespace Input
         public bool PreviousSlotPressed => _playerControls["PreviousSlot"].WasPerformedThisFrame();
         public float ChangeSlotAxis => _playerControls["ChangeSlotAxis"].ReadValue<float>();
 
+        /// <summary>Keyboard and mouse targets what the pointer hovers; other devices target what the character faces.</summary>
+        public bool UsesPointer => GetComponent<PlayerInput>().currentControlScheme == "Keyboard&Mouse";
+
         public bool PerformPrimaryActionDown => _playerControls["PerformPrimaryAction"].WasPressedThisFrame();
         public bool PerformPrimaryActionHeld => _playerControls["PerformPrimaryAction"].IsPressed();
         public bool PerformPrimaryActionReleased => _playerControls["PerformPrimaryAction"].WasReleasedThisFrame();

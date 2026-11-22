@@ -4,6 +4,7 @@ using Core.Events;
 using Core.Location;
 using Core.Tile;
 using Core.TimeAndWeather;
+using Input;
 using Interaction;
 using Interaction.Pointer;
 using UI.Shared;
@@ -20,17 +21,19 @@ namespace Core.Context
         private readonly CharacterManager _characters;
         private readonly GameClock _clock;
         private readonly VulcanusDialogueRunner _dialogue;
+        private readonly InputManager _input;
         private AbstractInteractable _hoveredInteractable;
         private TileData _hoveredTile;
 
         public PlayerInteractionContext(UrGUIManager gui, LocationContext location, CharacterManager characters, GameClock clock,
-            VulcanusDialogueRunner dialogue)
+            VulcanusDialogueRunner dialogue, InputManager input)
         {
             _gui = gui;
             _location = location;
             _characters = characters;
             _clock = clock;
             _dialogue = dialogue;
+            _input = input;
             this.Subscribe<PointerInteractableChangedEvent>();
             this.Subscribe<TileDataUnderPointerChangedEvent>();
             _gui.InteractionStateChanged += Refresh;
@@ -75,7 +78,8 @@ namespace Core.Context
                     character.MovementState,
                     _dialogue.CurrentDialogueId,
                     _clock.CurrentTime,
-                    _gui.IsWorldInteractionBlocked
+                    _gui.IsWorldInteractionBlocked,
+                    _input.UsesPointer
                 );
 
             if (CurrentSnapshot == snapshot)

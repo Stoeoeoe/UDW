@@ -155,6 +155,7 @@ namespace Core.Spawning.Editor
         [Test]
         public void SpawnedInteractableWritesIntoItsEntityRecord()
         {
+            _prefab.layer = LayerMask.NameToLayer("Interactable");
             _prefab.AddComponent<BoxCollider2D>().isTrigger = true;
             var template = Game.Add<TestInteractable>(_prefab);
             Set(template, "UnlimitedActivations", false);

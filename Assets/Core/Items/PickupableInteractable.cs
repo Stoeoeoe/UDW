@@ -18,7 +18,6 @@ namespace Core.Items
         [SerializeField, Min(1)] private int quantity = 1;
         [SerializeField] private CharacterAnimation pickupAnimation;
         [SerializeField] private Transform visual;
-        [SerializeField, Min(0.01f)] private float interactionDistance = 1.5f;
         [SerializeField, Min(0.01f)] private float liftDuration = 0.35f;
         [SerializeField, Min(0f)] private float liftHeight = 0.6f;
 
@@ -37,13 +36,10 @@ namespace Core.Items
         // LevelManager initializes the player before materializing location objects.
         public override bool CanInteract => base.CanInteract && CanPickUp(_characterManager.MainCharacter);
 
-        public bool CanPickUp(GameCharacter character)
-        {
-            var offset = (Vector2)(transform.position - character.ToolInteractionAnchor.position);
-            return isActiveAndEnabled && !_spawn.IsExpired && !_collected && !IsPickingUp && offset.sqrMagnitude <= interactionDistance * interactionDistance &&
-                offset.sqrMagnitude > 0f && Vector2.Dot(offset.normalized, character.Orientation.FacingDirection) >= 0.7071067f &&
-                character.MainInventory.Storage.CanAdd(item, quantity);
-        }
+        /// <summary>Whether the forage is still here and fits the bag; reach is the shared interaction targeting rule.</summary>
+        public bool CanPickUp(GameCharacter character) =>
+            isActiveAndEnabled && !_spawn.IsExpired && !_collected && !IsPickingUp &&
+            character.MainInventory.Storage.CanAdd(item, quantity);
 
         protected override void Awake()
         {

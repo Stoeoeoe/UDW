@@ -7147,6 +7147,7 @@ GameObject:
   - component: {fileID: 5518026159560976228}
   m_Layer: 0
   m_Name: PointerManager
+  - component: {fileID: 6663335756228956678}
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7186,6 +7187,19 @@ MonoBehaviour:
   cursorHotspot: {x: 0, y: 0}
 --- !u!1 &2516256580491792791
 GameObject:
+--- !u!114 &6663335756228956678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2485211263405546162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1512826956f56324991045ed2224ff0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interaction.Highlight.InteractionHighlighter
+  highlightMaterial: {fileID: 2100000, guid: 29120cadcdfef10499784131c610e4d9, type: 2}
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}

@@ -5,6 +5,7 @@ using Core.Tile;
 using Interaction.Dialogue;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using PixelPerfectCamera = UnityEngine.Rendering.Universal.PixelPerfectCamera;
 using VContainer;
 
 namespace Interaction.Pointer
@@ -14,6 +15,7 @@ namespace Interaction.Pointer
         [Inject] private PlayerInteractionContext _playerInteractionContext;
         [Inject] private LocationContext _locationContext;
         [Inject] private MapManager _mapManager;
+        [Inject] private CharacterManager _characterManager;
 
         public PointerMode CurrentPointerMode { get; private set; } = PointerMode.Default;
 
@@ -21,24 +23,22 @@ namespace Interaction.Pointer
         [SerializeField] protected Texture2D giftItemCursor;
         [SerializeField] protected Texture2D placeItemCursor;
         [SerializeField] protected Texture2D dialogueCursor;
+        [Tooltip("Pixel in the cursor image that points, counted from its top-left corner.")]
         [SerializeField] protected Vector2 cursorHotspot = Vector2.zero;
+        [Tooltip("Cursor size relative to the game's pixel scale: 1 draws one cursor pixel as large as one art " +
+                 "pixel in the world. Always rounded to whole screen pixels, so the cursor stays crisp.")]
+        [SerializeField, Range(0.25f, 2f)] private float cursorScale = 0.5f;
 
-        private LayerMask _interactableLayerMask;
-        private bool _hasAppliedCursor;
-        private PointerMode _appliedPointerMode;
+        // The game draws its own pointer: the operating system scales hardware cursors to its own size.
+        private Texture2D _cursorTexture;
+        private bool _drawCursor;
 
         public AbstractInteractable CurrentInteractableUnderPointer { get; private set; }
         public TileData CurrentTileDataUnderPointer { get; private set; }
 
-#if UNITY_EDITOR
-        private bool _isMouseOverGameView = true;
-        private bool _suppressCustomCursor;
-#endif
-
         protected override void Awake()
         {
             base.Awake();
-            _interactableLayerMask = LayerMask.GetMask("Interactable");
             Cursor.lockState = CursorLockMode.Confined;
         }
 
@@ -51,7 +51,7 @@ namespace Interaction.Pointer
         protected override void OnDisable()
         {
             _playerInteractionContext.OnContextChanged -= HandleContextChange;
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            _drawCursor = false;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
             base.OnDisable();
@@ -116,47 +116,38 @@ namespace Interaction.Pointer
         private void SetCursorMode(PointerMode pointerMode)
         {
             CurrentPointerMode = pointerMode;
-            ApplyCursorMode(pointerMode);
+            _cursorTexture = pointerMode switch
+            {
+                PointerMode.PlaceItems => placeItemCursor,
+                PointerMode.GiftItems => giftItemCursor,
+                PointerMode.Dialogue => dialogueCursor,
+                _ => defaultCursor
+            };
         }
 
-        private void ApplyCursorMode(PointerMode pointerMode, bool force = false)
+        private static bool IsMouseOverGame(Vector2 position) =>
+            position.x >= 0 && position.x <= Screen.width && position.y >= 0 && position.y <= Screen.height;
+
+        // Runs in menus too, where world hovering stops. The system cursor shows only outside the game view (Editor).
+        private void LateUpdate()
         {
-#if UNITY_EDITOR
-            if (_suppressCustomCursor && !force)
-            {
-                return;
-            }
-#endif
-
-            if (!force && _hasAppliedCursor && _appliedPointerMode == pointerMode)
-            {
-                return;
-            }
-
-            Texture2D cursorTexture;
-            switch (pointerMode)
-            {
-                case PointerMode.PlaceItems:
-                    cursorTexture = placeItemCursor;
-                    break;
-                case PointerMode.GiftItems:
-                    cursorTexture = giftItemCursor;
-                    break;
-                case PointerMode.Dialogue:
-                    cursorTexture = dialogueCursor;
-                    break;
-                case PointerMode.Default:
-                case PointerMode.UseTool:
-                default:
-                    cursorTexture = defaultCursor;
-                    break;
-            }
-
-            Cursor.SetCursor(cursorTexture, cursorHotspot, CursorMode.Auto);
-            Cursor.visible = true;
-            _appliedPointerMode = pointerMode;
-            _hasAppliedCursor = true;
+            _drawCursor = IsMouseOverGame(Mouse.current.position.ReadValue());
+            Cursor.visible = !_drawCursor;
         }
+
+        private void OnGUI()
+        {
+            if (!_drawCursor || Event.current.type != EventType.Repaint) return;
+            var texture = _cursorTexture ? _cursorTexture : defaultCursor;
+            var scale = Mathf.Max(1, Mathf.RoundToInt(PixelScale() * cursorScale));
+            var position = Mouse.current.position.ReadValue();
+            GUI.depth = int.MinValue; // Above every other IMGUI drawing; IMGUI draws after all other UI.
+            GUI.DrawTexture(new Rect(position.x - cursorHotspot.x * scale, Screen.height - position.y - cursorHotspot.y * scale,
+                texture.width * scale, texture.height * scale), texture);
+        }
+
+        // Screen pixels per art pixel; SystemRoot's main camera is pixel perfect.
+        private static int PixelScale() => Camera.main.GetComponent<PixelPerfectCamera>().pixelRatio;
 
         private void Update()
         {
@@ -164,27 +155,7 @@ namespace Interaction.Pointer
             if (!_locationContext.SceneReady || Camera.main == null) return;
 
             var mouseScreenPos = Mouse.current.position.ReadValue();
-
-#if UNITY_EDITOR
-            bool inGameView = mouseScreenPos.x >= 0 && mouseScreenPos.x <= Screen.width &&
-                              mouseScreenPos.y >= 0 && mouseScreenPos.y <= Screen.height;
-            if (!inGameView)
-            {
-                if (_isMouseOverGameView)
-                {
-                    Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-                    _isMouseOverGameView = false;
-                    _suppressCustomCursor = true;
-                }
-                return;
-            }
-            if (!_isMouseOverGameView)
-            {
-                _isMouseOverGameView = true;
-                _suppressCustomCursor = false;
-                ApplyCursorMode(CurrentPointerMode, true);
-            }
-#endif
+            if (!IsMouseOverGame(mouseScreenPos)) return;
 
             var worldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
 
@@ -195,14 +166,8 @@ namespace Interaction.Pointer
                 TileDataUnderPointerChangedEvent.Trigger(tileData);
             }
 
-            var ray = Camera.main.ScreenPointToRay(mouseScreenPos);
-            var raycastHit = Physics2D.GetRayIntersection(ray, Mathf.Infinity, _interactableLayerMask);
-
-            var interactable = raycastHit.collider != null
-                ? raycastHit.collider.GetComponentInParent<AbstractInteractable>()
-                : null;
-            if (interactable && !interactable.CanInteract)
-                interactable = null;
+            var player = _characterManager.MainCharacter;
+            var interactable = player ? player.InteractionSensor.FindUnderPointer(worldPos) : null;
             if (interactable != CurrentInteractableUnderPointer)
             {
                 CurrentInteractableUnderPointer = interactable;

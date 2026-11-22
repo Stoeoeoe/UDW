@@ -50,6 +50,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Inventory.PersistentContainer
   prefabId: base:chest
+  authoredId: 
   owner: {fileID: 8476815486123167853, guid: 73a64505967481043b17f85d6e23828f, type: 3}
   capacity: 20
   displayName: Chest
@@ -113,6 +114,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.ContainerInteractable
   requiresButtonPress: 1
+  target: {fileID: 5639100036984483989}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0

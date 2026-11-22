@@ -247,7 +247,7 @@ MonoBehaviour:
   TestLOSTargetsOnly: 0
   NumberOfRays: 1
   MinimumVisibility: 0.5
-  SensorRange: 1.5
+  SensorRange: 2
   DetectsOnLayers:
     serializedVersion: 2
     m_Bits: 8388608
@@ -411,6 +411,7 @@ MonoBehaviour:
   animancer: {fileID: 6491732590145289827}
   character: {fileID: 5674254781157152928}
   animationLibrary: {fileID: 11400000, guid: cf4542130557d7d4ca2059be98e024d3, type: 2}
+  activityOnEnter: {fileID: 0}
   runPrefix: Run
   walkPrefix: Walk
   idlePrefix: Idle
@@ -581,6 +582,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.SpawnedObject
   prefabId: base:cutscene-prototype-host
+  authoredId: 
 --- !u!1 &2637582510936521463
 GameObject:
   m_ObjectHideFlags: 0
@@ -626,7 +628,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Inventory.SlotInventory
   _inventoryName: MainInventory
-  _playerID: Player1
   _numberOfSlots: 10
   configuration: {fileID: 11400000, guid: 16359b172594fe340b9cc9b35876ed8a, type: 2}
 --- !u!1 &3037148771047915382
@@ -691,7 +692,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6312644118598596407}
-  - {fileID: 8289946629901876682}
   m_Father: {fileID: 3214733469854168549}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2857205774705344525
@@ -707,7 +707,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.InteractionSphere
   ambientSensor: {fileID: 3542628747221276778}
-  triggerSensor: {fileID: 130005966171485026}
 --- !u!1 &3652988585918498201
 GameObject:
   m_ObjectHideFlags: 0
@@ -936,133 +935,3 @@ Transform:
   - {fileID: 7286068647688494526}
   m_Father: {fileID: 3214733469854168549}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &9115745383623695433
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8289946629901876682}
-  - component: {fileID: 4745757196449428256}
-  - component: {fileID: 130005966171485026}
-  - component: {fileID: 7719766863746512760}
-  m_Layer: 10
-  m_Name: TriggerSensor
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8289946629901876682
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9115745383623695433}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7295795626305760178}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
---- !u!70 &4745757196449428256
-CapsuleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9115745383623695433}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: -0, y: -0.23329037}
-  m_Size: {x: 0.75, y: 1.1665808}
-  m_Direction: 0
---- !u!114 &130005966171485026
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9115745383623695433}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ff464aec5bd28204fa60b6456b500e6b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SensorToolkit.TriggerSensor2D
-  IgnoreList:
-  - {fileID: 1347474584414753981}
-  EnableTagFilter: 0
-  AllowedTags: []
-  OnDetected:
-    m_PersistentCalls:
-      m_Calls: []
-  OnLostDetection:
-    m_PersistentCalls:
-      m_Calls: []
-  DetectionMode: 0
-  RequiresLineOfSight: 0
-  BlocksLineOfSight:
-    serializedVersion: 2
-    m_Bits: 2305
-  TestLOSTargetsOnly: 0
-  NumberOfRays: 1
-  MinimumVisibility: 1
-  LineOfSightUpdateMode: 0
-  CheckLineOfSightInterval: 0.1
---- !u!50 &7719766863746512760
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9115745383623695433}
-  m_BodyType: 1
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 0
-  m_CollisionDetection: 0
-  m_Constraints: 0

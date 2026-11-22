@@ -11,6 +11,8 @@ namespace Character
         private GameCharacter _character;
         private MapManager _map;
         public TileData Current { get; private set; }
+        /// <summary>Whether a location's map is bound. Coordinates exist on it even where no tile data is stored.</summary>
+        public bool HasMap => _map;
         public Vector2Int Coordinates => _map.WorldToTileCoordinates(_character.ToolInteractionAnchor.position);
         public TileData InFront => InDirection(_character.Orientation.FacingDirection);
         public TileData InBack => InDirection(-_character.Orientation.FacingDirection);

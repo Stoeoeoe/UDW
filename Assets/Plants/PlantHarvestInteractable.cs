@@ -31,6 +31,8 @@ namespace Plants
             _state = state;
             UnlimitedActivations = true;
             cooldownMode = InteractionCooldownMode.None;
+            // The growth-stage visuals are children of the crop root.
+            SetTarget(transform);
         }
 
         public override bool RequiresButtonPress => true;

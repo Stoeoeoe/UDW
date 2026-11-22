@@ -1731,6 +1731,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Dialogue.ShowVulcanusDialogueInteractable
   requiresButtonPress: 1
+  target: {fileID: 0}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0
@@ -1746,13 +1747,10 @@ MonoBehaviour:
   dialogueId: dlg_test_dialogue
   options:
     CanMoveWhileTalking: 0
-    PauseGameClockWhileTalking: 1
     RotateDialogueStarterTowardsTarget: 1
     RotateTargetTowardsDialogueStarter: 1
     ReturnDialogueStarterRotationAfterDialogue: 0
     ReturnDialogueTargetRotationAfterDialogue: 1
-  dialogueTarget: {fileID: 109891479}
-  emitLifecycleEvents: 1
 --- !u!1 &1256537582
 GameObject:
   m_ObjectHideFlags: 0
@@ -2426,6 +2424,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.TestInteractable
   requiresButtonPress: 1
+  target: {fileID: 0}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0
@@ -3333,7 +3332,7 @@ GameObject:
   - component: {fileID: 2142778671}
   - component: {fileID: 2142778676}
   - component: {fileID: 2142778675}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: Bed
   m_TagString: Untagged
   m_Icon: {fileID: 2800000, guid: 6fee5c326f48ab244a636945c35bbf09, type: 3}
@@ -3475,6 +3474,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Bed
   requiresButtonPress: 1
+  target: {fileID: 2142778674}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 2

@@ -24,13 +24,20 @@ namespace Core.Context
     )
     {
         public bool WorldInteractionBlocked { get; init; }
+        /// <summary>Keyboard and mouse play: only the hovered target is used, never the one in front.</summary>
+        public bool UsesPointer { get; init; }
         public bool CanInteractWithWorld => SceneReady && !WorldInteractionBlocked;
 
-        /// <summary>Pointer has priority, but an unavailable target cannot block a ready nearby one.</summary>
-        public AbstractInteractable ActionableInteractable =>
-            !CanInteractWithWorld ? null :
-            InteractableUnderPointer && InteractableUnderPointer.CanInteract ? InteractableUnderPointer :
-            CurrentInteractable && CurrentInteractable.CanInteract ? CurrentInteractable : null;
+        /// <summary>The hovered target in pointer play, otherwise the one in front; either only while it is ready.</summary>
+        public AbstractInteractable ActionableInteractable
+        {
+            get
+            {
+                if (!CanInteractWithWorld) return null;
+                var target = UsesPointer ? InteractableUnderPointer : CurrentInteractable;
+                return target && target.CanInteract ? target : null;
+            }
+        }
 
         public static PlayerInteractionContextSnapshot Empty()
         {
@@ -52,7 +59,8 @@ namespace Core.Context
             MovementState? movement,
             string conversation, 
             UrTime currentTime,
-            bool worldInteractionBlocked = false)
+            bool worldInteractionBlocked = false,
+            bool usesPointer = false)
         {
             var baseSnapshot = new PlayerInteractionContextSnapshot(
                 sceneReady,
@@ -68,7 +76,7 @@ namespace Core.Context
                 conversation,
                 currentTime,
                 default
-            ) { WorldInteractionBlocked = worldInteractionBlocked };
+            ) { WorldInteractionBlocked = worldInteractionBlocked, UsesPointer = usesPointer };
 
             return baseSnapshot with
             {

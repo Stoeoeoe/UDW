@@ -44,14 +44,12 @@ namespace Character.Editor
         }
 
         [Test]
-        public void InteractionSensorsPivotAtTheSameGroundPointAsTargeting()
+        public void InteractionSensorPivotsAtTheSameGroundPointAsTargeting()
         {
             var ground = _character.ToolInteractionAnchor.position;
-            var facing = _character.GetComponentInChildren<TriggerSensor2D>(true);
             var ambient = _character.GetComponentInChildren<RangeSensor2D>(true);
-            Assert.That(Vector3.Distance(facing.transform.position, ground), Is.LessThan(0.001f));
             Assert.That(Vector3.Distance(ambient.transform.position, ground), Is.LessThan(0.001f));
-            facing.transform.localPosition += Vector3.up;
+            ambient.transform.localPosition += Vector3.up;
             Assert.Throws<InvalidOperationException>(_character.InteractionSensor.ValidateConfiguration);
         }
 

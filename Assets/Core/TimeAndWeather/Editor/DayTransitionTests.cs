@@ -53,6 +53,7 @@ namespace Core.TimeAndWeather.Editor
             Game.Location = homeLocation;
 
             var bedObject = Child("Home bed");
+            bedObject.layer = LayerMask.NameToLayer("Interactable");
             bedObject.AddComponent<BoxCollider2D>();
             var bed = Game.Add<Bed>(bedObject);
             var bedSlot = bed.GetComponent<InteractionSlot>();

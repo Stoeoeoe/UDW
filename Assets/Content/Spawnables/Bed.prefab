@@ -252,6 +252,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.Spawning.SpawnedObject
   prefabId: base:bed
+  authoredId: 
 --- !u!61 &3503847426978939909
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -330,6 +331,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Bed
   requiresButtonPress: 1
+  target: {fileID: 3390128716920606493}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 2

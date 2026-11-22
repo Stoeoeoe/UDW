@@ -39,8 +39,7 @@ namespace Core.Items.Editor
             GameTestFixture.Invoke(_pickup, "Awake");
             Game.Root.SetActive(true);
             // The fixture deliberately keeps its character inactive, outside the location lifecycle.
-            _pickup.transform.position = _character.ToolInteractionAnchor.position + Vector3.down;
-            _character.Orientation.ForceDirection(Vector2.down);
+            // Reach is the shared targeting rule (InteractionTargetingTests), not part of CanPickUp.
         }
 
         [Test]
@@ -48,17 +47,6 @@ namespace Core.Items.Editor
         {
             PickupConfigurationValidation.CheckPrefabs();
             Assert.That(_pickup.RequiresButtonPress, Is.True);
-        }
-
-        [Test]
-        public void RequiresNearbyTargetInFrontOfTheCharacter()
-        {
-            Assert.That(_pickup.CanPickUp(_character), Is.True);
-            _character.Orientation.ForceDirection(Vector2.up);
-            Assert.That(_pickup.CanPickUp(_character), Is.False);
-            _character.Orientation.ForceDirection(Vector2.down);
-            _pickup.transform.position += Vector3.down * 10;
-            Assert.That(_pickup.CanPickUp(_character), Is.False);
         }
 
         [Test]

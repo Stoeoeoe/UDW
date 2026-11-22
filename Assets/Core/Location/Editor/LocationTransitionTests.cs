@@ -71,7 +71,7 @@ namespace Core.Location.Editor
         [Test]
         public void LocationLinksRejectExplicitNonPlayerCommands()
         {
-            var root = new GameObject("Link", typeof(BoxCollider2D));
+            var root = new GameObject("Link", typeof(BoxCollider2D)) { layer = LayerMask.NameToLayer("Interactable") };
             root.transform.SetParent(Game.Root.transform);
             var link = Game.Add<LocationLink>(root);
             // A missing target would otherwise throw: non-player commands must never reach routing.

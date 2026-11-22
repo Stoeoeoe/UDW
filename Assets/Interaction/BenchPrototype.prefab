@@ -62,7 +62,7 @@ GameObject:
   - component: {fileID: 123692276554290321}
   - component: {fileID: 8364882175394062698}
   - component: {fileID: 5069561316164479406}
-  m_Layer: 0
+  m_Layer: 23
   m_Name: BenchPrototype
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -146,6 +146,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.SeatInteractable
   requiresButtonPress: 1
+  target: {fileID: 123692276554290321}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0

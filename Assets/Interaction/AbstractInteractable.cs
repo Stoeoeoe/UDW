@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Character;
 using Core.Context;
 using Core.Events;
 using Core.Game;
 using Core.Location;
+using Core.Tile;
 using Core.TimeAndWeather;
 using MoreMountains.Feedbacks;
 using Sirenix.OdinInspector;
@@ -26,10 +28,15 @@ namespace Interaction
         [Inject] protected CharacterManager _characterManager;
         [Inject] protected GameClock _clock;
         [Inject] protected LevelManager _levelManager;
+        [Inject] private MapManager _map;
 
         [Header("Interaction")]
         [Tooltip("If false, triggers on contact (walk-in portals). If true, player must press Interact.")]
         [SerializeField] private bool requiresButtonPress = true;
+        [Tooltip("The object that holds this interactable's sprites and solid colliders. The pointer hovers the visible " +
+                 "pixels of its sprites; its solid colliders are the tiles that must be next to the player. Leave empty " +
+                 "for things without their own art, such as doors: the interaction collider is then used for both.")]
+        [SerializeField] private Transform target;
 
         [Header("Activations")]
         [SerializeField] protected bool UnlimitedActivations = true;
@@ -68,6 +75,11 @@ namespace Interaction
         private int _lastRemainingUses;
         private bool _destroyQueued;
         private InteractableState _bound;
+        private Collider2D _interactionCollider;
+        private static readonly List<SpriteRenderer> TargetSprites = new();
+        private static readonly List<Collider2D> FootprintBuffer = new();
+        // Keeps a collider edge that lies exactly on a tile border from reaching into the next tile.
+        private static readonly Vector3 TileEdgeInset = new(0.01f, 0.01f, 0f);
 
         private bool UsesSecondsCooldown => cooldownMode == InteractionCooldownMode.GameplaySeconds ||
                                             cooldownMode == InteractionCooldownMode.RealTimeSeconds;
@@ -109,6 +121,29 @@ namespace Interaction
             EditorUtility.SetDirty(this);
             PrefabUtility.RecordPrefabInstancePropertyModifications(this);
         }
+
+        private static readonly Color HoverGizmoColor = new(0.3f, 0.85f, 1f);
+        private static readonly Color FootprintGizmoColor = new(1f, 0.8f, 0.2f);
+
+        // Cyan: what the pointer hovers. Yellow: the footprint whose tiles must be next to the player.
+        private void OnDrawGizmosSelected()
+        {
+            var interactionCollider = GetComponent<Collider2D>();
+            if (!interactionCollider) return;
+            Gizmos.color = HoverGizmoColor;
+            if (target)
+            {
+                Gizmos.DrawLine(transform.position, target.position);
+                foreach (var sprite in target.GetComponentsInChildren<SpriteRenderer>())
+                    if (sprite.sprite) Gizmos.DrawWireCube(sprite.bounds.center, sprite.bounds.size);
+            }
+            else Gizmos.DrawWireCube(interactionCollider.bounds.center, interactionCollider.bounds.size);
+
+            Gizmos.color = FootprintGizmoColor;
+            foreach (var footprint in Footprint(interactionCollider))
+                Gizmos.DrawWireCube(footprint.bounds.center, footprint.bounds.size + new Vector3(0.04f, 0.04f));
+            Handles.Label(transform.position, target ? $"Target: {target.name}" : "Target: interaction collider");
+        }
 #endif
 
         public virtual bool RequiresButtonPress => requiresButtonPress;
@@ -124,8 +159,95 @@ namespace Interaction
             }
         }
 
+        /// <summary>For interactables whose art is built at runtime; authored ones set the target in the Inspector.</summary>
+        protected void SetTarget(Transform value) => target = value;
+
+        /// <summary>Fills the list with the target's active sprites; empty without a target.</summary>
+        public void GetTargetSprites(List<SpriteRenderer> result)
+        {
+            result.Clear();
+            if (target) target.GetComponentsInChildren(false, result);
+        }
+
+        /// <summary>Whether the point is over a visible pixel of the target's sprites, or inside the interaction collider without a target.</summary>
+        public bool IsUnderPointer(Vector2 point)
+        {
+            if (!target) return _interactionCollider.OverlapPoint(point);
+            target.GetComponentsInChildren(false, TargetSprites);
+            foreach (var sprite in TargetSprites)
+                if (sprite.enabled && IsOpaquePixel(sprite, point)) return true;
+            return false;
+        }
+
+        /// <summary>Whether a tile the footprint covers is the character's tile or one of the eight around it.</summary>
+        public bool IsWithinReach(Vector2Int characterTile)
+        {
+            foreach (var footprint in Footprint(_interactionCollider))
+            {
+                var bounds = footprint.bounds;
+                var min = _map.WorldToTileCoordinates(bounds.min + TileEdgeInset);
+                var max = _map.WorldToTileCoordinates(bounds.max - TileEdgeInset);
+                var dx = Mathf.Max(min.x - characterTile.x, 0, characterTile.x - max.x);
+                var dy = Mathf.Max(min.y - characterTile.y, 0, characterTile.y - max.y);
+                if (dx <= 1 && dy <= 1) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The footprint point nearest to the given point; the point itself when it is inside.</summary>
+        public Vector2 ClosestFootprintPoint(Vector2 point)
+        {
+            var closest = point;
+            var best = float.PositiveInfinity;
+            foreach (var footprint in Footprint(_interactionCollider))
+            {
+                var candidate = footprint.ClosestPoint(point);
+                var distance = (candidate - point).sqrMagnitude;
+                if (distance >= best) continue;
+                best = distance;
+                closest = candidate;
+            }
+            return closest;
+        }
+
+        // The target's enabled solid colliders, or the interaction collider when there are none.
+        // Returns a shared buffer: read it before the next call.
+        private List<Collider2D> Footprint(Collider2D interactionCollider)
+        {
+            FootprintBuffer.Clear();
+            if (target)
+            {
+                target.GetComponentsInChildren(false, FootprintBuffer);
+                FootprintBuffer.RemoveAll(collider => collider.isTrigger || !collider.enabled);
+            }
+            if (FootprintBuffer.Count == 0) FootprintBuffer.Add(interactionCollider);
+            return FootprintBuffer;
+        }
+
+        private static bool IsOpaquePixel(SpriteRenderer renderer, Vector2 point)
+        {
+            var sprite = renderer.sprite;
+            if (!sprite) return false;
+            var bounds = renderer.bounds;
+            if (!bounds.Contains(new Vector3(point.x, point.y, bounds.center.z))) return false;
+            var local = (Vector2)renderer.transform.InverseTransformPoint(point);
+            if (renderer.flipX) local.x = -local.x;
+            if (renderer.flipY) local.y = -local.y;
+            // Sprite-rect pixels from the pivot, then into the texture, also for sprites packed into an atlas.
+            var texel = sprite.textureRect.position - sprite.textureRectOffset + local * sprite.pixelsPerUnit + sprite.pivot;
+            if (!sprite.textureRect.Contains(texel)) return false;
+            if (!sprite.texture.isReadable)
+                throw new InvalidOperationException(
+                    $"Sprite '{sprite.name}' on '{renderer.name}' needs a readable texture (Read/Write) so the pointer can hover it.");
+            return sprite.texture.GetPixel((int)texel.x, (int)texel.y).a > 0f;
+        }
+
         protected virtual void Awake()
         {
+            _interactionCollider = GetComponent<Collider2D>();
+            // The player's nearby sensor finds button-press targets on this layer only.
+            if (RequiresButtonPress && gameObject.layer != LayerMask.NameToLayer("Interactable"))
+                throw new InvalidOperationException($"Interactable '{name}' needs a button press, so it must be on the Interactable layer.");
             _visuals = GetComponent<InteractableVisuals>();
             if (NeedsSavedState && string.IsNullOrWhiteSpace(persistentId))
                 Debug.LogError($"[AbstractInteractable] '{name}' needs a stable persistent ID.", this);

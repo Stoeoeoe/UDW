@@ -92,6 +92,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Dialogue.ShowVulcanusDialogueInteractable
   requiresButtonPress: 1
+  target: {fileID: 5909159666678768742}
   UnlimitedActivations: 1
   MaxNumberOfActivations: 1
   cooldownMode: 0
@@ -107,7 +108,6 @@ MonoBehaviour:
   dialogueId: 
   options:
     CanMoveWhileTalking: 0
-    PauseGameClockWhileTalking: 1
     RotateDialogueStarterTowardsTarget: 1
     RotateTargetTowardsDialogueStarter: 1
     ReturnDialogueStarterRotationAfterDialogue: 0

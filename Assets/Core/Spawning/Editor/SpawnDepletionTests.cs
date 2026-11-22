@@ -83,6 +83,7 @@ namespace Core.Spawning.Editor
             var prefab = prefabObject.AddComponent<SpawnedObject>();
             typeof(SpawnedObject).GetField("prefabId", BindingFlags.NonPublic | BindingFlags.Instance)
                 .SetValue(prefab, "base:exhausted");
+            prefabObject.layer = LayerMask.NameToLayer("Interactable");
             prefabObject.AddComponent<BoxCollider2D>();
             var interactable = prefabObject.AddComponent<TestInteractable>();
             typeof(AbstractInteractable).GetField("UnlimitedActivations", BindingFlags.NonPublic | BindingFlags.Instance)

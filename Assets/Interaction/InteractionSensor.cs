@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Generic;
 using Character;
-using Core.Events;
 using SensorToolkit;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -8,97 +8,89 @@ using UnityEngine;
 namespace Interaction
 {
     /// <summary>
-    /// Detects nearby interactables using a single stationary RangeSensor2D.
-    /// Interactables that require a button press are additionally filtered by facing direction.
-    /// Results are cached; InteractableChangedEvent fires only on actual change.
+    /// Finds the interactables a character can use: ready ones that need a button press and whose footprint covers
+    /// the character's tile or one of the eight around it. The nearby sensor only supplies candidates.
+    /// Facing play uses <see cref="Current"/>; pointer play asks for the one under the pointer.
     /// </summary>
-    public class InteractionSensor : MonoBehaviour, IEventListener<InteractableStateChangedEvent>
+    public class InteractionSensor : MonoBehaviour
     {
+        // Targets further than this from where the character faces are never picked by facing.
+        private const float MaxFacingAngle = 90f;
+
         [SerializeField] private RangeSensor2D ambientSensor;
-        [SerializeField] private TriggerSensor2D triggerSensor;
 
         private GameCharacter _owner;
-        private bool _dirty;
+        private readonly List<AbstractInteractable> _candidates = new();
 
+        /// <summary>The usable target closest to where the character faces, then closest in distance.</summary>
         [ReadOnly] [ShowInInspector] public AbstractInteractable Current { get; private set; }
 
         public void ValidateConfiguration()
         {
             var owner = GetComponentInParent<GameCharacter>(true);
-            if (!owner || !ambientSensor || !triggerSensor)
-                throw new InvalidOperationException($"Interaction sensor '{name}' requires its character, ambient sensor and facing sensor.");
-            var ground = owner.ToolInteractionAnchor.position;
-            if (Vector3.Distance(ambientSensor.transform.position, ground) > 0.001f ||
-                Vector3.Distance(triggerSensor.transform.position, ground) > 0.001f)
-                throw new InvalidOperationException($"Character '{owner.name}' interaction sensors must pivot at its ground interaction anchor.");
+            if (!owner || !ambientSensor)
+                throw new InvalidOperationException($"Interaction sensor '{name}' requires its character and nearby sensor.");
+            if (Vector3.Distance(ambientSensor.transform.position, owner.ToolInteractionAnchor.position) > 0.001f)
+                throw new InvalidOperationException($"Character '{owner.name}' interaction sensor must pivot at its ground interaction anchor.");
         }
 
         private void Awake()
         {
             ValidateConfiguration();
             _owner = GetComponentInParent<GameCharacter>();
-            ambientSensor.OnDetected.AddListener((_, __) => _dirty = true);
-            ambientSensor.OnLostDetection.AddListener((_, __) => _dirty = true);
-            triggerSensor.OnDetected.AddListener((_, __) => _dirty = true);
-            triggerSensor.OnLostDetection.AddListener((_, __) => _dirty = true);
-        }
-
-        private void OnEnable() => EventBus<InteractableStateChangedEvent>.Subscribe(this);
-
-        private void OnDisable() => EventBus<InteractableStateChangedEvent>.Unsubscribe(this);
-
-        public void OnEvent(InteractableStateChangedEvent change) => _dirty = true;
-
-        private void Start()
-        {
-            _owner.Orientation.OnFacingDirectionChanged += RotateSensors;
-            RotateSensors(_owner.Orientation.FacingDirection);
-        }
-
-        private void RotateSensors(Vector2 characterOrientation)
-        {
-            // Rotate the trigger sensor to match the character's facing direction, so it only detects interactables in front of the character.
-            var angle = Mathf.Atan2(characterOrientation.y, characterOrientation.x) * Mathf.Rad2Deg;
-            triggerSensor.transform.localRotation = Quaternion.Euler(0, 0, angle + 90f);
-            
-            triggerSensor.Pulse();
-            _dirty = true;
         }
 
         private void LateUpdate()
         {
-            if (!_dirty) return;
-            _dirty = false;
-            Refresh();
-        }
-
-        void Refresh()
-        {
-            var next = FindBest();
+            var next = FindInFront();
             if (next == Current) return;
             Current = next;
             InteractableChangedEvent.Trigger(Current, _owner);
         }
 
-        private AbstractInteractable FindBest()
+        public AbstractInteractable FindInFront()
         {
-            // Things in the front over ambient
-            for (var i = 0; i < triggerSensor.DetectedObjectsOrderedByDistance.Count; i++)
+            var origin = (Vector2)_owner.ToolInteractionAnchor.position;
+            var facing = _owner.Orientation.FacingDirection;
+            AbstractInteractable best = null;
+            var bestAngle = float.PositiveInfinity;
+            var bestDistance = float.PositiveInfinity;
+            foreach (var candidate in Candidates())
             {
-                var go = triggerSensor.DetectedObjectsOrderedByDistance[i];
-                if (!go.TryGetComponent<AbstractInteractable>(out var ia) || !ia.CanInteract) continue;
-                return ia;
+                var offset = candidate.ClosestFootprintPoint(origin) - origin;
+                // Standing on the footprint counts as straight ahead.
+                var angle = offset.sqrMagnitude < 0.0001f ? 0f : Vector2.Angle(facing, offset);
+                if (angle > MaxFacingAngle) continue;
+                var distance = offset.sqrMagnitude;
+                if (angle > bestAngle || angle == bestAngle && distance >= bestDistance) continue;
+                best = candidate;
+                bestAngle = angle;
+                bestDistance = distance;
             }
+            return best;
+        }
 
-            // Ambient interactables
-            foreach (var go in ambientSensor.DetectedObjectsOrderedByDistance)
-            {
-                if (!go.TryGetComponent<AbstractInteractable>(out var ia) || !ia.CanInteract) continue;
-                if (ia.RequiresButtonPress) continue;
-                return ia;
-            }
+        /// <summary>The usable target under the pointer; where targets overlap, the one in front (lowest on screen).</summary>
+        public AbstractInteractable FindUnderPointer(Vector2 point)
+        {
+            AbstractInteractable best = null;
+            foreach (var candidate in Candidates())
+                if ((!best || candidate.transform.position.y < best.transform.position.y) && candidate.IsUnderPointer(point))
+                    best = candidate;
+            return best;
+        }
 
-            return null;
+        private List<AbstractInteractable> Candidates()
+        {
+            _candidates.Clear();
+            // Indoor floors and other cells may have no stored tile data, so reach uses plain coordinates.
+            if (!_owner.Tiles.HasMap) return _candidates;
+            var tile = _owner.Tiles.Coordinates;
+            foreach (var detected in ambientSensor.DetectedObjects)
+                if (detected.TryGetComponent<AbstractInteractable>(out var interactable) && interactable.RequiresButtonPress &&
+                    interactable.CanInteract && interactable.IsWithinReach(tile))
+                    _candidates.Add(interactable);
+            return _candidates;
         }
     }
 }
