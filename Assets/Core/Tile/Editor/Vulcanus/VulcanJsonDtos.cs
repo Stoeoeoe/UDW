@@ -87,6 +87,8 @@ namespace Core.Tile.Editor.Vulcanus
         // Keyed by tile-index string ("16", "17", …); sparse — missing entries are default tiles.
         [JsonProperty("tiles")] public Dictionary<string, TileMetaDto> Tiles { get; set; } = new();
         [JsonProperty("folderPath")] public string FolderPath { get; set; } = "";
+        [JsonProperty("baseTilesetId")] public string BaseTilesetId { get; set; }
+        [JsonProperty("season")] public string Season { get; set; }
     }
 
     internal class TileMetaDto

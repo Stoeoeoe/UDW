@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Tile.Vulcanus;
+using Core.TimeAndWeather;
 using Core.Tile.Water;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -54,6 +55,8 @@ namespace Core.Tile.Editor.Vulcanus
             if (texture && AssetImporter.GetAtPath(spriteSheetAssetPath) is AsepriteImporter &&
                 (texture.width < columns * tileSize || texture.height < ((tileCount + columns - 1) / columns) * tileSize))
                 throw new InvalidOperationException($"Tileset '{tilesetId}' needs a {columns * tileSize}x{((tileCount + columns - 1) / columns) * tileSize} sheet, but Aseprite imported {texture.width}x{texture.height}. Check transparent canvas cropping, frame count and texture size limits; tile indices require the original grid.");
+
+            var twinSheets = SeasonTwinSheets(ctx, tilesetId, columns, tileCount, projectAssetPath);
 
             var tiles = new VulcanusTile[tileCount];
             for (var i = 0; i < tileCount; i++)
@@ -158,6 +161,10 @@ namespace Core.Tile.Editor.Vulcanus
                 if (collisionKind == VulcanusCollisionKind.Complex && sprite != null)
                     tile.colliderType = UnityEngine.Tilemaps.Tile.ColliderType.Sprite;
 
+                if (twinSheets.Count > 0)
+                    tile.ConfigureSeasonSprites(CreateSeasonSprites(ctx, twinSheets, columns, tileSize, i, tilePivotY,
+                        collisionKind == VulcanusCollisionKind.Complex ? shapes : null));
+
                 tiles[i] = tile;
                 ctx.AddObjectToAsset($"tile_{i}", tile);
             }
@@ -168,6 +175,54 @@ namespace Core.Tile.Editor.Vulcanus
 
             ctx.AddObjectToAsset("tileset", tileset);
             ctx.SetMainObject(tileset);
+        }
+
+        // ── Season twins ──────────────────────────────────────────────────────
+
+        // The sheets of this tileset's season twins, which must share its grid.
+        private static Dictionary<Season, Texture2D> SeasonTwinSheets(AssetImportContext ctx, string tilesetId,
+            int columns, int tileCount, string projectAssetPath)
+        {
+            ctx.DependsOnCustomDependency(SeasonTwins.DependencyName);
+            var sheets = new Dictionary<Season, Texture2D>();
+            foreach (var (path, twin) in SeasonTwins.Of(tilesetId))
+            {
+                ctx.DependsOnSourceAsset(path);
+                if (!Enum.TryParse<Season>(twin.Season, true, out var season))
+                    throw new FormatException($"Season twin '{twin.Id}' has unknown season '{twin.Season}'.");
+                if (twin.Columns != columns || twin.TileCount != tileCount)
+                    throw new InvalidOperationException(
+                        $"Season twin '{twin.Id}' needs the grid of '{tilesetId}': {columns} columns and {tileCount} tiles.");
+                if (sheets.ContainsKey(season))
+                    throw new InvalidOperationException($"Tileset '{tilesetId}' has more than one {season} twin.");
+                var sheetPath = VulcanusImportHelpers.ResolveAssetReferencePath(path, twin.SpriteSheet, projectAssetPath)
+                    ?? throw new InvalidOperationException($"Season twin '{twin.Id}' requires sprite sheet '{twin.SpriteSheet}'.");
+                VulcanusImportHelpers.AddDependency(ctx, sheetPath);
+                EnsureTextureReadable(sheetPath);
+                sheets.Add(season, AssetDatabase.LoadAssetAtPath<Texture2D>(sheetPath));
+            }
+            return sheets;
+        }
+
+        // A tile's sprite per season, where the twin's tile has visible pixels; it collides like the base tile.
+        private static Sprite[] CreateSeasonSprites(AssetImportContext ctx, Dictionary<Season, Texture2D> twinSheets,
+            int columns, int tileSize, int tileIndex, float pivotY, VulcanusTile.CollisionShape[] complexShapes)
+        {
+            var sprites = new Sprite[Enum.GetValues(typeof(Season)).Length];
+            foreach (var (season, sheet) in twinSheets)
+            {
+                var sprite = CreateSpriteForTile(sheet, columns, tileSize, tileIndex, pivotY);
+                if (sprite == null) continue;
+                sprite.name = $"sprite_{tileIndex:D4}_{season}";
+                if (complexShapes is { Length: > 0 })
+                {
+                    var physicsShapes = BuildPhysicsShapesForSprite(complexShapes, tileSize);
+                    if (physicsShapes.Count > 0) sprite.OverridePhysicsShape(physicsShapes);
+                }
+                ctx.AddObjectToAsset(sprite.name, sprite);
+                sprites[(int)season] = sprite;
+            }
+            return sprites;
         }
 
         // ── Sprite physics shapes ─────────────────────────────────────────────

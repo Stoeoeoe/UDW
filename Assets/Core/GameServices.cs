@@ -13,6 +13,7 @@ using Core.Scripting;
 using Core.Shops;
 using Core.Routines;
 using Core.Spawning;
+using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
 using Interaction.Dialog;
 using Plants;
@@ -43,6 +44,7 @@ namespace Core
             builder.Register<PlayerStateManager>(Lifetime.Singleton);
             // Frame callbacks are declared as interfaces; the scope's entry-point dispatcher drives them.
             builder.Register<GameClock>(Lifetime.Singleton).AsSelf().As<IStartable>().As<ITickable>();
+            builder.Register<SeasonalTiles>(Lifetime.Singleton).As<IStartable>();
             builder.Register<PlayerInteractionContext>(Lifetime.Singleton).AsSelf().As<ILateTickable>();
             builder.Register<ItemManager>(Lifetime.Singleton);
             builder.Register<PlantManager>(Lifetime.Singleton);

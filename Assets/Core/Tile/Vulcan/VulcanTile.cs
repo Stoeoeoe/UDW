@@ -1,5 +1,7 @@
 using System;
+using Core.TimeAndWeather;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace Core.Tile.Vulcanus
 {
@@ -39,6 +41,8 @@ namespace Core.Tile.Vulcanus
         [SerializeField] private float pivotY = 1f;
         [SerializeField] private int navigationCost; // 0 = not set; authored range is 1..100
         [SerializeField] private CollisionShape[] collisionShapes = Array.Empty<CollisionShape>();
+        // By Season, from the tileset's season twins; null (or no entry) draws the base sprite in that season.
+        [SerializeField] private Sprite[] seasonSprites = Array.Empty<Sprite>();
 
         [Serializable]
         public class VulcanusTileProperty
@@ -87,6 +91,21 @@ namespace Core.Tile.Vulcanus
             navigationCost = tileNavigationCost;
             collisionShapes = tileCollisionShapes ?? Array.Empty<CollisionShape>();
             colliderType = collision == VulcanusCollisionKind.None ? ColliderType.None : ColliderType.Grid;
+        }
+
+        /// <summary>The sprite a season twin draws this tile with, or null when the season draws the base sprite.</summary>
+        public Sprite SeasonSprite(Season season)
+        {
+            var sprite = (int)season < seasonSprites.Length ? seasonSprites[(int)season] : null;
+            return sprite ? sprite : null; // an empty serialized slot is not a C# null
+        }
+
+        public void ConfigureSeasonSprites(Sprite[] sprites) => seasonSprites = sprites;
+
+        public override void GetTileData(Vector3Int position, ITilemap tilemap, ref UnityEngine.Tilemaps.TileData tileData)
+        {
+            base.GetTileData(position, tilemap, ref tileData);
+            if (TileSeason.Current is { } season && SeasonSprite(season) is { } seasonal) tileData.sprite = seasonal;
         }
 
         public bool TryGetNavigationCost(out int cost)

@@ -591,6 +591,55 @@ namespace Core.Tile.Editor
             Assert.That(AssetDatabase.LoadAllAssetsAtPath(_mapPath).OfType<Texture2D>(), Is.Empty);
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void ASeasonTwinRedrawsTilesAndObjectsInItsSeasonUnlessItsTileIsTransparent(bool drawn)
+        {
+            var sheet = WriteSheet("winter.png", drawn ? Color.white : Color.clear);
+            WriteAndImport(_root + "/winter.vts", "{\"id\":\"test:tiles_winter\",\"spriteSheet\":\"winter.png\",\"columns\":1," +
+                "\"tileCount\":1,\"tiles\":{},\"baseTilesetId\":\"test:tiles\",\"season\":\"winter\"}");
+            Reimport(_tilesetPath, _objectPath);
+            var tile = AssetDatabase.LoadAssetAtPath<VulcanusTilesetAsset>(_tilesetPath).Tiles[0];
+            var prefab = AssetDatabase.LoadAssetAtPath<VulcanusObjectAsset>(_objectPath).Prefab;
+            Assert.That(tile.SeasonSprite(Core.TimeAndWeather.Season.Summer), Is.Null);
+            if (!drawn)
+            {
+                Assert.That(tile.SeasonSprite(Core.TimeAndWeather.Season.Winter), Is.Null);
+                Assert.That(prefab.GetComponent<SeasonalSprite>(), Is.Null);
+                return;
+            }
+            var winter = tile.SeasonSprite(Core.TimeAndWeather.Season.Winter);
+            Assert.That(winter.texture, Is.SameAs(sheet));
+            Assert.That(prefab.GetComponent<SeasonalSprite>(), Is.Not.Null);
+            var data = new UnityEngine.Tilemaps.TileData();
+            try
+            {
+                TileSeason.Set(Core.TimeAndWeather.Season.Winter);
+                tile.GetTileData(Vector3Int.zero, null, ref data);
+                Assert.That(data.sprite, Is.SameAs(winter));
+                TileSeason.Set(null);
+                tile.GetTileData(Vector3Int.zero, null, ref data);
+                Assert.That(data.sprite, Is.SameAs(tile.sprite));
+            }
+            finally { TileSeason.Set(null); }
+        }
+
+        [Test]
+        public void ASeasonTwinWithAnotherGridFailsItsBaseTilesetImport()
+        {
+            WriteSheet("winter.png", Color.white);
+            File.WriteAllText(Absolute(_root + "/winter.vts"), "{\"id\":\"test:tiles_winter\",\"spriteSheet\":\"winter.png\",\"columns\":2," +
+                "\"tileCount\":2,\"tiles\":{},\"baseTilesetId\":\"test:tiles\",\"season\":\"winter\"}");
+            var errors = new List<string>();
+            Application.LogCallback capture = (text, stack, type) => { if (type == LogType.Error) errors.Add(text); };
+            var previous = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            Application.logMessageReceived += capture;
+            try { Reimport(_root + "/winter.vts", _tilesetPath); }
+            finally { Application.logMessageReceived -= capture; LogAssert.ignoreFailingMessages = previous; }
+            Assert.That(errors.Any(error => error.Contains("needs the grid of 'test:tiles'")), Is.True, string.Join(System.Environment.NewLine, errors));
+        }
+
         [Test]
         public void TilesetImportsNavigationCostAndLeavesAbsentCostsUnset()
         {
@@ -996,6 +1045,29 @@ namespace Core.Tile.Editor
         }
 
         private LocationData ImportedLocation() => AssetDatabase.LoadAllAssetsAtPath(_mapPath).OfType<LocationData>().Single();
+
+        // A readable one-tile sheet filled with one colour.
+        private Texture2D WriteSheet(string name, Color color)
+        {
+            var path = _root + "/" + name;
+            var texture = new Texture2D(16, 16);
+            texture.SetPixels(Enumerable.Repeat(color, 256).ToArray());
+            texture.Apply();
+            File.WriteAllBytes(Absolute(path), texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.isReadable = true;
+            importer.filterMode = FilterMode.Point;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        private static void Reimport(params string[] paths)
+        {
+            foreach (var path in paths)
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        }
 
         private static void WriteAndImport(string path, string json)
         {

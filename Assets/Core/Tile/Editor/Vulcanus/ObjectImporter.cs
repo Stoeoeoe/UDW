@@ -4,6 +4,7 @@ using System.Linq;
 using Character;
 using Core.Tile.Vulcanus;
 using Core.Tile.Water;
+using Core.TimeAndWeather;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -41,9 +42,18 @@ namespace Core.Tile.Editor.Vulcanus
                 var maxY = tiles.Max(t => t.y);
                 widthTiles = maxX - minX + 1;
                 heightTiles = maxY - minY + 1;
-                var sprite = BakeSprite(ctx, tiles, tileset, minX, maxY, widthTiles, heightTiles, dto.Name);
+                var sprite = BakeSprite(ctx, tiles, tileset, tile => tile.sprite, minX, maxY, widthTiles, heightTiles,
+                    dto.Name + "_baked");
                 prefab = BuildObjectPrefab(tiles, tileset.Tiles, minX, maxX, minY, maxY, widthTiles, heightTiles, sprite, dto.Name);
                 prefab.name = dto.Name + "_prefab";
+                // A season redraws the object when its twin redraws any of the object's tiles.
+                var seasonSprites = new Sprite[Enum.GetValues(typeof(Season)).Length];
+                foreach (Season season in Enum.GetValues(typeof(Season)))
+                    if (tiles.Any(t => tileset.TryGetTile(t.tileIndex, out var tile) && tile.SeasonSprite(season)))
+                        seasonSprites[(int)season] = BakeSprite(ctx, tiles, tileset, tile => tile.SeasonSprite(season) ?? tile.sprite,
+                            minX, maxY, widthTiles, heightTiles, $"{dto.Name}_{season}");
+                if (seasonSprites.Any(seasonSprite => seasonSprite))
+                    prefab.AddComponent<SeasonalSprite>().Configure(prefab.GetComponent<SpriteRenderer>(), seasonSprites);
                 ctx.AddObjectToAsset(prefab.name, prefab);
             }
 
@@ -54,13 +64,13 @@ namespace Core.Tile.Editor.Vulcanus
             ctx.SetMainObject(asset);
         }
 
-        // Copies the object's tiles from the sheet into one texture, with the pivot at the bottom-centre.
+        // Copies the sprites that pick chooses for the object's tiles into one texture, with the pivot at the
+        // bottom-centre. Tiles without a sprite are fully transparent.
         private static Sprite BakeSprite(AssetImportContext ctx, VulcanusObjectAsset.ObjectTile[] tiles,
-            VulcanusTilesetAsset tileset, int minX, int maxY, int widthTiles, int heightTiles, string name)
+            VulcanusTilesetAsset tileset, Func<VulcanusTile, Sprite> pick, int minX, int maxY, int widthTiles,
+            int heightTiles, string name)
         {
-            var texture = tileset.SpriteSheet;
             var tileSize = tileset.TileSize;
-            var columns = tileset.Columns;
             var bakeWidth = widthTiles * tileSize;
             var bakeHeight = heightTiles * tileSize;
             var baked = new Texture2D(bakeWidth, bakeHeight, TextureFormat.RGBA32, false);
@@ -68,13 +78,10 @@ namespace Core.Tile.Editor.Vulcanus
 
             foreach (var t in tiles)
             {
-                var col = t.tileIndex % columns;
-                var row = t.tileIndex / columns;
-                var srcX = col * tileSize;
-                var srcY = texture.height - (row + 1) * tileSize;
-                if (srcX < 0 || srcY < 0 || srcX + tileSize > texture.width || srcY + tileSize > texture.height)
-                    continue;
-                var pixels = texture.GetPixels(srcX, srcY, tileSize, tileSize);
+                var source = tileset.TryGetTile(t.tileIndex, out var tile) ? pick(tile) : null;
+                if (!source) continue;
+                var rect = source.rect;
+                var pixels = source.texture.GetPixels((int)rect.x, (int)rect.y, tileSize, tileSize);
                 var dstX = (t.x - minX) * tileSize;
                 var dstY = (maxY - t.y) * tileSize;
                 baked.SetPixels(dstX, dstY, tileSize, tileSize, pixels);
@@ -82,11 +89,11 @@ namespace Core.Tile.Editor.Vulcanus
 
             baked.Apply();
             baked.filterMode = FilterMode.Point;
-            baked.name = name + "_bakedTexture";
+            baked.name = name + "Texture";
 
             var sprite = Sprite.Create(baked, new Rect(0, 0, bakeWidth, bakeHeight),
                 new Vector2(0.5f, 0f), tileSize, 0, SpriteMeshType.FullRect);
-            sprite.name = name + "_bakedSprite";
+            sprite.name = name + "Sprite";
 
             ctx.AddObjectToAsset(baked.name, baked);
             ctx.AddObjectToAsset(sprite.name, sprite);
