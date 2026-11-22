@@ -8,6 +8,7 @@ import { CompactInput, CompactSelect, CompactTextarea, Field } from '../../commo
 import { CaptionText, SectionLabel } from '../../common/Typography';
 import { TagsField } from '../../common/TagsField';
 import { ObjectPreview, ObjectSheetPicker } from './ObjectCanvases';
+import { isSeasonTwin } from '../../../lib/seasons';
 import type { ObjectDefinition } from '../../../types/object';
 
 export function ObjectEditor({ objectId }: { objectId: string }) {
@@ -104,11 +105,13 @@ function ObjectWorkspace({ object }: { object: ObjectDefinition }) {
           onChange={(e) => update(object.id, { tilesetId: e.target.value, tiles: [] })}
         >
           {!tileset && <option value={object.tilesetId}>{object.tilesetId}</option>}
-          {[...tilesets.values()].map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {entry.name}
-            </option>
-          ))}
+          {[...tilesets.values()]
+            .filter((entry) => !isSeasonTwin(entry))
+            .map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.name}
+              </option>
+            ))}
         </CompactSelect>
       </Field>
       <HStack justify="space-between">

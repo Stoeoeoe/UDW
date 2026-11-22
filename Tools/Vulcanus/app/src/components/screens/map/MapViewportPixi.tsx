@@ -364,7 +364,9 @@ export const MapViewportPixi: React.FC = () => {
         renderHover();
       }
       const mapChanged = state.currentMap !== prevState.currentMap;
-      const variationChanged = state.activeVariationId !== prevState.activeVariationId;
+      const variationChanged =
+        state.activeVariationId !== prevState.activeVariationId ||
+        state.previewSeason !== prevState.previewSeason;
 
       if (mapChanged || variationChanged) {
         // Check which sub-parts of the map changed to avoid unnecessary redraws

@@ -4,13 +4,17 @@ import { AddIcon, MinusIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../store/useEditorStore';
 import { TilesetCanvas } from './TilesetCanvas';
 import { useTileSelection } from '../../hooks/useTileSelection';
+import { isSeasonTwin } from '../../lib/seasons';
 
 interface TilesetPaletteProps {
   enableMultiSelect?: boolean;
 }
 
 export const TilesetPalette: React.FC<TilesetPaletteProps> = ({ enableMultiSelect = false }) => {
-  const tilesets = Array.from(useEditorStore((state) => state.tilesets).values());
+  // Maps place base tilesets; their season twins only redraw them.
+  const tilesets = Array.from(useEditorStore((state) => state.tilesets).values()).filter(
+    (tileset) => !isSeasonTwin(tileset),
+  );
   const activeTilesetId = useEditorStore((state) => state.activeTilesetId);
   const setActiveTileset = useEditorStore((state) => state.setActiveTileset);
 

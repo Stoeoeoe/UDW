@@ -3,11 +3,14 @@ import { Flex, HStack, IconButton, Select, Text, Tooltip, useDisclosure } from '
 import { AddIcon, EditIcon } from '@chakra-ui/icons';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { CreateVariationDialog } from './CreateVariationDialog';
+import { SEASONS, SEASON_NAMES, type Season } from '../../../lib/seasons';
 
 export const VariationManager: React.FC = () => {
   const currentMap = useEditorStore((state) => state.currentMap);
   const activeVariationId = useEditorStore((state) => state.activeVariationId);
   const setActiveVariation = useEditorStore((state) => state.setActiveVariation);
+  const previewSeason = useEditorStore((state) => state.previewSeason);
+  const setPreviewSeason = useEditorStore((state) => state.setPreviewSeason);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const variations = useMemo(() => currentMap?.variations || [], [currentMap?.variations]);
@@ -131,6 +134,47 @@ export const VariationManager: React.FC = () => {
               onClick={onOpen}
             />
           </Tooltip>
+        </HStack>
+      </Flex>
+
+      <Flex
+        px="3"
+        py="2"
+        borderBottom="1px"
+        borderColor="editorShellBorder"
+        align="center"
+        bg="editorSectionBg"
+      >
+        <HStack spacing={2} align="center">
+          <Text
+            fontSize="10px"
+            fontWeight="black"
+            textTransform="uppercase"
+            letterSpacing="widest"
+            color="gray.500"
+          >
+            Season
+          </Text>
+          <Select
+            aria-label="Season"
+            size="xs"
+            value={previewSeason ?? ''}
+            onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+              setPreviewSeason((event.target.value as Season) || null)
+            }
+            bg="editorSectionBg"
+            borderColor="transparent"
+            color="gray.300"
+            width="180px"
+            title="Draws tiles from season twin tilesets"
+          >
+            <option value="">No season</option>
+            {SEASONS.map((season) => (
+              <option key={season} value={season}>
+                {SEASON_NAMES[season]}
+              </option>
+            ))}
+          </Select>
         </HStack>
       </Flex>
 

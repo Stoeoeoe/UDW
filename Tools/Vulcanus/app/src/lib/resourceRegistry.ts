@@ -198,6 +198,7 @@ function normalizeTileset(tileset: Tileset, prefix: string): Tileset {
   return {
     ...tileset,
     id: qualifyResourceId(tileset.id, prefix),
+    baseTilesetId: resourceReference(tileset.baseTilesetId, prefix),
     tiles:
       tileset.tiles &&
       Object.fromEntries(

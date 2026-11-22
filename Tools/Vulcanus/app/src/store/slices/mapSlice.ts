@@ -11,7 +11,7 @@ import {
 } from '../../lib/resourceIds';
 import { castDraft } from 'immer';
 import { StateCreator } from 'zustand';
-import { Anchor, Map as GameMap, LocationLink } from '../../types/schema';
+import { Anchor, Map as GameMap, LocationLink, type Season } from '../../types/schema';
 import { fileSystem } from '../../lib/fileSystem';
 import { serializeMap } from '../../lib/mapMigration';
 import { DEFAULT_LINK_FACING } from '../../lib/locationLinkUtils';
@@ -63,7 +63,10 @@ export interface MapSlice {
   currentMap: GameMap | null;
   currentMapPath: string | null;
   activeVariationId: string | null;
+  /** The season maps are drawn in, through season twin tilesets; null draws the base tilesets. Not saved. */
+  previewSeason: Season | null;
 
+  setPreviewSeason: (season: Season | null) => void;
   setCurrentMap: (map: GameMap | null) => void;
   loadMap: (mapId: string) => void;
   createNewMap: (
@@ -84,7 +87,12 @@ export const createMapSlice: ImmerStateCreator<MapSlice> = (set, get) => ({
   currentMap: null,
   currentMapPath: null,
   activeVariationId: null,
+  previewSeason: null,
 
+  setPreviewSeason: (season) =>
+    set((state) => {
+      state.previewSeason = season;
+    }),
   setCurrentMap: (map) =>
     withHistorySuppressed(
       () =>

@@ -12,6 +12,7 @@ import { bresenhamLine, circularBrush } from '../../../lib/algorithms';
 import { shapeToNormalizedPolygon } from '../../../lib/collisionUtils';
 import { getIconTexture } from '../../../lib/iconRaster';
 import { getWaterBitmap } from '../../../lib/waterMaskCache';
+import { seasonalTileset } from '../../../lib/seasons';
 import {
   computeNavigationCostGrid,
   navigationCostTint,
@@ -782,11 +783,20 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
   // Render tiles
   const renderTiles = useCallback(() => {
     const tileContainer = tileContainerRef.current;
-    const { currentMap, activeVariationId, tilesets, objects, selectedObjectInstanceId } =
-      useEditorStore.getState();
+    const {
+      currentMap,
+      activeVariationId,
+      tilesets,
+      objects,
+      selectedObjectInstanceId,
+      previewSeason,
+      loadedSprites,
+    } = useEditorStore.getState();
     const objectIndex = indexObjects(objects);
     const tileSize = projectTileSize;
     if (!tileContainer || !currentMap) return;
+    const inSeason = (tileset: Tileset, tileIndex: number) =>
+      seasonalTileset(tilesets, tileset, tileIndex, previewSeason, loadedSprites, tileSize);
 
     const effectiveMap = resolveMapContext(currentMap, activeVariationId);
 
@@ -844,6 +854,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
                   const suffixed = tilesets.get(`${tile.tilesetId}${variation.tilesetSuffix}`);
                   if (suffixed) effectiveTileset = suffixed;
                 }
+                effectiveTileset = inSeason(effectiveTileset, tile.tileIndex);
 
                 const texture = getTileTexture(
                   effectiveTileset.spriteSheet,
@@ -904,6 +915,7 @@ export function useMapRenderer({ viewport, onSceneChange }: UseMapRendererProps)
                 const suffixed = tilesets.get(`${resolvedBaseTilesetId}${variation.tilesetSuffix}`);
                 if (suffixed) effectiveTileset = suffixed;
               }
+              effectiveTileset = inSeason(effectiveTileset, index);
 
               const texture = getTileTexture(
                 effectiveTileset.spriteSheet,

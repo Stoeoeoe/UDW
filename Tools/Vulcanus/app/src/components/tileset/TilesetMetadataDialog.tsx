@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
-import { Button, FormControl, HStack, Input, Text, VStack, useToast } from '@chakra-ui/react';
+import {
+  Button,
+  FormControl,
+  HStack,
+  Input,
+  Select,
+  Text,
+  VStack,
+  useToast,
+} from '@chakra-ui/react';
 import { EditorModal } from '../common/EditorModal';
-import { Tileset } from '../../types/schema';
+import { Season, Tileset } from '../../types/schema';
+import { SEASONS, SEASON_NAMES, isSeasonTwin, seasonTwinMismatch } from '../../lib/seasons';
 import { fileSystem } from '../../lib/fileSystem';
 import { useEditorStore } from '../../store/useEditorStore';
 import { resolveSpriteAsset } from '../../lib/asepriteUtils';
@@ -22,6 +32,11 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
   const [name, setName] = useState(tileset.name);
   const [spritePath, setSpritePath] = useState(tileset.spriteSheet);
   const [columns, setColumns] = useState(tileset.columns);
+  const [baseTilesetId, setBaseTilesetId] = useState(tileset.baseTilesetId ?? '');
+  const [season, setSeason] = useState<Season>(tileset.season ?? 'spring');
+  const bases = Array.from(useEditorStore((s) => s.tilesets).values()).filter(
+    (candidate) => candidate.id !== tileset.id && !isSeasonTwin(candidate),
+  );
   const [isProcessing, setProcessing] = useState(false);
   const toast = useToast();
 
@@ -88,7 +103,15 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
         spriteSheet: spritePath,
         columns: finalColumns,
         tileCount: Math.max(1, finalColumns * rows),
+        baseTilesetId: baseTilesetId || undefined,
+        season: baseTilesetId ? season : undefined,
       };
+      const base = bases.find((candidate) => candidate.id === baseTilesetId);
+      const mismatch = base && seasonTwinMismatch(updated as Tileset, base);
+      if (mismatch) {
+        toast({ title: 'Not saved', description: mismatch, status: 'error' });
+        return;
+      }
 
       await updateTileset(tileset.id, updated);
 
@@ -158,6 +181,46 @@ export const TilesetMetadataDialog: React.FC<Props> = ({ isOpen, onClose, tilese
               bg="editorPanelBg"
               borderColor="editorBorderLight"
             />
+          </FormControl>
+
+          <FormControl>
+            <MutedFieldLabel>Season twin of</MutedFieldLabel>
+            <HStack>
+              <Select
+                aria-label="Season twin of"
+                value={baseTilesetId}
+                onChange={(e) => setBaseTilesetId(e.target.value)}
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
+              >
+                <option value="">Not a season twin</option>
+                {bases.map((base) => (
+                  <option key={base.id} value={base.id}>
+                    {base.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                aria-label="Season"
+                value={season}
+                onChange={(e) => setSeason(e.target.value as Season)}
+                isDisabled={!baseTilesetId}
+                bg="editorPanelBg"
+                borderColor="editorBorderLight"
+                w="40%"
+              >
+                {SEASONS.map((each) => (
+                  <option key={each} value={each}>
+                    {SEASON_NAMES[each]}
+                  </option>
+                ))}
+              </Select>
+            </HStack>
+            <Text color="gray.500" fontSize="xs" mt={1}>
+              In that season, maps draw the base tileset&apos;s tiles from this sheet, except where
+              a tile here is fully transparent. Collision, cost and terrain stay the base
+              tileset&apos;s.
+            </Text>
           </FormControl>
 
           <HStack justify="flex-end">

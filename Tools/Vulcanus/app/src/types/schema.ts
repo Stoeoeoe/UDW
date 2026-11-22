@@ -83,7 +83,13 @@ export interface Tileset extends NamedEditorResource {
   tileCount: number; // Total number of tiles
   tiles: Record<number, TileDefinition>; // Keyed by tile index (integer)
   wangSets?: WangSet[]; // Modern autotiling logic (Tiled-compatible)
+  /** Set on a season twin: the tileset whose tiles this one redraws in {@link season}. */
+  baseTilesetId?: string;
+  season?: Season;
 }
+
+/** A season of the game year; season twin tilesets redraw a base tileset for one. */
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 
 export interface TilesetObjectTile {
   x: number; // Relative tile offset from the object's top-left origin

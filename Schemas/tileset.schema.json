@@ -14,6 +14,10 @@
     "tiles"
   ],
   "additionalProperties": false,
+  "dependencies": {
+    "baseTilesetId": ["season"],
+    "season": ["baseTilesetId"]
+  },
   "properties": {
     "version": {
       "type": "integer",
@@ -60,6 +64,16 @@
     "folderPath": {
       "type": "string",
       "description": "Virtual folder path for workspace organization (e.g. 'Environment/Forest'). Empty string or absent = root."
+    },
+    "baseTilesetId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*:[a-z0-9](?:[a-z0-9_.-]*[a-z0-9_-])?$",
+      "description": "Makes this tileset a season twin: in its season, maps draw a tile of this base tileset from this sheet instead, unless the tile here is fully transparent. Needs the same columns and tile count as the base; collision, cost and terrain always come from the base."
+    },
+    "season": {
+      "type": "string",
+      "enum": ["spring", "summer", "autumn", "winter"],
+      "description": "The season a season twin redraws its base tileset for."
     },
     "$schema": {
       "type": "string"
