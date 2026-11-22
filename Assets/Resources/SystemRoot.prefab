@@ -2405,19 +2405,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI.Hud.InteractionPromptPresenter
   mouse:
   - {fileID: -4156247463131373841, guid: c02b5447c822b0b4681b5292cfbbea83, type: 3}
+  keyboard:
   - {fileID: -6837806662979014076, guid: c02b5447c822b0b4681b5292cfbbea83, type: 3}
   xbox:
-  keyboard:
   - {fileID: 246077574704974851, guid: 85c1a4e5795085d47ace625b2faf3e81, type: 3}
   playStation:
   - {fileID: -7621540373723568720, guid: 26f309acf3278d5419d59ce3c14704e4, type: 3}
   nintendoSwitch:
   - {fileID: 1254774588608704883, guid: c9315977c33b87040a4cf0869fcd2f1a, type: 3}
   worldGap: 0.25
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
 --- !u!1 &1124810803398170432
 GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
@@ -7169,9 +7169,9 @@ GameObject:
   m_Component:
   - component: {fileID: 78512998734796768}
   - component: {fileID: 5518026159560976228}
+  - component: {fileID: 6663335756228956678}
   m_Layer: 0
   m_Name: PointerManager
-  - component: {fileID: 6663335756228956678}
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7223,10 +7223,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Highlight.InteractionHighlighter
   highlightMaterial: {fileID: 2100000, guid: 29120cadcdfef10499784131c610e4d9, type: 2}
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
 --- !u!1 &2516256580491792791
 GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
