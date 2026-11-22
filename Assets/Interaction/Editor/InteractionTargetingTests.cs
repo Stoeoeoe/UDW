@@ -4,7 +4,6 @@ using Core.Common.Editor;
 using Core.Context;
 using Core.Tile;
 using NUnit.Framework;
-using SensorToolkit;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using static Core.Common.Editor.Reflect;
@@ -48,7 +47,7 @@ namespace Interaction.Editor
 
             _player = Game.CreatePlayer();
             GameTestFixture.PlaceCharacterAtGroundPoint(_player, new Vector3(0.5f, 0.5f));
-            _player.transform.parent.gameObject.SetActive(true); // The nearby sensor only pulses while active.
+            _player.transform.parent.gameObject.SetActive(true); // Physics queries find only active colliders.
             _player.Tiles.EnterLocation(map);
             _sensor = _player.InteractionSensor;
             Game.Wake(_sensor);
@@ -171,11 +170,7 @@ namespace Interaction.Editor
             return _sensor.FindUnderPointer(point);
         }
 
-        private void Pulse()
-        {
-            Physics2D.SyncTransforms();
-            _player.GetComponentInChildren<RangeSensor2D>().Pulse();
-        }
+        private static void Pulse() => Physics2D.SyncTransforms();
 
         // An interactable on a tile: its trigger, a one-tile sprite and a small solid body at the tile's bottom.
         private TargetingProbe Probe(Vector2Int tile, float triggerSize = 0.8f)

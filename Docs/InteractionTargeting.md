@@ -17,7 +17,8 @@ solid (non-trigger) colliders. Without any, it is the interaction collider.
 - **Gamepad:** the interactable closest to the facing direction (at most 90° away), then
   the nearest. The direction is measured to the closest point of its footprint.
 
-`InteractionSensor` makes both picks from the candidates its nearby sensor detects.
+`InteractionSensor` makes both picks from the interaction colliders on the Interactable layer
+within two units of the player's ground anchor (a `Physics2D.OverlapCircle`).
 `PlayerInteractionContextSnapshot.ActionableInteractable` is the result.
 
 ## Authoring
@@ -31,8 +32,11 @@ interaction collider is then used for both hovering and reach.
 Select an interactable to see its gizmo. Cyan shows what the pointer hovers (sprite bounds,
 or the interaction collider) and yellow shows the footprint.
 
-Hovered sprites need **Read/Write** enabled on their texture. A sprite without it fails with
-an error that names the sprite when the pointer reaches it. Crops set their target in code
+Target art must be readable (**Read/Write**), use the **Full Rect** sprite mesh type and the
+default lit sprite material; button-press interactables must be on the **Interactable** layer.
+`InteractableConfigurationValidation` checks this for prefabs, plant data and the open scenes
+when you enter Play Mode (and stops it, listing every problem), and for builds; a test runs it
+over the authored prefabs and plants. Crops set their target in code
 (`PlantHarvestInteractable.Bind`), because their art is created at runtime.
 
 ## Highlight

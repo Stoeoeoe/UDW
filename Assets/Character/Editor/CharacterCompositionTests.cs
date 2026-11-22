@@ -4,7 +4,6 @@ using Core.Common.Editor;
 using Core.Tile;
 using Interaction.Tools;
 using NUnit.Framework;
-using SensorToolkit;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -41,16 +40,6 @@ namespace Character.Editor
             var groundPoint = body.transform.TransformPoint(body.offset);
             Assert.That(Vector3.Distance(_character.ToolInteractionAnchor.position, groundPoint), Is.LessThan(0.001f),
                 "Tool targeting must start at the character's ground footprint, rather than above the character.");
-        }
-
-        [Test]
-        public void InteractionSensorPivotsAtTheSameGroundPointAsTargeting()
-        {
-            var ground = _character.ToolInteractionAnchor.position;
-            var ambient = _character.GetComponentInChildren<RangeSensor2D>(true);
-            Assert.That(Vector3.Distance(ambient.transform.position, ground), Is.LessThan(0.001f));
-            ambient.transform.localPosition += Vector3.up;
-            Assert.Throws<InvalidOperationException>(_character.InteractionSensor.ValidateConfiguration);
         }
 
         [Test]

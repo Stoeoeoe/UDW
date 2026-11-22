@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Character;
-using SensorToolkit;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -9,17 +8,19 @@ namespace Interaction
 {
     /// <summary>
     /// Finds the interactables a character can use: ready ones that need a button press and whose footprint covers
-    /// the character's tile or one of the eight around it. The nearby sensor only supplies candidates.
+    /// the character's tile or one of the eight around it. A physics query around the character supplies candidates.
     /// Facing play uses <see cref="Current"/>; pointer play asks for the one under the pointer.
     /// </summary>
     public class InteractionSensor : MonoBehaviour
     {
         // Targets further than this from where the character faces are never picked by facing.
         private const float MaxFacingAngle = 90f;
-
-        [SerializeField] private RangeSensor2D ambientSensor;
+        // Any interaction collider reaching into the 3x3 tiles around the character is within this distance.
+        private const float CandidateRadius = 2f;
 
         private GameCharacter _owner;
+        private ContactFilter2D _interactables;
+        private readonly List<Collider2D> _hits = new();
         private readonly List<AbstractInteractable> _candidates = new();
 
         /// <summary>The usable target closest to where the character faces, then closest in distance.</summary>
@@ -27,17 +28,17 @@ namespace Interaction
 
         public void ValidateConfiguration()
         {
-            var owner = GetComponentInParent<GameCharacter>(true);
-            if (!owner || !ambientSensor)
-                throw new InvalidOperationException($"Interaction sensor '{name}' requires its character and nearby sensor.");
-            if (Vector3.Distance(ambientSensor.transform.position, owner.ToolInteractionAnchor.position) > 0.001f)
-                throw new InvalidOperationException($"Character '{owner.name}' interaction sensor must pivot at its ground interaction anchor.");
+            if (!GetComponentInParent<GameCharacter>(true))
+                throw new InvalidOperationException($"Interaction sensor '{name}' must belong to a character.");
         }
 
         private void Awake()
         {
             ValidateConfiguration();
             _owner = GetComponentInParent<GameCharacter>();
+            // Interaction colliders are triggers on the Interactable layer.
+            _interactables = new ContactFilter2D
+                { useLayerMask = true, layerMask = LayerMask.GetMask("Interactable"), useTriggers = true };
         }
 
         private void LateUpdate()
@@ -86,9 +87,10 @@ namespace Interaction
             // Indoor floors and other cells may have no stored tile data, so reach uses plain coordinates.
             if (!_owner.Tiles.HasMap) return _candidates;
             var tile = _owner.Tiles.Coordinates;
-            foreach (var detected in ambientSensor.DetectedObjects)
-                if (detected.TryGetComponent<AbstractInteractable>(out var interactable) && interactable.RequiresButtonPress &&
-                    interactable.CanInteract && interactable.IsWithinReach(tile))
+            Physics2D.OverlapCircle(_owner.ToolInteractionAnchor.position, CandidateRadius, _interactables, _hits);
+            foreach (var hit in _hits)
+                if (hit.TryGetComponent<AbstractInteractable>(out var interactable) && !_candidates.Contains(interactable) &&
+                    interactable.RequiresButtonPress && interactable.CanInteract && interactable.IsWithinReach(tile))
                     _candidates.Add(interactable);
             return _candidates;
         }
