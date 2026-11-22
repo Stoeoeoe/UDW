@@ -25,7 +25,8 @@ namespace Core.Tile.Vulcanus
 
         private void OnDisable() => TileSeason.Changed -= Apply;
 
-        private void Apply()
+        /// <summary>Shows the sprite for <see cref="TileSeason.Current"/>; the editor calls it where OnEnable does not run.</summary>
+        public void Apply()
         {
             var season = TileSeason.Current;
             target.sprite = season is { } current && seasonSprites[(int)current] ? seasonSprites[(int)current] : baseSprite;
