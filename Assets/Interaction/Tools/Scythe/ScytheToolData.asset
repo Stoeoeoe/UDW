@@ -18,13 +18,14 @@ MonoBehaviour:
   <Icon>k__BackingField: {fileID: 4854329587640585295, guid: 2621113b4d4dc8642a0eb2eaabe25aab, type: 3}
   <Description>k__BackingField: Harvest crops that are ready for cutting.
   <MaxStackSize>k__BackingField: 1
+  <PreventDropping>k__BackingField: 1
   <BuyBasePrice>k__BackingField: 0
   <SellBasePrice>k__BackingField: 0
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
   <PickupSound>k__BackingField: {fileID: 0}
-  <PreventDropping>k__BackingField: 1
   <MaxCharge>k__BackingField: 0
   <ChargePerUsage>k__BackingField: 0
+  <ChargeColor>k__BackingField: {r: 0.18, g: 0.55, b: 0.9, a: 1}
   <StaminaCost>k__BackingField: 5
   <ConsumeStaminaOnFailure>k__BackingField: 0
   <IsInInventory>k__BackingField: 1
@@ -35,6 +36,8 @@ MonoBehaviour:
     AffectedTileOffsets:
     - {x: 0, y: 1}
     IsGlobalEffect: 0
+  <Targeting>k__BackingField: 0
+  <PointerRange>k__BackingField: 3
   <PrepareUseUpAnimationClip>k__BackingField: {fileID: 0}
   <PrepareUseRightAnimationClip>k__BackingField: {fileID: 0}
   <PrepareUseDownAnimationClip>k__BackingField: {fileID: 0}

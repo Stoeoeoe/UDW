@@ -29,6 +29,8 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 11400000, guid: f862f6af1a1fd0d469c344bc14ada3b3, type: 2}
     enabled: 1
+  - definition: {fileID: 11400000, guid: d426513aeade4d47890d2b2ae7d32f22, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 97656e7f6de98a842b78d44d34a5c4a2, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: 735bfb39ebf96294e9a1a01b4dbb4d2f, type: 2}
@@ -71,6 +73,8 @@ MonoBehaviour:
     enabled: 1
   - definition: {fileID: 11400000, guid: d85f78b93f0a47119383204499714edc, type: 2}
     enabled: 1
+  - definition: {fileID: 11400000, guid: ec5d044461102e84385dbc2dbd15cde0, type: 2}
+    enabled: 1
   - definition: {fileID: 11400000, guid: 1bb688290aafe6947bb465b3455b5bd1, type: 2}
     enabled: 1
   - definition: {fileID: 11400000, guid: c77db11f0663bea4a943705b430a2227, type: 2}
@@ -112,6 +116,8 @@ MonoBehaviour:
   - definition: {fileID: 8102598863001076544, guid: e82ac185e2592b04593ffb3fabd40978, type: 3}
     enabled: 1
   - definition: {fileID: 8102598863001076544, guid: da0f2e0b8dcb49444a352165b3ecf7bc, type: 3}
+    enabled: 1
+  - definition: {fileID: 8102598863001076544, guid: c0ce5ea42fe9e4c49beb31c84a45d5a7, type: 3}
     enabled: 1
   - definition: {fileID: -8716238424114511454, guid: 6f30d331d644092439409da27eeda80b, type: 3}
     enabled: 1

@@ -12,6 +12,7 @@ using Core.Spawning;
 using Core.Tile;
 using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
+using Interaction;
 using Interaction.Dialogue;
 using UnityEngine;
 using VContainer;
@@ -63,6 +64,10 @@ namespace Core.Routines
             /// <summary>A plain looping animation or set is playing, which has no end to wait for.</summary>
             public bool PlainActivity;
             public NavigationRoute Route;
+            /// <summary>Real seconds until a character at an entity looks again for a free slot.</summary>
+            public float SlotRetryLeft;
+            /// <summary>The callout of a character waiting for a free slot.</summary>
+            public EmoteAction Impatience;
             /// <summary>Where the character walks to; they stop while the clock is paused and walk on from where they stand.</summary>
             public Vector2 WalkTarget;
             public bool Halted;
@@ -287,9 +292,9 @@ namespace Core.Routines
         /// <summary>Puts the character at their segment's place, facing its anchor's direction, with its activity to start.</summary>
         private void StandAt(Npc npc)
         {
-            var anchor = Anchor(npc.Segment.Place);
-            PlaceFeet(npc.Character, anchor.transform.position);
-            npc.Facing = anchor.FacingDirection;
+            var stand = Stand(npc.Segment.Place);
+            PlaceFeet(npc.Character, stand.Feet);
+            npc.Facing = stand.Facing;
             npc.PendingActivity = Activity(npc);
             UpdateDialogue(npc);
         }
@@ -336,8 +341,10 @@ namespace Core.Routines
             {
                 // At the place before it's time to leave: the stay has absorbed any delay.
                 npc.DelayMinutes = 0;
+                if (segment.Place.IsEntity) UseSlot(npc, Time.deltaTime);
                 return;
             }
+            if (!StandUp(npc)) return;
             // Finish the current activity before setting off; its end animation may take a moment.
             if (npc.Activity != null && !npc.Activity.IsCompleted && !npc.Activity.IsInterrupted)
             {
@@ -373,7 +380,7 @@ namespace Core.Routines
                 Walk(npc, ToWorld(segment.Route[^1]));
                 return;
             }
-            var place = (Vector2)Anchor(segment.Place).transform.position;
+            var place = Stand(segment.Place).Feet;
             if (Vector2.Distance(Feet(npc.Character), place) > AtPlaceDistance) Walk(npc, place);
             else Arrive(npc);
         }
@@ -417,9 +424,9 @@ namespace Core.Routines
         /// <summary>At the segment's place: on the exact spot, which activities such as sitting need, playing its activity.</summary>
         private void Arrive(Npc npc)
         {
-            var anchor = Anchor(npc.Segment.Place);
-            PlaceFeet(npc.Character, anchor.transform.position);
-            npc.Character.Orientation.ForceDirection(anchor.FacingDirection);
+            var stand = Stand(npc.Segment.Place);
+            PlaceFeet(npc.Character, stand.Feet);
+            npc.Character.Orientation.ForceDirection(stand.Facing);
             StartActivity(npc, Activity(npc));
             UpdateDialogue(npc);
         }
@@ -448,6 +455,55 @@ namespace Core.Routines
             }
         }
 
+        /// <summary>
+        /// At an entity: sits in a free slot of it. When every slot is taken, the character looks at the camera and shows
+        /// the impatient emote, looking again every <see cref="RoutineSettings.slotRetrySeconds"/>.
+        /// </summary>
+        private void UseSlot(Npc npc, float deltaTime)
+        {
+            var occupation = npc.Character.Occupation;
+            if (npc.Impatience != null)
+            {
+                npc.Impatience.Tick(deltaTime);
+                if (npc.Impatience.IsCompleted || occupation.IsOccupied) StopWaiting(npc);
+            }
+            if (occupation.IsOccupied) return;
+            npc.SlotRetryLeft -= deltaTime;
+            if (npc.SlotRetryLeft > 0) return;
+            npc.SlotRetryLeft = _settings.slotRetrySeconds;
+            var seat = FreeSeat(npc.Segment.Place);
+            if (seat)
+            {
+                StopWaiting(npc);
+                seat.TriggerInteraction(npc.Character);
+                return;
+            }
+            npc.Character.Orientation.ForceDirection(Vector2.down);
+            npc.Impatience ??= new EmoteAction(npc.Character, _settings.impatientEmote);
+        }
+
+        /// <summary>Gets the character up from their slot before they set off; false while the hop out is still going.</summary>
+        private static bool StandUp(Npc npc)
+        {
+            StopWaiting(npc);
+            var occupation = npc.Character.Occupation;
+            if (occupation.Phase == CharacterOccupation.OccupationPhase.Occupied) occupation.TryExit();
+            return !occupation.IsOccupied;
+        }
+
+        private static void StopWaiting(Npc npc)
+        {
+            npc.Impatience?.Dispose();
+            npc.Impatience = null;
+        }
+
+        private SeatInteractable FreeSeat(RoutinePlace place) =>
+            Entity(place).GetComponentsInChildren<SeatInteractable>(true).FirstOrDefault(seat => seat.CanInteract);
+
+        private VulcanusMapEntity Entity(RoutinePlace place) =>
+            _maps.CurrentMap.GetComponentsInChildren<VulcanusMapEntity>(true).FirstOrDefault(candidate => candidate.EntityId == place.Entity)
+            ?? throw new InvalidOperationException($"Map '{place.Map}' has no entity '{place.Entity}'.");
+
         /// <summary>Fades the character in after arriving through a door, or out after leaving through one; then removes them.</summary>
         private void Fade(Npc npc, float deltaTime)
         {
@@ -470,10 +526,18 @@ namespace Core.Routines
                 : _catalog.Get<CharacterAnimationDefinition>(id) ?? throw new InvalidOperationException($"Animation '{id}' is not registered and enabled.");
         }
 
-        private VulcanusMapAnchor Anchor(RoutinePlace place) =>
-            _maps.TryGetAnchor(place.Anchor, out var anchor)
-                ? anchor
-                : throw new InvalidOperationException($"Map '{place.Map}' has no anchor '{place.Anchor}'.");
+        /// <summary>Where the character stands for a place, and which way they face: its anchor, or the exit of its entity's first slot.</summary>
+        private (Vector2 Feet, Vector2 Facing) Stand(RoutinePlace place)
+        {
+            if (!place.IsEntity)
+                return _maps.TryGetAnchor(place.Anchor, out var anchor)
+                    ? ((Vector2)anchor.transform.position, anchor.FacingDirection)
+                    : throw new InvalidOperationException($"Map '{place.Map}' has no anchor '{place.Anchor}'.");
+            var slot = Entity(place).GetComponentInChildren<InteractionSlot>(true);
+            return slot
+                ? ((Vector2)slot.ExitPoint.position, slot.Facing)
+                : throw new InvalidOperationException($"Entity '{place.Entity}' on map '{place.Map}' has no interaction slot.");
+        }
 
         /// <summary>A timetable position, in the current map's local space, in the world.</summary>
         private Vector2 ToWorld(Vector2 local) => _maps.CurrentMap.transform.TransformPoint(local);
@@ -505,6 +569,7 @@ namespace Core.Routines
         {
             npc.Route?.Dispose();
             npc.Activity?.Dispose();
+            StopWaiting(npc);
         }
 
         private void Remove(Npc npc)

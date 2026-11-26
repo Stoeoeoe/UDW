@@ -1,0 +1,132 @@
+{
+  "cueId": "base:roman-spring",
+  "soundFont": "../../../../../../Tools/Apollo/soundfonts/Jnsgm2.sf2",
+  "sampleRate": 48000,
+  "gain": 0.2,
+  "loop": {
+    "startBar": 1,
+    "endBar": 17,
+    "tail": "wrap",
+    "fadeOutSeconds": 0
+  },
+  "ignoreTracks": [],
+  "stems": [
+    {
+      "id": "flute-1",
+      "name": "Flute",
+      "tracks": [
+        1
+      ],
+      "instruments": [
+        {
+          "channel": 0,
+          "preset": "Flute"
+        }
+      ]
+    },
+    {
+      "id": "lyre-2",
+      "name": "Lyre",
+      "tracks": [
+        2
+      ],
+      "instruments": [
+        {
+          "channel": 1,
+          "preset": "Harp"
+        }
+      ]
+    },
+    {
+      "id": "strings-3",
+      "name": "Strings",
+      "tracks": [
+        3
+      ],
+      "instruments": [
+        {
+          "channel": 2,
+          "preset": "Slow Strings"
+        }
+      ]
+    },
+    {
+      "id": "pan-flute-4",
+      "name": "Pan Flute",
+      "tracks": [
+        4
+      ],
+      "instruments": [
+        {
+          "channel": 3,
+          "preset": "Pan Flute"
+        }
+      ]
+    },
+    {
+      "id": "bass-5",
+      "name": "Bass",
+      "tracks": [
+        5
+      ],
+      "instruments": [
+        {
+          "channel": 4,
+          "preset": "Contra Bass"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "id": "full",
+      "gains": [
+        {
+          "stem": "flute-1",
+          "gain": 1
+        },
+        {
+          "stem": "lyre-2",
+          "gain": 1
+        },
+        {
+          "stem": "strings-3",
+          "gain": 1
+        },
+        {
+          "stem": "pan-flute-4",
+          "gain": 1
+        },
+        {
+          "stem": "bass-5",
+          "gain": 1
+        }
+      ]
+    },
+    {
+      "id": "light",
+      "gains": [
+        {
+          "stem": "flute-1",
+          "gain": 1
+        },
+        {
+          "stem": "lyre-2",
+          "gain": 0.8
+        },
+        {
+          "stem": "strings-3",
+          "gain": 0.9
+        },
+        {
+          "stem": "pan-flute-4",
+          "gain": 0
+        },
+        {
+          "stem": "bass-5",
+          "gain": 0
+        }
+      ]
+    }
+  ]
+}

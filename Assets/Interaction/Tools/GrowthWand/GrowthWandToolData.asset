@@ -32,11 +32,11 @@ MonoBehaviour:
   <ShowTileHighlighterOnPrepare>k__BackingField: 0
   <ActionDuration>k__BackingField: 0.2
   <CooldownDuration>k__BackingField: 0.2
-  <Targeting>k__BackingField: 1
-  <PointerRange>k__BackingField: 3
   <ToolEffectConfiguration>k__BackingField:
     AffectedTileOffsets: []
     IsGlobalEffect: 0
+  <Targeting>k__BackingField: 1
+  <PointerRange>k__BackingField: 3
   <PrepareUseUpAnimationClip>k__BackingField: {fileID: 0}
   <PrepareUseRightAnimationClip>k__BackingField: {fileID: 0}
   <PrepareUseDownAnimationClip>k__BackingField: {fileID: 0}

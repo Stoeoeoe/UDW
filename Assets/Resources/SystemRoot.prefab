@@ -2257,6 +2257,8 @@ MonoBehaviour:
   routines:
     pauseAfterTalkingSeconds: 3
     maxDelayMinutes: 20
+    impatientEmote: {fileID: 11400000, guid: d426513aeade4d47890d2b2ae7d32f22, type: 2}
+    slotRetrySeconds: 1
   quests:
     markIcon: {fileID: 21300000, guid: 99d9c017be802d444bf60d2e85367033, type: 3}
     markOffset: {x: 0, y: 1.75}

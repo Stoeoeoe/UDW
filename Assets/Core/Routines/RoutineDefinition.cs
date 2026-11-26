@@ -6,14 +6,18 @@ using UnityEngine;
 
 namespace Core.Routines
 {
-    /// <summary>A map anchor a routine starts from or walks to.</summary>
+    /// <summary>A map anchor, or an entity placed on the map that has interaction slots, which a routine starts from or walks to.</summary>
     [Serializable, ImportedData]
     public sealed class RoutinePlace
     {
         [field: SerializeField] public string Map { get; private set; }
         [field: SerializeField] public string Anchor { get; private set; }
+        /// <summary>Instance ID of a placed entity whose slots the character uses; empty for an anchor.</summary>
+        [field: SerializeField] public string Entity { get; private set; }
 
-        public override string ToString() => $"{Map}/{Anchor}";
+        public bool IsEntity => !string.IsNullOrEmpty(Entity);
+
+        public override string ToString() => $"{Map}/{(IsEntity ? Entity : Anchor)}";
 
         /// <summary>Reads a goal's destination: "home" as an empty place, otherwise a map anchor.</summary>
         public sealed class DestinationJsonConverter : JsonConverter<RoutinePlace>

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../Schemas/item.schema.json",
+  "id": "base:asd",
+  "name": "asd",
+  "category": "",
+  "icon": "",
+  "description": "",
+  "maxStackSize": 99,
+  "folderPath": ""
+}

@@ -15,4 +15,5 @@ MonoBehaviour:
   <Id>k__BackingField: SampleScene
   label: Sample Scene
   locationType: 1
+  muteWeatherAudio: 0
   scenePath: Assets/Scenes/SampleScene.unity

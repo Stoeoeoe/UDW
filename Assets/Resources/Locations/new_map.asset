@@ -15,3 +15,5 @@ MonoBehaviour:
   <Id>k__BackingField: new_map
   label: Indoor Test
   locationType: 0
+  muteWeatherAudio: 0
+  scenePath: 

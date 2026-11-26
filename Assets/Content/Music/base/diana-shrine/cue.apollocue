@@ -17,13 +17,13 @@
     "denominator": 4
   },
   "source": {
-    "file": "../../../../../Apollo/base/diana-shrine/source.mid",
+    "file": "../../../../../Tools/Apollo/base/diana-shrine/source.mid",
     "sha256": "8c5b8de595bc7744466b66905a235f2dc85519ec64afb42edf987f80534ad588",
     "ticksPerBeat": 960
   },
   "renderer": {
-    "name": "FluidSynth",
-    "version": "FluidSynth runtime version 2.6.1\r\nCopyright (C) 2000-2026 Peter Hanappe and others.\r\nDistributed under the LGPL license.\r\nSoundFont(R) is a registered trademark of Creative Technology Ltd.\r\n\r\nFluidSynth executable version 2.6.1\r\nSample type=float",
+    "name": "FluidSynth (WebAssembly)",
+    "version": "2.4.6",
     "gain": 0.2,
     "reverb": false,
     "chorus": false,
@@ -32,7 +32,7 @@
   "stems": [
     {
       "id": "pan-flute-1",
-      "file": "../_stems/pan-flute-1--pan-flute--4ffb0b8aae77.ogg",
+      "file": "../_stems/pan-flute-1--pan-flute--dd2f06d3f340.ogg",
       "tracks": [
         1
       ],
@@ -48,11 +48,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "4ffb0b8aae7712328f3e2fdee054e16c8d64eb6aa24dea45389dcdd3ad202cda"
+      "sha256": "dd2f06d3f340150777c3bf5c80cbc50ce8db8a288232d5727917bbac41c3b961"
     },
     {
       "id": "flute-2",
-      "file": "../_stems/flute-2--flute--a581f2dea8fb.ogg",
+      "file": "../_stems/flute-2--flute--41fc66b1b443.ogg",
       "tracks": [
         2
       ],
@@ -68,11 +68,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "a581f2dea8fb950c215bd174e61f150670846ade652509cfd06d22ba3b7b4491"
+      "sha256": "41fc66b1b443a2260744ced6291f97c71d2a49e60032331b0749d2e2d5c8fad5"
     },
     {
       "id": "harp-lyre-3",
-      "file": "../_stems/harp-lyre-3--harp--e1d626bebf76.ogg",
+      "file": "../_stems/harp-lyre-3--harp--70f22821fdb3.ogg",
       "tracks": [
         3
       ],
@@ -88,11 +88,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "e1d626bebf7693f56c7c4c292c574003781dcc2ff5211a11dc744f0bc8e0128a"
+      "sha256": "70f22821fdb32aa01e0398002b709dd70fe15b1ff8910d76cff86c5e56075568"
     },
     {
       "id": "voice-oohs-4",
-      "file": "../_stems/voice-oohs-4--voice-oohs--b712bd17e4a8.ogg",
+      "file": "../_stems/voice-oohs-4--voice-oohs--b2593ab27512.ogg",
       "tracks": [
         4
       ],
@@ -108,11 +108,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "b712bd17e4a8ec81eb229dddb352866f80f6a12078646c5d999af65cfe852fa7"
+      "sha256": "b2593ab275129060f4f315ca40f34de3b91c49348d457b1fecff3f62f1d5d194"
     },
     {
       "id": "hunting-horn-5",
-      "file": "../_stems/hunting-horn-5--french-horns--5b332827a9e1.ogg",
+      "file": "../_stems/hunting-horn-5--french-horns--5215b9e3d2e9.ogg",
       "tracks": [
         5
       ],
@@ -128,11 +128,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "5b332827a9e147e1395adeaf237063b7a9132d3c96492bc8c6461828837b9f2a"
+      "sha256": "5215b9e3d2e9ca0dbe5e21706d3d7a14fe496196f19cdd5b6dc7d1b10cdc940e"
     },
     {
       "id": "celesta-moonlight-6",
-      "file": "../_stems/celesta-moonlight-6--celeste--11b5dde30f2c.ogg",
+      "file": "../_stems/celesta-moonlight-6--celeste--e9d4e5a88f12.ogg",
       "tracks": [
         6
       ],
@@ -148,11 +148,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "11b5dde30f2c5945f265919f0fab600d77c802d4b5237021ab4f9c128f96dff1"
+      "sha256": "e9d4e5a88f1246ef81601d846c1462e7ce90c974e28f405dba4e9a261df5dfc4"
     },
     {
       "id": "slow-strings-7",
-      "file": "../_stems/slow-strings-7--slow-strings--9eb259cae6ee.ogg",
+      "file": "../_stems/slow-strings-7--slow-strings--8dc9b620d5ee.ogg",
       "tracks": [
         7
       ],
@@ -168,11 +168,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "9eb259cae6ee6719fcb8fe3683e51e368ee0f9c09e65d4f2bbaa816529474c12"
+      "sha256": "8dc9b620d5ee464fa9f1fac6b3e54787ec0ed9b1f07e490b570cdce19b042380"
     },
     {
       "id": "contrabass-8",
-      "file": "../_stems/contrabass-8--contra-bass--dae55b7a997b.ogg",
+      "file": "../_stems/contrabass-8--contra-bass--0ac1244fe799.ogg",
       "tracks": [
         8
       ],
@@ -188,11 +188,11 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "dae55b7a997b93486559125f152454b4071cdd5acc5694870fedd4a0592a3a5c"
+      "sha256": "0ac1244fe799ad4c8794320706d1d6aea796123050a383ba48941d66b0438c3c"
     },
     {
       "id": "percussion-9",
-      "file": "../_stems/percussion-9--standard--be322007c3d1.ogg",
+      "file": "../_stems/percussion-9--standard--0cde869f3a7c.ogg",
       "tracks": [
         9
       ],
@@ -208,7 +208,7 @@
       "sampleRate": 48000,
       "channels": 2,
       "frames": 6981811,
-      "sha256": "be322007c3d1149395a546878fa72e617d7b70dff17df4b617760a46fa9d048e"
+      "sha256": "0cde869f3a7cc1875f6985c6d05c2b8a3cfeb173075b6a00c38e37c54ac0daa9"
     }
   ],
   "presets": [

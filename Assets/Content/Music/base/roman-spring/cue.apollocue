@@ -1,0 +1,185 @@
+{
+  "id": "base:roman-spring",
+  "bpm": 72.00002880001152,
+  "beatsPerBar": 4,
+  "loopBars": 16,
+  "sampleRate": 48000,
+  "frames": 2559999,
+  "loop": {
+    "startBar": 1,
+    "endBar": 17,
+    "tail": "wrap",
+    "fadeOutSeconds": 0,
+    "startTick": 0,
+    "endTick": 30720,
+    "numerator": 4,
+    "denominator": 4
+  },
+  "source": {
+    "file": "../../../../Vulcan/0204project/music/base/roman-spring/source.mid",
+    "sha256": "91b9c82c99e942196939057631f1e85a8fb0f92d51b7afa1fad9be06b28c9337",
+    "ticksPerBeat": 480
+  },
+  "renderer": {
+    "name": "FluidSynth (WebAssembly)",
+    "version": "2.4.6",
+    "gain": 0.2,
+    "reverb": false,
+    "chorus": false,
+    "bankSelect": "mma"
+  },
+  "stems": [
+    {
+      "id": "flute-1",
+      "file": "../_stems/flute-1--flute--5e0b5feadfe1.ogg",
+      "tracks": [
+        1
+      ],
+      "instruments": [
+        {
+          "channel": 0,
+          "bank": 0,
+          "program": 73,
+          "preset": "Flute"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 2559999,
+      "sha256": "5e0b5feadfe125773a5f3dba4685ccbe6386ea60ee42d9d690a15edfb84d8ac7"
+    },
+    {
+      "id": "lyre-2",
+      "file": "../_stems/lyre-2--harp--689a171305c5.ogg",
+      "tracks": [
+        2
+      ],
+      "instruments": [
+        {
+          "channel": 1,
+          "bank": 0,
+          "program": 46,
+          "preset": "Harp"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 2559999,
+      "sha256": "689a171305c5397043c5203d5708c6fb437034de223096a28dac5accf5f1c9db"
+    },
+    {
+      "id": "strings-3",
+      "file": "../_stems/strings-3--slow-strings--b98372b2ff09.ogg",
+      "tracks": [
+        3
+      ],
+      "instruments": [
+        {
+          "channel": 2,
+          "bank": 0,
+          "program": 49,
+          "preset": "Slow Strings"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 2559999,
+      "sha256": "b98372b2ff0986faf271c725e4188aa9e409306fd4e204aeff8a1902847f9aa2"
+    },
+    {
+      "id": "pan-flute-4",
+      "file": "../_stems/pan-flute-4--pan-flute--a4e837300a2c.ogg",
+      "tracks": [
+        4
+      ],
+      "instruments": [
+        {
+          "channel": 3,
+          "bank": 0,
+          "program": 75,
+          "preset": "Pan Flute"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 2559999,
+      "sha256": "a4e837300a2c96425dae2233530e72021334fb5f81d2326be87fd3a916898279"
+    },
+    {
+      "id": "bass-5",
+      "file": "../_stems/bass-5--contra-bass--17db249fce46.ogg",
+      "tracks": [
+        5
+      ],
+      "instruments": [
+        {
+          "channel": 4,
+          "bank": 0,
+          "program": 43,
+          "preset": "Contra Bass"
+        }
+      ],
+      "soundFontSha256": "dc48cb5c322cab23fce1b18442066be30ccc49a184603c7a3bf7615003ee137d",
+      "sampleRate": 48000,
+      "channels": 2,
+      "frames": 2559999,
+      "sha256": "17db249fce46a933afb2ade75de929d2bc0dc94afdd4dc2bea6c2e3bfa96a34e"
+    }
+  ],
+  "presets": [
+    {
+      "id": "full",
+      "gains": [
+        {
+          "stem": "flute-1",
+          "gain": 1
+        },
+        {
+          "stem": "lyre-2",
+          "gain": 1
+        },
+        {
+          "stem": "strings-3",
+          "gain": 1
+        },
+        {
+          "stem": "pan-flute-4",
+          "gain": 1
+        },
+        {
+          "stem": "bass-5",
+          "gain": 1
+        }
+      ]
+    },
+    {
+      "id": "light",
+      "gains": [
+        {
+          "stem": "flute-1",
+          "gain": 1
+        },
+        {
+          "stem": "lyre-2",
+          "gain": 0.8
+        },
+        {
+          "stem": "strings-3",
+          "gain": 0.9
+        },
+        {
+          "stem": "pan-flute-4",
+          "gain": 0
+        },
+        {
+          "stem": "bass-5",
+          "gain": 0
+        }
+      ]
+    }
+  ]
+}

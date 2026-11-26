@@ -1,12 +1,24 @@
 # Mercurius
 
-A small, local production workspace for Roemer technical devlogs. Based on the official `create-video@4.0.544 --blank` scaffold, with custom React/TypeScript scenes. Mercurius is the working folder name; the visual language is provisional.
+A local production workspace for Roemer technical devlogs: episode planning, script writing, capture tracking, clip rendering, and FilmCraft handoff. Based on the official `create-video@4.0.544 --blank` scaffold, with custom React/TypeScript scenes. Mercurius is the working folder name; the visual language is provisional.
 
 The current target is **vertical short-form video: 1080×1920, 9:16, 30 FPS**. The demo and component studies use portrait layouts with space reserved for captions and interface overlays. They contain illustrative examples, not claims about implemented Roemer code.
 
+## Production desk
+
+Run `npm run playground` and open **http://127.0.0.1:3109/#production** (also the default landing page). Create an episode, write its script, then track capture and editing against its timed beats. Episodes save as reviewable JSON files under `productions/`, independently of browser storage. Import existing writer drafts or complete production files; download an episode backup, narration, or a Markdown production handoff. Search the library and track human review, description, credits, and the published URL. See [docs/production.md](docs/production.md) for workflow and storage boundaries.
+
+## Clips and FilmCraft
+
+Run `npm run playground` and open **http://127.0.0.1:3109/#clips**. Author curtain, code, and dependency clips with live portrait preview; save their inputs, render immutable revisions, and import/place/replace them in a connected FilmCraft session. The manual controls and `npm run clips -- help` client use the same local service. See [docs/clips.md](docs/clips.md) for connection setup, revision storage, handoff behaviour, and tests.
+
+## Script writer
+
+Run `npm run playground` and open **http://127.0.0.1:3109/#writer**. Start with a devlog or explainer structure, write narration beside visual directions, adjust beat timings, and read through the spoken text. The active draft autosaves in this browser. Download a draft JSON file to keep it, export a production script as Markdown, or export narration as plain text for recording. See [the research and writing guide](docs/script-writing.md) for sources, the template, and how exports fit the episode workflow.
+
 ## Design playground
 
-Run `npm run playground` and open **http://127.0.0.1:3109**. Browse seven diagrams plus type/colour and code studies, play/scrub their motion, compare Terracotta with Paper & ink, and copy a study/frame reference for feedback. Safe-area guides are optional and use house review margins rather than platform guarantees. See [docs/playground.md](docs/playground.md).
+Run `npm run playground` and open **http://127.0.0.1:3109/#study=intro**. Browse seven diagrams plus type/colour and code studies, play/scrub their motion, compare Terracotta with Paper & ink, and copy a study/frame reference for feedback. Safe-area guides are optional and use house review margins rather than platform guarantees. See [docs/playground.md](docs/playground.md).
 
 The playground uses the actual shared Remotion components and the same renderable StudyScene as Studio's Playground folder. It is a small preview app in this package, not an episode editor. `npm run playground:build` builds it to ignored dist/playground/.
 
@@ -68,6 +80,7 @@ Validation checks metadata types, ID uniqueness/directory agreement, even video 
 
 - src/shared/: theme, motion, components, diagrams, layouts, and showcase.
 - episodes/<id>/: brief, narration, metadata, timeline, custom scenes, snippets.
+- productions/<id>.json: saved production scripts, capture references, review, and publishing notes.
 - public/shared/ and public/episodes/<id>/: browser-accessible assets.
 - scripts/: scaffold, validation, and validated CLI production wrappers.
 - docs/: visual language, animation rules, and teaching/review guidance.

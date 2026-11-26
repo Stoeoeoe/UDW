@@ -1,5 +1,11 @@
 # Motion
 
+CurtainIntro is a one-second 3D overlay using @remotion/three, React Three Fiber, Three.js, and cannon-es. A particle cloth grid has structural, shear, and bending constraints. The top rail gathers while the free fabric responds to gravity and the pull's inertia. The simulation runs at a fixed 180 Hz, settles first, and caches one-second frame snapshots per FPS. Rendering holds the closed snapshot for half a second, then plays the baked opening at double speed. It reads snapshots rather than advancing physics in playback order. A smoothed surface and stepped toon shading give the fabric an illustrated finish.
+
+curtainFabric.ts generates matching colour and height maps for plain-woven linen, with cream meander embroidery on dark red edging. Alternating warp/weft crowns, uneven threads, small yarn slubs, and broad ochre dye variation move with the cloth UVs. Each panel uses a fixed seed. Mipmaps and anisotropic filtering control shimmer as the weave compresses during the opening. Gold tassels attach to the moving cloth edge; their trailing angle derives from previous snapshots. No texture image download is required.
+
+Study 10 previews it with an extra hold; the exported composition remains one second. WebGL is required. First preview of the intro performs the local cloth bake; later seeks reuse it. ThreeCanvas synchronizes the 3D renderer with Remotion frames; do not use React Three Fiber's wall-clock useFrame loop for this animation.
+
 All visible state is a pure consequence of the current Remotion frame and authored props. Use useCurrentFrame, useVideoConfig, spring, and interpolate. The shared entrance uses a damped spring and 24 px translation; line/path reveals use clamped interpolation. Presets live in theme/motion.ts: a 24-frame entrance, 6-frame line stagger, and 18-frame scene transition at the demo's 30 FPS.
 
 Episode timelines store named composition-absolute scene starts/durations and cues. Inside a Sequence or TransitionSeries.Sequence, useCurrentFrame is sequence-local. Subtract that scene's start when applying an absolute cue. The demo's title/explanation and explanation/proof overlap by the same transition preset used in its TransitionSeries. Keep metadata duration equal to the end of the final scene when editing.

@@ -1,16 +1,22 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Character;
 using Core.Common.Editor;
 using Core.Location;
 using Core.Tile;
+using Core.Tile.Editor.Vulcanus;
+using Core.Tile.Vulcanus;
 using Core.TimeAndWeather;
+using Interaction;
 using Interaction.Dialogue;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.TestTools;
+using VContainer;
+using VContainer.Unity;
 using static Core.Common.Editor.Reflect;
 using Object = UnityEngine.Object;
 
@@ -157,6 +163,65 @@ namespace Core.Routines.Editor
                 "Standing in the door's trigger doesn't take anyone but the player through it.");
             yield return null;
             Assert.That(None(service), Is.True, "Fabia isn't brought back while the timetable has them walking home.");
+        }
+
+        [UnityTest]
+        public IEnumerator AtABenchFabiaSitsWaitsAngrilyWhileItIsTakenAndGetsUpWhenTheGoalEnds()
+        {
+            EditorSceneManager.OpenScene(MapScene, OpenSceneMode.Single);
+            yield return new EnterPlayMode();
+            yield return WaitForGame();
+            var service = LiveGame.Get<RoutineNpcService>();
+            var level = LiveGame.Get<LevelManager>();
+            LiveGame.Get<RoutineSettings>().slotRetrySeconds = 0.2f;
+            var map = LiveGame.Get<MapManager>().CurrentMap;
+            var anchors = map.GetComponentsInChildren<VulcanusMapAnchor>(true);
+            var bench = LiveGame.Get<IObjectResolver>().Instantiate(
+                UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Interaction/BenchPrototype.prefab"),
+                anchors[0].transform.position + Vector3.up * 0.9f, Quaternion.identity, map.transform);
+            bench.AddComponent<VulcanusMapEntity>().Configure("test-bench");
+            var seat = bench.GetComponent<SeatInteractable>();
+            var slot = bench.GetComponentInChildren<InteractionSlot>();
+
+            // Fabia's day is replaced by one goal: the bench, and then back to an anchor an hour later.
+            var exit = (Vector2)map.transform.InverseTransformPoint(slot.ExitPoint.position);
+            var anchorPositions = anchors.ToDictionary(anchor => anchor.AnchorId, anchor => (Vector2)map.transform.InverseTransformPoint(anchor.transform.position));
+            var world = new WorldNavigation(new[]
+            {
+                new NavigationMap(map.MapId, map.GetComponentInChildren<VulcanusImportedMap>(true).NavigationCosts, anchorPositions,
+                    new Dictionary<string, Vector2> { ["test-bench"] = exit })
+            }, new MapLinkGraph(System.Array.Empty<MapLink>()));
+            var place = $"{{ map: '{map.MapId}', anchor: '{anchors[0].AnchorId}' }}";
+            var routine = VulcanusJson.Populate(ScriptableObject.CreateInstance<RoutineDefinition>(),
+                $"{{ id: 'test:bench_routine', character: '{Fabia}', home: {place}, variants: [{{ id: 'default', goals: [" +
+                $"{{ id: 'sit', departAt: '08:00', destination: {{ map: '{map.MapId}', entity: 'test-bench' }} }}," +
+                $"{{ id: 'leave', departAt: '12:00', destination: {place} }}] }}] }}");
+            var plan = new DayPlan(routine, "default", routine.Variants[0].Goals.Select(goal => new PlannedGoal(goal, routine.Home)).ToArray());
+            var dayType = typeof(RoutineNpcService).GetNestedType("Day", System.Reflection.BindingFlags.NonPublic);
+            var day = System.Activator.CreateInstance(dayType);
+            Set(day, "Timetable", RoutineTimetablePlanner.Plan(plan, world, 2f, 0.5f));
+            var days = Get<System.Collections.IList>(service, "_days");
+            days.Clear();
+            days.Add(day);
+
+            // The bench is taken: Fabia faces the camera and shows the emote while they wait.
+            LiveGame.Player.Occupation.TryEnter(slot);
+            SetTime(10 * 60);
+            var fabia = ReEnter(service, level);
+            yield return WaitUntil(() => fabia.Graphics.Find("Emote callout") != null, "Fabia is annoyed that the bench is taken.");
+            Assert.That(slot.Occupant, Is.SameAs(LiveGame.Player.Occupation));
+            Assert.That(fabia.Orientation.FacingDirection, Is.EqualTo(Vector2.down), "Fabia looks at the camera.");
+
+            // Once it is free, Fabia sits, and the emote goes.
+            LiveGame.Player.Occupation.ReleaseImmediately();
+            yield return WaitUntil(() => slot.Occupant == fabia.Occupation, "Fabia takes the free bench.");
+            yield return WaitUntil(() => fabia.Occupation.Phase == CharacterOccupation.OccupationPhase.Occupied, "Fabia is seated.");
+            Assert.That(fabia.Graphics.Find("Emote callout"), Is.Null);
+            Assert.That(seat.CanInteract, Is.False);
+
+            // When the goal ends, Fabia gets up and sets off.
+            SetTime(12 * 60);
+            yield return WaitUntil(() => slot.Occupant == null && fabia.Controller.IsMovementOwned, "Fabia gets up and walks on.");
         }
 
         private static RoutineTimetable FabiasDay(RoutineNpcService service)

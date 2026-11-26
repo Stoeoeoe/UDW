@@ -15,11 +15,13 @@ MonoBehaviour:
   <Id>k__BackingField: lentils_seed
   <Name>k__BackingField: Lentil Seeds
   <Category>k__BackingField: Seeds
-  <Icon>k__BackingField: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582,
-    type: 3}
+  <Icon>k__BackingField: {fileID: 21300000, guid: 1037175158709ba40b9dd6edb2702582, type: 3}
   <Description>k__BackingField: 
   <MaxStackSize>k__BackingField: 99
+  <PreventDropping>k__BackingField: 0
+  <BuyBasePrice>k__BackingField: 0
+  <SellBasePrice>k__BackingField: 0
   <WorldRepresentationPrefab>k__BackingField: {fileID: 0}
   <PickupSound>k__BackingField: {fileID: 0}
-  <PlaceableOnTerrainTypes>k__BackingField: 01000000
+  <PlaceableOnTerrainTypes>k__BackingField: 01000000i
   <PlantData>k__BackingField: {fileID: 11400000, guid: 8434e4390b8bf664997b587750639731, type: 2}

@@ -9,13 +9,7 @@ import {
   type OrnamentId,
 } from '../shared/components/RomanOrnament';
 import { StudyScene } from './StudyScene';
-import {
-  checkpoints,
-  findStudy,
-  studies,
-  studyTiming,
-  type StudyId,
-} from './studies';
+import { findStudy, studies, studyPreview, type StudyId } from './studies';
 
 const directionIds = Object.keys(directions) as DirectionId[];
 const readSelection = () => {
@@ -34,9 +28,12 @@ export const App = () => {
   const [compare, setCompare] = useState(false);
   const [guides, setGuides] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [frame, setFrame] = useState<number>(168);
+  const [frame, setFrame] = useState<number>(
+    () => studyPreview(selection.study).initialFrame,
+  );
   const player = useRef<PlayerRef>(null);
   const { study, direction, ornament } = selection;
+  const preview = studyPreview(study);
   const entry = findStudy(study)!;
   const inputProps = useMemo(
     () => ({ study, direction, ornament }),
@@ -44,8 +41,9 @@ export const App = () => {
   );
   useEffect(() => {
     const onHash = () => {
+      if (['#writer', '#clips'].includes(window.location.hash)) return;
       setSelection(readSelection());
-      setFrame(168);
+      setFrame(studyPreview(readSelection().study).initialFrame);
       setCopied(false);
     };
     window.addEventListener('hashchange', onHash);
@@ -67,9 +65,9 @@ export const App = () => {
   }, [study, direction, ornament]);
   const select = (nextStudy: StudyId, nextDirection = direction) => {
     if (nextStudy === study && nextDirection === direction)
-      player.current!.seekTo(168);
+      player.current!.seekTo(studyPreview(nextStudy).initialFrame);
     setSelection({ study: nextStudy, direction: nextDirection, ornament });
-    setFrame(168);
+    setFrame(studyPreview(nextStudy).initialFrame);
     setCopied(false);
   };
   const seek = (nextFrame: number) => {
@@ -96,6 +94,21 @@ export const App = () => {
           MERCURIUS<span>STUDIES</span>
         </a>
         <nav aria-label="Design studies">
+          <div className="pg-nav-group">
+            <a href="#production" style={{ color: '#eee4d4', marginLeft: 12 }}>
+              Productions ↗
+            </a>
+          </div>
+          <div className="pg-nav-group">
+            <a href="#clips" style={{ color: '#eee4d4', marginLeft: 12 }}>
+              Clips ↗
+            </a>
+          </div>
+          <div className="pg-nav-group">
+            <a href="#writer" style={{ color: '#eee4d4', marginLeft: 12 }}>
+              Script writer ↗
+            </a>
+          </div>
           {['Diagrams', 'Foundations'].map((group) => (
             <div className="pg-nav-group" key={group}>
               <h2>{group}</h2>
@@ -148,11 +161,12 @@ export const App = () => {
                 ref={player}
                 component={StudyScene}
                 inputProps={inputProps}
-                durationInFrames={studyTiming.duration}
+                durationInFrames={preview.duration}
                 compositionWidth={videoFormat.width}
                 compositionHeight={videoFormat.height}
                 fps={30}
-                initialFrame={168}
+                initialFrame={preview.initialFrame}
+                autoPlay={study === 'intro'}
                 controls
                 loop
                 style={{ width: '100%', aspectRatio: '9 / 16' }}
@@ -219,7 +233,7 @@ export const App = () => {
               >
                 <RotateCcw size={15} />
               </button>
-              {checkpoints.map((checkpoint) => (
+              {preview.checkpoints.map((checkpoint) => (
                 <button
                   key={checkpoint.name}
                   aria-pressed={frame === checkpoint.frame}
@@ -305,8 +319,8 @@ export const App = () => {
                 <Thumbnail
                   component={StudyScene}
                   inputProps={{ study, direction: id, ornament }}
-                  frameToDisplay={168}
-                  durationInFrames={studyTiming.duration}
+                  frameToDisplay={preview.thumbnailFrame}
+                  durationInFrames={preview.duration}
                   compositionWidth={1080}
                   compositionHeight={1920}
                   fps={30}

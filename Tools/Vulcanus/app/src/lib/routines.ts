@@ -3,7 +3,7 @@
  * catalog checks Vulcanus can make itself (maps, anchors, characters, animations), and the planner's first-hit
  * choice. See docs/routine-editor.md.
  */
-import type { Character, Map as GameMap } from '../types/schema';
+import type { Character, EntityInstance, Map as GameMap } from '../types/schema';
 import type {
   Routine,
   RoutineChoice,
@@ -68,6 +68,17 @@ export function dayAt(
   const choice = entry.pickOne?.[ref.choiceIndex];
   return choice ? { entry, choice, goals: choice.goals } : null;
 }
+
+/** The entities placed on a map, from the map itself and from its entity layers. */
+export function mapEntities(map: GameMap): EntityInstance[] {
+  const byId = new Map<string, EntityInstance>();
+  for (const entity of [...map.entities, ...map.layers.flatMap((layer) => layer.entities ?? [])])
+    byId.set(entity.id, entity);
+  return [...byId.values()];
+}
+
+/** What a goal's place is called in lists: the anchor, or the entity. */
+export const placeName = (place: RoutinePlace) => place.entity ?? place.anchor ?? '';
 
 export function resolvePlace(
   routine: Routine,
@@ -163,16 +174,28 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
     where: string,
     day?: RoutineDayRef,
     goalIndex?: number,
+    allowEntity = false,
   ) => {
-    if (!place.map || !place.anchor) {
-      issues.push({ day, goalIndex, message: `${where} needs a map and an anchor.` });
+    if (!place.map || !!place.anchor === !!place.entity || (place.entity && !allowEntity)) {
+      issues.push({
+        day,
+        goalIndex,
+        message: `${where} needs a map and an anchor${allowEntity ? ' or an entity' : ''}.`,
+      });
       return;
     }
     if (!references) return;
     const map = references.maps.find((entry) => entry.id === place.map);
     if (!map)
       issues.push({ day, goalIndex, message: `${where} uses the unknown map ${place.map}.` });
-    else if (!map.spatialPrimitives?.anchors?.some((anchor) => anchor.id === place.anchor))
+    else if (place.entity) {
+      if (!mapEntities(map).some((entity) => entity.id === place.entity))
+        issues.push({
+          day,
+          goalIndex,
+          message: `${where} uses the entity ${place.entity}, which ${map.name} does not have.`,
+        });
+    } else if (!map.spatialPrimitives?.anchors?.some((anchor) => anchor.id === place.anchor))
       issues.push({
         day,
         goalIndex,
@@ -237,7 +260,9 @@ export function validateRoutine(routine: Routine, references?: RoutineReferences
       }
       if (goal.condition !== undefined && !goal.condition.trim())
         at(`${name} is only on some days but has no condition yet.`);
-      if (goal.destination !== 'home') checkPlace(goal.destination, name, day, goalIndex);
+      if (goal.destination !== 'home') checkPlace(goal.destination, name, day, goalIndex, true);
+      if (goal.destination !== 'home' && goal.destination.entity && goal.activity)
+        at(`${name} sits at a slot, which supplies the animation: remove its activity.`);
       checkDialogue(goal.walkingDialogue, `${name} (walking)`, day, goalIndex);
       checkDialogue(goal.dialogue, name, day, goalIndex);
       if (goal.occupation !== undefined && !LOCAL_ID_PATTERN.test(goal.occupation))

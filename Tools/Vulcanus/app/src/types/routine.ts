@@ -1,8 +1,10 @@
 /** An NPC's daily routine (*.routine.json). See schemas/routine.schema.json. */
 
+/** A map anchor, or a placed entity with interaction slots (a bench) that the character sits at. Exactly one is set. */
 export interface RoutinePlace {
   map: string;
-  anchor: string;
+  anchor?: string;
+  entity?: string;
 }
 
 export interface RoutineGoal {

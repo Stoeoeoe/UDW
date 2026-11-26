@@ -79,14 +79,24 @@ namespace Core.Routines
                 else if (goal.DepartAt <= previous)
                     Report(errors, asset, goalPath, $"Goal '{goal.Id}' must depart after the goal before it.");
                 previous = Math.Max(previous, goal.DepartAt);
-                if (!goal.ToHome) CheckPlace(errors, asset, goalPath + ".Destination", goal.Destination);
+                if (!goal.ToHome)
+                {
+                    CheckPlace(errors, asset, goalPath + ".Destination", goal.Destination, allowEntity: true);
+                    if (goal.Destination is { IsEntity: true } && !string.IsNullOrEmpty(goal.ActivityAnimationId))
+                        Report(errors, asset, goalPath, $"Goal '{goal.Id}' uses a slot, which supplies the animation; remove its activity.");
+                }
             }
         }
 
-        private static void CheckPlace(List<ConfigurationError> errors, RoutineDefinition asset, string path, RoutinePlace place)
+        private static void CheckPlace(List<ConfigurationError> errors, RoutineDefinition asset, string path, RoutinePlace place,
+            bool allowEntity = false)
         {
-            if (place == null || !DefinitionIdRules.IsPresent(place.Map) || !DefinitionIdRules.IsPresent(place.Anchor))
-                Report(errors, asset, path, "A place needs a map and an anchor.");
+            if (place == null || !DefinitionIdRules.IsPresent(place.Map))
+                Report(errors, asset, path, "A place needs a map.");
+            else if (DefinitionIdRules.IsPresent(place.Anchor) == place.IsEntity)
+                Report(errors, asset, path, "A place needs an anchor" + (allowEntity ? " or an entity, not both." : "."));
+            else if (place.IsEntity && !allowEntity)
+                Report(errors, asset, path, "A place needs an anchor.");
         }
     }
 }

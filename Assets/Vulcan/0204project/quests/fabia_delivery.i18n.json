@@ -12,11 +12,11 @@
     },
     {
       "msgKey": "quest.base:fabia_delivery.step-1.journal",
-      "text": "Complete the first objective."
+      "text": "Complete the next objective."
     },
     {
       "msgKey": "quest.base:fabia_delivery.step-1.objective-1.text",
-      "text": "New objective"
+      "text": "Wait for condition"
     }
   ]
 }

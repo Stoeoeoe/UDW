@@ -11,6 +11,8 @@
 
 RomanOrnament's inline meander, laurel, and wave are original SVG paths inspired by the user's reference board. No reference image files are embedded.
 
+The curtain and tassel fringe are original procedural 3D geometry with authored linen colour and height textures, including original meander edging, generated in curtainFabric.ts. It uses Three.js, React Three Fiber, @remotion/three, and cannon-es; package licences are included with the installed dependencies. No cloth image, HDR environment, or external model is downloaded at render time.
+
 Font package versions are pinned in package.json and package-lock.json. Copy the named files from each package's files/ directory and its LICENSE into shared/fonts/ to reproduce the bundled assets. Rendering never downloads fonts.
 
 For new footage, images, music, and narration, record source, author, licence, attribution requirements, and permission evidence here. Keep episode assets under their stable ID, reused assets under shared/, and renders under ignored out/. No third-party footage or music is used by the playground.

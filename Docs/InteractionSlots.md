@@ -87,6 +87,9 @@ release. Location leave releases without repositioning, since location placement
 owns the next destination. Cleanup never changes condition or revives a dead
 character. Occupancy is runtime-only; no save format changes are included.
 
+Routine characters use seats through the same interactable: see "Using a slot" in
+`Assets/Core/Routines/README.md`.
+
 This first implementation covers stationary seats. Bed ownership, sleep behavior,
 reservation while approaching, moving vehicle attachment, and persisted
 occupation remain separate work.

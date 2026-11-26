@@ -7,6 +7,7 @@ import { Node, anchor } from '../shared/diagrams/Node';
 import { Connection } from '../shared/diagrams/Connection';
 import { findStudy, studyTiming, type StudyId } from './studies';
 import { DiagramStudy } from './DiagramStudy';
+import { CurtainIntro } from '../shared/components/CurtainIntro';
 import {
   RomanOrnament,
   type OrnamentId,
@@ -33,6 +34,25 @@ export const StudyScene = ({
   if (!entry) throw new Error(`Unknown study '${study}'`);
   const frame = useCurrentFrame();
   const palette = directions[direction].color;
+  if (study === 'intro')
+    return (
+      <Presentation direction={direction}>
+        <RomanOrnament ornament={ornament} />
+        <AbsoluteFill style={{ display: 'grid', placeItems: 'center' }}>
+          <div
+            style={{
+              fontFamily: 'var(--mercurius-display)',
+              fontSize: 132,
+              color: 'var(--mercurius-accent)',
+              letterSpacing: '0.025em',
+            }}
+          >
+            ROEMER
+          </div>
+        </AbsoluteFill>
+        <CurtainIntro />
+      </Presentation>
+    );
   return (
     <Presentation direction={direction}>
       <AbsoluteFill style={{ overflow: 'hidden' }}>

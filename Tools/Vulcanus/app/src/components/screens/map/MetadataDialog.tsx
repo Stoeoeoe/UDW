@@ -16,6 +16,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import type { PropertyValue, WorldMapMetadata } from '../../../types/schema';
 import { PropertyForm, propertyDefinitionsToSchema } from '../../common/PropertyForm';
 import { EditorModal } from '../../common/EditorModal';
+import { ResourceReferenceSelect } from '../../common/ResourceReferenceSelect';
 import { EntityFormDialog } from '../common/EntityFormDialog';
 import { FormLabel } from '../../common/FormLabel';
 import { SectionLabel } from '../../common/Typography.tsx';
@@ -57,7 +58,10 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
     );
   }
 
-  const updateMapMetadata = (key: 'description' | 'musicCue' | 'musicPreset' | 'ambience', value: string) => {
+  const updateMapMetadata = (
+    key: 'description' | 'musicCue' | 'musicPreset' | 'ambience',
+    value: string,
+  ) => {
     updateCurrentMap({ metadata: { ...(currentMap.metadata || {}), [key]: value || undefined } });
   };
 
@@ -365,9 +369,11 @@ export const MetadataDialog: React.FC<MetadataDialogProps> = ({ isOpen, onClose,
 
             <FormControl>
               <FormLabel>Music Cue</FormLabel>
-              <Input
+              <ResourceReferenceSelect
+                type="music"
+                aria-label="Music Cue"
                 value={currentMap.metadata?.musicCue || ''}
-                onChange={(e) => updateMapMetadata('musicCue', e.target.value)}
+                onChange={(cue) => updateMapMetadata('musicCue', cue)}
               />
             </FormControl>
 

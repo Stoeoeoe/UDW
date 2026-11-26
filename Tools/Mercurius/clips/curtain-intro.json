@@ -1,0 +1,12 @@
+{
+  "id": "curtain-intro",
+  "name": "Curtain intro",
+  "direction": "parchment",
+  "ornament": "meander",
+  "durationFrames": 105,
+  "scene": "curtain",
+  "wordmark": "ROEMER",
+  "holdFrames": 90,
+  "openingFrames": 15,
+  "accent": "#742d32"
+}

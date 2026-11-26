@@ -1862,9 +1862,17 @@
       {
         "id": "mars",
         "description": "Mars"
+      },
+      {
+        "id": "rabatonius",
+        "description": "Rabatonius"
       }
     ],
     "emote": [
+      {
+        "id": "base:angry",
+        "description": "Angry"
+      },
       {
         "id": "base:laugh",
         "description": "Laugh"
@@ -1943,6 +1951,10 @@
       },
       {
         "id": "base:interior",
+        "description": "cue"
+      },
+      {
+        "id": "base:roman-spring",
         "description": "cue"
       }
     ],

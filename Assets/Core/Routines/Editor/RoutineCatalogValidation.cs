@@ -6,6 +6,7 @@ using System.Linq;
 using Character;
 using Core.Catalogs.Editor;
 using Core.Spawning;
+using Interaction;
 using Interaction.Dialogue;
 using Core.Tile.Vulcanus;
 
@@ -31,6 +32,7 @@ namespace Core.Routines.Editor
             }
 
             var anchorsByMap = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            var slotEntitiesByMap = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             var placedCharacters = new Dictionary<string, string>(StringComparer.Ordinal);
             var worlds = CatalogAssetDiscovery.Find("Assets", typeof(VulcanusWorldCatalog)).Cast<VulcanusWorldCatalog>().ToArray();
             var links = MapLinkGraph.Build(worlds);
@@ -40,6 +42,9 @@ namespace Core.Routines.Editor
                     {
                         anchorsByMap[binding.MapId] = binding.MapPrefab.GetComponentsInChildren<VulcanusMapAnchor>(true)
                             .Select(anchor => anchor.AnchorId).ToHashSet(StringComparer.Ordinal);
+                        slotEntitiesByMap[binding.MapId] = binding.MapPrefab.GetComponentsInChildren<VulcanusMapEntity>(true)
+                            .Where(entity => entity.GetComponentInChildren<InteractionSlot>(true))
+                            .Select(entity => entity.EntityId).ToHashSet(StringComparer.Ordinal);
                         foreach (var placed in binding.MapPrefab.GetComponentsInChildren<GameCharacter>(true))
                             placedCharacters.TryAdd(placed.CharacterId, binding.MapId);
                     }
@@ -48,7 +53,13 @@ namespace Core.Routines.Editor
             {
                 if (!anchorsByMap.TryGetValue(place.Map, out var anchors))
                     throw new InvalidOperationException($"Routine '{routine.Id}': {role} uses the unknown map '{place.Map}'.");
-                if (!anchors.Contains(place.Anchor))
+                if (place.IsEntity)
+                {
+                    if (!slotEntitiesByMap[place.Map].Contains(place.Entity))
+                        throw new InvalidOperationException($"Routine '{routine.Id}': {role} uses the entity '{place.Entity}', which map " +
+                            $"'{place.Map}' doesn't have, or which has no interaction slot. Reimport the map if it was placed recently.");
+                }
+                else if (!anchors.Contains(place.Anchor))
                     throw new InvalidOperationException($"Routine '{routine.Id}': {role} uses the unknown anchor '{place.Anchor}' on map '{place.Map}'.");
             }
 

@@ -4,7 +4,7 @@
   "id": "base:map-1",
   "name": "Map 1",
   "metadata": {
-    "musicCue": "base:diana-shrine",
+    "musicCue": "base:roman-spring",
     "musicPreset": "full",
     "flowDirectionEnd": "bottom",
     "swellDirection": "east"
@@ -2467,9 +2467,24 @@
             "v": 57
           },
           {
+            "x": 26,
+            "y": 6,
+            "v": 56
+          },
+          {
+            "x": 27,
+            "y": 6,
+            "v": 57
+          },
+          {
             "x": 28,
             "y": 6,
-            "v": 1014
+            "v": 57
+          },
+          {
+            "x": 29,
+            "y": 6,
+            "v": 57
           },
           {
             "x": 13,
@@ -2497,6 +2512,26 @@
             "v": 54
           },
           {
+            "x": 26,
+            "y": 7,
+            "v": 56
+          },
+          {
+            "x": 29,
+            "y": 7,
+            "v": 56
+          },
+          {
+            "x": 30,
+            "y": 7,
+            "v": 56
+          },
+          {
+            "x": 31,
+            "y": 7,
+            "v": 56
+          },
+          {
             "x": 6,
             "y": 8,
             "v": 22
@@ -2520,6 +2555,11 @@
             "x": 15,
             "y": 8,
             "v": 86
+          },
+          {
+            "x": 26,
+            "y": 8,
+            "v": 56
           },
           {
             "x": 7,
@@ -2547,9 +2587,9 @@
             "v": 22
           },
           {
-            "x": 31,
+            "x": 26,
             "y": 9,
-            "v": 895
+            "v": 57
           },
           {
             "x": 7,
@@ -2577,9 +2617,9 @@
             "v": 86
           },
           {
-            "x": 25,
+            "x": 26,
             "y": 10,
-            "v": 86
+            "v": 56
           },
           {
             "x": 9,
@@ -2602,9 +2642,9 @@
             "v": 22
           },
           {
-            "x": 24,
+            "x": 26,
             "y": 11,
-            "v": 22
+            "v": 56
           },
           {
             "x": 11,
@@ -2613,6 +2653,11 @@
           },
           {
             "x": 13,
+            "y": 12,
+            "v": 56
+          },
+          {
+            "x": 26,
             "y": 12,
             "v": 56
           },
@@ -2627,9 +2672,9 @@
             "v": 57
           },
           {
-            "x": 31,
+            "x": 26,
             "y": 13,
-            "v": 1023
+            "v": 56
           },
           {
             "x": 13,
@@ -2637,14 +2682,34 @@
             "v": 57
           },
           {
-            "x": 24,
-            "y": 14,
-            "v": 22
-          },
-          {
             "x": 26,
             "y": 14,
-            "v": 54
+            "v": 57
+          },
+          {
+            "x": 27,
+            "y": 14,
+            "v": 57
+          },
+          {
+            "x": 28,
+            "y": 14,
+            "v": 56
+          },
+          {
+            "x": 29,
+            "y": 14,
+            "v": 25
+          },
+          {
+            "x": 30,
+            "y": 14,
+            "v": 57
+          },
+          {
+            "x": 31,
+            "y": 14,
+            "v": 24
           },
           {
             "x": 13,
@@ -3121,15 +3186,6 @@
       "sortingLayer": "ground"
     },
     {
-      "id": "navigation",
-      "name": "Navigation",
-      "kind": "navigation",
-      "visible": true,
-      "locked": false,
-      "opacity": 1,
-      "zOrder": 9999
-    },
-    {
       "id": "layer-1776961708061",
       "name": "Objects",
       "kind": "object",
@@ -3148,8 +3204,8 @@
         {
           "id": "inst_cde709a0d18d",
           "objectId": "base:tree",
-          "x": 368,
-          "y": 112
+          "x": 381,
+          "y": 108
         },
         {
           "id": "inst_cb49f64a549c",
@@ -3168,6 +3224,12 @@
           "objectId": "base:tree",
           "x": 272,
           "y": 0
+        },
+        {
+          "id": "inst_2d553c92f274",
+          "objectId": "base:p",
+          "x": 384,
+          "y": 16
         }
       ]
     },
@@ -3250,6 +3312,38 @@
       ]
     },
     {
+      "id": "containers",
+      "name": "Containers",
+      "kind": "entity",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 6,
+      "sortingLayer": "Objects",
+      "entities": [
+        {
+          "id": "player-chest-01",
+          "typeId": "base:chest",
+          "position": [
+            256,
+            176
+          ],
+          "properties": {},
+          "layerId": "containers"
+        },
+        {
+          "id": "ent-1795184601635",
+          "typeId": "base:bench_1",
+          "position": [
+            336,
+            64
+          ],
+          "properties": {},
+          "layerId": "containers"
+        }
+      ]
+    },
+    {
       "id": "layer-1777189358667",
       "name": "FarmLand",
       "kind": "visual",
@@ -3274,109 +3368,9 @@
             "v": 98
           },
           {
-            "x": 26,
-            "y": 6,
-            "v": 56
-          },
-          {
-            "x": 27,
-            "y": 6,
-            "v": 25
-          },
-          {
-            "x": 28,
-            "y": 6,
-            "v": 57
-          },
-          {
-            "x": 29,
-            "y": 6,
-            "v": 57
-          },
-          {
             "x": 5,
             "y": 7,
             "v": 96
-          },
-          {
-            "x": 26,
-            "y": 7,
-            "v": 56
-          },
-          {
-            "x": 29,
-            "y": 7,
-            "v": 56
-          },
-          {
-            "x": 30,
-            "y": 7,
-            "v": 56
-          },
-          {
-            "x": 31,
-            "y": 7,
-            "v": 56
-          },
-          {
-            "x": 26,
-            "y": 8,
-            "v": 56
-          },
-          {
-            "x": 26,
-            "y": 9,
-            "v": 57
-          },
-          {
-            "x": 26,
-            "y": 10,
-            "v": 56
-          },
-          {
-            "x": 26,
-            "y": 11,
-            "v": 56
-          },
-          {
-            "x": 26,
-            "y": 12,
-            "v": 56
-          },
-          {
-            "x": 26,
-            "y": 13,
-            "v": 56
-          },
-          {
-            "x": 26,
-            "y": 14,
-            "v": 57
-          },
-          {
-            "x": 27,
-            "y": 14,
-            "v": 57
-          },
-          {
-            "x": 28,
-            "y": 14,
-            "v": 56
-          },
-          {
-            "x": 29,
-            "y": 14,
-            "v": 25
-          },
-          {
-            "x": 30,
-            "y": 14,
-            "v": 57
-          },
-          {
-            "x": 31,
-            "y": 14,
-            "v": 24
           },
           {
             "x": 13,
@@ -3560,28 +3554,6 @@
           }
         ]
       }
-    },
-    {
-      "id": "containers",
-      "name": "Containers",
-      "kind": "entity",
-      "visible": true,
-      "locked": false,
-      "opacity": 1,
-      "zOrder": 6,
-      "sortingLayer": "Objects",
-      "entities": [
-        {
-          "id": "player-chest-01",
-          "typeId": "base:chest",
-          "position": [
-            256,
-            176
-          ],
-          "properties": {},
-          "layerId": "containers"
-        }
-      ]
     },
     {
       "id": "layer-1793965453243",
@@ -5672,6 +5644,15 @@
           290
         ]
       }
+    },
+    {
+      "id": "navigation",
+      "name": "Navigation",
+      "kind": "navigation",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 9999
     }
   ],
   "entities": [
@@ -5786,8 +5767,8 @@
         "type": "locationLinkTrigger",
         "shape": "rectangle",
         "position": [
-          320,
-          96
+          448,
+          208
         ],
         "size": [
           64,

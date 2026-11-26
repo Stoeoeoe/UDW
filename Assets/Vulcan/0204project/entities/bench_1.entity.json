@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../Schemas/entity-type.schema.json",
+  "id": "base:bench_1",
+  "displayName": "Bench 1",
+  "category": "object",
+  "placeholderColor": "#888888",
+  "properties": [],
+  "folderPath": "",
+  "description": "A bench to sit on",
+  "defaultSize": [
+    48,
+    32
+  ],
+  "sprite": {
+    "path": "assets/bench.png"
+  }
+}

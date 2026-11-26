@@ -16,6 +16,16 @@ import {
 } from '@chakra-ui/react';
 import { PropertyDefinition, PropertyValue } from '../../types/schema';
 import { FormLabel } from './FormLabel';
+import { ResourceReferenceSelect } from './ResourceReferenceSelect';
+import { isEditorResourceTypeId } from '../../lib/editorResourceTypes';
+import type { EditorResourceTypeId } from '../../types/editorResource';
+
+function referenceTypeOf(prop: PropertySchema): EditorResourceTypeId {
+  const type = prop.constraints?.referenceType ?? '';
+  if (!isEditorResourceTypeId(type))
+    throw new Error(`Property '${prop.key}' references the unknown resource type '${type}'.`);
+  return type;
+}
 
 export type PropertyType =
   | 'string'
@@ -25,6 +35,7 @@ export type PropertyType =
   | 'enum'
   | 'color'
   | 'vector2'
+  | 'reference' // One of the project's resources, chosen by `constraints.referenceType`
   | 'custom';
 
 export interface PropertySchema {
@@ -37,6 +48,8 @@ export interface PropertySchema {
     max?: number;
     step?: number;
     options?: string[];
+    /** The editor resource type a `reference` points at, such as `music`. */
+    referenceType?: string;
   };
   // Optional custom renderer for complex fields. Receives current value and an onChange callback.
   customRenderer?: (value: PropertyValue, onChange: (v: PropertyValue) => void) => React.ReactNode;
@@ -87,6 +100,12 @@ export function propertyDefinitionsToSchema(definitions: PropertyDefinition[]): 
         return { ...common, type: 'color' };
       case 'vector2':
         return { ...common, type: 'vector2' };
+      case 'reference':
+        return {
+          ...common,
+          type: 'reference',
+          constraints: { referenceType: d.constraints?.referenceType },
+        };
       case 'string':
       default:
         return { ...common, type: 'string' };
@@ -167,6 +186,18 @@ export const PropertyForm: React.FC<PropertyFormProps> = ({ schema, values, onCh
                   }}
                   onBlur={() => {
                     focusedRef.current[prop.key] = false;
+                  }}
+                />
+              )}
+
+              {prop.type === 'reference' && (
+                <ResourceReferenceSelect
+                  aria-label={prop.label}
+                  type={referenceTypeOf(prop)}
+                  value={localVal}
+                  onChange={(id) => {
+                    setLocalValues((prev) => ({ ...prev, [prop.key]: id }));
+                    onChange(prop.key, id);
                   }}
                 />
               )}

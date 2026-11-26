@@ -12,8 +12,16 @@
       "id": "default",
       "goals": [
         {
-          "id": "visit",
+          "id": "sit",
           "departAt": "06:30",
+          "destination": {
+            "map": "base:map-1",
+            "entity": "ent-1795184601635"
+          }
+        },
+        {
+          "id": "visit",
+          "departAt": "07:15",
           "destination": {
             "map": "base:map-1",
             "anchor": "fabia-destination"
@@ -24,7 +32,7 @@
         },
         {
           "id": "back_home",
-          "departAt": "08:00",
+          "departAt": "08:30",
           "destination": "home"
         }
       ]

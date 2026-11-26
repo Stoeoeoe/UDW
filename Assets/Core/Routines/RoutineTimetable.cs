@@ -177,7 +177,7 @@ namespace Core.Routines
         }
 
         private static TimetableSegment StayAt(WorldNavigation world, int goalIndex, RoutinePlace place, float start, float end) =>
-            TimetableSegment.Stay(goalIndex, place, world.Map(place.Map).Anchor(place.Anchor), start, end);
+            TimetableSegment.Stay(goalIndex, place, world.Map(place.Map).Position(place), start, end);
 
         /// <summary>A step of the search: standing on a map, having come this far.</summary>
         private sealed class Stop
@@ -214,7 +214,7 @@ namespace Core.Routines
         /// </summary>
         private static List<TimetableLeg> FindLegs(WorldNavigation world, RoutinePlace from, RoutinePlace to)
         {
-            var start = new Stop { MapId = from.Map, Position = world.Map(from.Map).Anchor(from.Anchor) };
+            var start = new Stop { MapId = from.Map, Position = world.Map(from.Map).Position(from) };
             var open = new List<Stop> { start };
             var crossed = new HashSet<MapLink>();
             while (open.Count > 0)
@@ -226,7 +226,7 @@ namespace Core.Routines
                 if (stop.Entered != null && !crossed.Add(stop.Entered)) continue;
                 var map = world.Map(stop.MapId);
                 if (stop.MapId == to.Map
-                    && TryWalk(map, stop.Position, map.Anchor(to.Anchor), out var toGoal))
+                    && TryWalk(map, stop.Position, map.Position(to), out var toGoal))
                     open.Add(new Stop { MapId = stop.MapId, Position = toGoal.Route[^1], Distance = stop.Distance + toGoal.Length,
                         Crossings = stop.Crossings, Previous = stop, Walk = toGoal, IsGoal = true });
                 foreach (var link in world.Links.LinksFrom(stop.MapId))

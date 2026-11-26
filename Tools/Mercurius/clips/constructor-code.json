@@ -1,0 +1,15 @@
+{
+  "id": "constructor-code",
+  "name": "Constructor example · code",
+  "direction": "parchment",
+  "ornament": "meander",
+  "durationFrames": 90,
+  "scene": "code",
+  "heading": "",
+  "code": "public Delivery(\n  Inventory items)\n{\n  this.items = items;\n}",
+  "filename": "Example.cs",
+  "language": "csharp",
+  "revealAt": 0,
+  "focusAt": 45,
+  "emphasis": [1, 4]
+}

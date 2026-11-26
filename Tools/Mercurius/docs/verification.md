@@ -1,5 +1,13 @@
 # Verification history
 
+## Production desk — 20 November 2026
+
+- Typecheck, lint, format check, all 12 workflow tests, episode validation, and the playground build passed. Tests and validation required normal host permissions because the Windows sandbox blocked tsx's OS user lookup.
+- Production tests covered disk round trips, duplicate import refusal, concurrent stale saves, malformed files and IDs, stable beat references, review invalidation, and ordered handoff exports.
+- Browser checks created a temporary episode, saved its title in the writer, saved a capture reference on the board, and verified the reference after reload. Cancelling navigation retained the route and unsaved edits. The temporary episode was removed after verification.
+- Inspected desktop and 390px phone layouts. Fixed the browser's Unicode-regex ID pattern and the narrow-screen heading layout. The final page had no console errors. The desk loaded four existing rendered revisions as selectable references.
+- Remotion scenes and rendered motion were unchanged by this work; this verification covers the production interface and storage workflow.
+
 ## Portrait playground
 
 The current workspace targets 1080×1920 portrait video. The initial landscape checks below are historical and describe the first commit, not the current render dimensions or palette.

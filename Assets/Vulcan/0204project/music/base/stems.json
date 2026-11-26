@@ -35,6 +35,15 @@
       }
     ]
   },
+  "17db249fce46a933afb2ade75de929d2bc0dc94afdd4dc2bea6c2e3bfa96a34e": {
+    "file": "Assets/Content/Music/base/_stems/bass-5--contra-bass--17db249fce46.ogg",
+    "uses": [
+      {
+        "cue": "base:roman-spring",
+        "stem": "bass-5"
+      }
+    ]
+  },
   "2e04e086f1217dee73ef78216392b81af78d868580355fcfed6cce1d7a8e30f0": {
     "file": "Assets/Content/Music/base/_stems/harp-lyre-3--french-horns--2e04e086f121.ogg",
     "uses": [
@@ -89,6 +98,24 @@
       }
     ]
   },
+  "5e0b5feadfe125773a5f3dba4685ccbe6386ea60ee42d9d690a15edfb84d8ac7": {
+    "file": "Assets/Content/Music/base/_stems/flute-1--flute--5e0b5feadfe1.ogg",
+    "uses": [
+      {
+        "cue": "base:roman-spring",
+        "stem": "flute-1"
+      }
+    ]
+  },
+  "689a171305c5397043c5203d5708c6fb437034de223096a28dac5accf5f1c9db": {
+    "file": "Assets/Content/Music/base/_stems/lyre-2--harp--689a171305c5.ogg",
+    "uses": [
+      {
+        "cue": "base:roman-spring",
+        "stem": "lyre-2"
+      }
+    ]
+  },
   "70f22821fdb32aa01e0398002b709dd70fe15b1ff8910d76cff86c5e56075568": {
     "file": "Assets/Content/Music/base/_stems/harp-lyre-3--harp--70f22821fdb3.ogg",
     "uses": [
@@ -116,6 +143,15 @@
       }
     ]
   },
+  "a4e837300a2c96425dae2233530e72021334fb5f81d2326be87fd3a916898279": {
+    "file": "Assets/Content/Music/base/_stems/pan-flute-4--pan-flute--a4e837300a2c.ogg",
+    "uses": [
+      {
+        "cue": "base:roman-spring",
+        "stem": "pan-flute-4"
+      }
+    ]
+  },
   "b2593ab275129060f4f315ca40f34de3b91c49348d457b1fecff3f62f1d5d194": {
     "file": "Assets/Content/Music/base/_stems/voice-oohs-4--voice-oohs--b2593ab27512.ogg",
     "uses": [
@@ -131,6 +167,15 @@
       {
         "cue": "base:interior",
         "stem": "voice-oohs-4"
+      }
+    ]
+  },
+  "b98372b2ff0986faf271c725e4188aa9e409306fd4e204aeff8a1902847f9aa2": {
+    "file": "Assets/Content/Music/base/_stems/strings-3--slow-strings--b98372b2ff09.ogg",
+    "uses": [
+      {
+        "cue": "base:roman-spring",
+        "stem": "strings-3"
       }
     ]
   },

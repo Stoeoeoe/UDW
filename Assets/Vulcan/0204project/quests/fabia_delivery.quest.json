@@ -8,14 +8,13 @@
   "steps": [
     {
       "id": "step-1",
-      "journal": "Complete the first objective.",
+      "journal": "Complete the next objective.",
       "objectives": [
         {
           "id": "objective-1",
-          "text": "New objective",
-          "kind": "talk",
-          "character": "base:fabia",
-          "dialogue": "base:dlg_salve"
+          "text": "Wait for condition",
+          "kind": "condition",
+          "condition": "true"
         }
       ]
     }
@@ -27,18 +26,8 @@
         "id": "begin",
         "kind": "entry",
         "position": {
-          "x": -33.670761633892454,
+          "x": -32.530729850539274,
           "y": 114.6835639525433
-        }
-      },
-      {
-        "id": "step-node-0",
-        "kind": "step",
-        "stepId": "step-1",
-        "group": false,
-        "position": {
-          "x": 338.22785465084775,
-          "y": 118.22785465084775
         }
       },
       {
@@ -62,25 +51,34 @@
             "money": 100
           }
         }
+      },
+      {
+        "id": "node-c8299d3e-5851-4caf-921c-8e667d398e6d",
+        "kind": "action",
+        "position": {
+          "x": 1453.8990746639513,
+          "y": 289.56883147892773
+        },
+        "action": {
+          "method": "Inventory.Give",
+          "arguments": {
+            "itemId": "raven_flower_produce",
+            "count": 5
+          }
+        }
+      },
+      {
+        "id": "node-7f6541df-ce76-4cef-bdc4-8386e200bc66",
+        "kind": "step",
+        "position": {
+          "x": 313.53288614769065,
+          "y": 103.00597144287025
+        },
+        "stepId": "step-1",
+        "group": true
       }
     ],
     "edges": [
-      {
-        "id": "wire-2c66002c-a83b-4d23-80aa-fac515fff4ad",
-        "source": "begin",
-        "target": "step-node-0",
-        "sourcePin": "next",
-        "targetPin": "in",
-        "kind": "execution"
-      },
-      {
-        "id": "wire-891e5b63-9a1d-4a8d-9e02-b30f867f7b6e",
-        "source": "step-node-0",
-        "target": "complete",
-        "sourcePin": "next",
-        "targetPin": "in",
-        "kind": "execution"
-      },
       {
         "id": "wire-b576132e-cf17-4b28-b836-cfb2d5ae96e7",
         "source": "complete",
@@ -88,10 +86,34 @@
         "sourcePin": "next",
         "targetPin": "in",
         "kind": "execution"
+      },
+      {
+        "id": "wire-37750c01-eddd-413a-980b-00034155690b",
+        "source": "node-e8962fde-ba51-468d-b308-049fdae8cd7c",
+        "target": "node-c8299d3e-5851-4caf-921c-8e667d398e6d",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-4994798b-d34e-477d-9696-783479211aae",
+        "source": "begin",
+        "target": "node-7f6541df-ce76-4cef-bdc4-8386e200bc66",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
+      },
+      {
+        "id": "wire-d67ab342-21cc-4119-b8b7-51ef9e8f1a5c",
+        "source": "node-7f6541df-ce76-4cef-bdc4-8386e200bc66",
+        "target": "complete",
+        "sourcePin": "next",
+        "targetPin": "in",
+        "kind": "execution"
       }
     ]
   },
-  "onComplete": "Wallet.AddMoney(100)",
+  "onComplete": "Wallet.AddMoney(100)\nInventory.Give(\"raven_flower_produce\", 5)",
   "start": {
     "when": [
       {

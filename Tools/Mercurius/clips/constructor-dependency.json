@@ -1,0 +1,14 @@
+{
+  "id": "constructor-dependency",
+  "name": "Constructor example · diagram",
+  "scene": "dependency",
+  "direction": "parchment",
+  "ornament": "meander",
+  "durationFrames": 90,
+  "heading": "",
+  "from": "Delivery",
+  "to": "Inventory",
+  "connection": "requires",
+  "revealAt": 10,
+  "focusAt": 50
+}

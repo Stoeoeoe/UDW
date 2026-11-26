@@ -83,6 +83,38 @@ namespace Core.Routines.Editor
         }
 
         [Test]
+        public void AGoalAtAnEntityWalksToWhereItsSlotLetsOut()
+        {
+            var bench = new Dictionary<string, Vector2> { ["bench"] = new Vector2(6.5f, 3) };
+            var world = new WorldNavigation(new[] { new NavigationMap("base:town", Grid(10, 5), TownAnchors, bench) },
+                new MapLinkGraph(System.Array.Empty<MapLink>()));
+
+            var timetable = Plan(Day("{ id: 'sit', departAt: '08:00', destination: { map: 'base:town', entity: 'bench' } }"), world);
+
+            var stay = timetable.Segments[^1];
+            Assert.That(stay.IsWalk, Is.False);
+            Assert.That(stay.Place.IsEntity, Is.True);
+            Assert.That(stay.PositionAt(600), Is.EqualTo(new Vector2(6.5f, 3)));
+            Assert.That(timetable.Warnings, Is.Empty);
+            Assert.Throws<System.InvalidOperationException>(() =>
+                Plan(Day("{ id: 'sit', departAt: '08:00', destination: { map: 'base:town', entity: 'chair' } }"), world),
+                "An entity without a slot on the map can't be walked to.");
+        }
+
+        [Test]
+        public void ASlotSuppliesTheAnimationAndAHomeIsAnAnchor()
+        {
+            // Importing validates the routine, so the errors come out of Populate.
+            var error = Assert.Throws<System.ArgumentException>(() => VulcanusJson.Populate(Game.Asset<RoutineDefinition>(),
+                "{ id: 'base:fabia_routine', character: 'base:fabia', home: { map: 'base:town', entity: 'bench' }, " +
+                "variants: [{ id: 'default', goals: [{ id: 'sit', departAt: '08:00', destination: { map: 'base:town', entity: 'bench' }, " +
+                "activity: { animation: 'base:wave2' } }] }] }"));
+
+            Assert.That(error.Message, Does.Contain("supplies the animation"));
+            Assert.That(error.Message, Does.Contain("Home: A place needs an anchor."));
+        }
+
+        [Test]
         public void OccupationIsWhatTheGoalSaysOnceArrived()
         {
             var timetable = Plan(Day("{ id: 'well', departAt: '08:00', destination: " + Well + ", occupation: 'fishing' }",

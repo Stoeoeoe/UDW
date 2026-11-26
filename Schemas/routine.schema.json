@@ -73,6 +73,16 @@
         "anchor": { "$ref": "#/definitions/localId", "description": "ID of an anchor on that map." }
       }
     },
+    "slotPlace": {
+      "type": "object",
+      "required": ["map", "entity"],
+      "additionalProperties": false,
+      "description": "An entity placed on the map that has interaction slots, such as a bench. The character sits in a free slot until the goal ends, and waits for one if all are taken. The slot supplies the animation, so the goal has no activity.",
+      "properties": {
+        "map": { "type": "string", "pattern": "\\S", "description": "ID of the map, for example base:map-1." },
+        "entity": { "type": "string", "pattern": "\\S", "description": "Instance ID of the placed entity on that map." }
+      }
+    },
     "goal": {
       "type": "object",
       "required": ["id", "departAt", "destination"],
@@ -89,10 +99,11 @@
           "description": "Evaluated once each morning with the variant choice. If false, the goal is skipped that day."
         },
         "destination": {
-          "description": "Where the character goes: a map anchor, or \"home\".",
+          "description": "Where the character goes: a map anchor, an entity with slots, or \"home\".",
           "oneOf": [
             { "type": "string", "enum": ["home"] },
-            { "$ref": "#/definitions/place" }
+            { "$ref": "#/definitions/place" },
+            { "$ref": "#/definitions/slotPlace" }
           ]
         },
         "activity": {

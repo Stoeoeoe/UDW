@@ -1,0 +1,65 @@
+{
+  "id": "jkjlkjl",
+  "draft": {
+    "title": "",
+    "audience": "",
+    "question": "",
+    "takeaway": "",
+    "notes": "",
+    "targetSeconds": 45,
+    "wordsPerMinute": 150,
+    "beats": [
+      {
+        "id": "fe4949b3-14e4-4f61-a8ab-df909d0bb564",
+        "title": "The change",
+        "seconds": 4,
+        "narration": "",
+        "visual": "",
+        "evidence": ""
+      },
+      {
+        "id": "6662c0c6-a045-41aa-9a97-fada1cfadce1",
+        "title": "Before",
+        "seconds": 7,
+        "narration": "",
+        "visual": "",
+        "evidence": ""
+      },
+      {
+        "id": "3489dd78-ec18-4867-bfd8-d262bf2d0e28",
+        "title": "What I did",
+        "seconds": 15,
+        "narration": "",
+        "visual": "",
+        "evidence": ""
+      },
+      {
+        "id": "72d81665-4db8-4617-9c0e-1700ecf6726a",
+        "title": "Show it working",
+        "seconds": 13,
+        "narration": "",
+        "visual": "",
+        "evidence": ""
+      },
+      {
+        "id": "8d126227-2d4f-4998-9068-66a20aee73e5",
+        "title": "Where it stands",
+        "seconds": 6,
+        "narration": "",
+        "visual": "",
+        "evidence": ""
+      }
+    ]
+  },
+  "shots": {},
+  "review": {
+    "evidence": false,
+    "narration": false,
+    "picture": false,
+    "sound": false,
+    "rights": false,
+    "delivery": false
+  },
+  "description": "",
+  "publishedUrl": ""
+}

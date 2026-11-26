@@ -20,18 +20,30 @@ MonoBehaviour:
   - value: 0
     title: Untrained
     description: Repair with the usual amount of force.
+    grantedTags: []
+    attributeBonuses: []
   - value: 1
     title: Novice
     description: Restore 1 additional point with each repair.
+    grantedTags: []
+    attributeBonuses: []
   - value: 2
     title: Apprentice
     description: Restore 2 additional points with each repair.
+    grantedTags: []
+    attributeBonuses: []
   - value: 3
     title: Journeyman
     description: Restore 3 additional points with each repair.
+    grantedTags: []
+    attributeBonuses: []
   - value: 4
     title: Expert
     description: Restore 4 additional points with each repair.
+    grantedTags: []
+    attributeBonuses: []
   - value: 5
     title: Master
     description: Restore 5 additional points with each repair.
+    grantedTags: []
+    attributeBonuses: []

@@ -85,7 +85,35 @@ export const studies = [
     heading: 'The constructor.',
     note: 'C# / constructor excerpt',
   },
+  {
+    id: 'intro',
+    number: '10',
+    name: 'Curtain intro',
+    group: 'Foundations',
+    heading: 'ROEMER',
+    note: 'Ochre curtain / 1 second',
+  },
 ] as const;
 export type StudyId = (typeof studies)[number]['id'];
 export const findStudy = (id: string) =>
   studies.find((study) => study.id === id);
+
+export const studyPreview = (id: StudyId) =>
+  id === 'intro'
+    ? {
+        duration: 60,
+        initialFrame: 0,
+        thumbnailFrame: 21,
+        checkpoints: [
+          { name: 'Closed', frame: 0 },
+          { name: 'Pull', frame: 18 },
+          { name: 'Parting', frame: 22 },
+          { name: 'Clear', frame: 29 },
+        ],
+      }
+    : {
+        duration: studyTiming.duration,
+        initialFrame: 168,
+        thumbnailFrame: 168,
+        checkpoints,
+      };

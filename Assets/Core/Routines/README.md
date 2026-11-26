@@ -90,6 +90,24 @@ it: null while walking, before the first goal, or when the goal sets none. Lua r
 `Routines.Occupation(characterId)` and `Routines.HasOccupation(characterId, occupation)`, both usable in conditions.
 A character without a routine is busy with nothing.
 
+## Using a slot
+
+A goal's destination can be an entity placed on the map instead of an anchor: `"destination": { "map": "base:map-1",
+"entity": "ent-1795184601635" }`, picked in Vulcanus as "a seat or other slot". The importer marks every placed entity
+with a `VulcanusMapEntity` holding that instance ID. The entity must have an `InteractionSlot` (see
+`Docs/InteractionSlots.md`); catalog refresh rejects one that doesn't, and a map imported before this feature must be
+reimported.
+
+- The character walks to the exit point of the entity's first slot, which is clear standing space, then interacts with
+  the first of the entity's `SeatInteractable`s that is free, as the player does. The slot supplies the pose, so the goal
+  has no `activity` (rejected at import). Only seats are supported; other interactables can't be used by routines yet.
+- When every slot is taken (by the player or another character), they face the camera and show
+  `RoutineSettings.impatientEmote` above them, and look again every `slotRetrySeconds` (1 by default, real seconds)
+  until one is free or the goal ends.
+- At the next departure they hop out of the slot before walking on. A character placed mid-stay, by loading or entering
+  the map, hops into the slot from its exit point. Occupation isn't saved.
+- Goals can't use the entity as `home`.
+
 ## Rules checked at import
 
 - The schema: IDs, `HH:MM` departure times, `"home"` or a map anchor as
@@ -100,7 +118,7 @@ A character without a routine is busy with nothing.
 - Overrides need a condition. At least one variant has no condition (a pool
   whose members all have conditions doesn't count, as it can be skipped), and
   entries after it are rejected as unreachable.
-- When catalogs refresh: the character exists, maps and anchors exist in the
+- When catalogs refresh: the character exists, maps, anchors and slot entities exist in the
   world catalog's maps, activity animations exist, and no character has two
   routines.
 

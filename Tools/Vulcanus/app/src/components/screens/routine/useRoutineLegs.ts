@@ -5,7 +5,7 @@ import { useProject } from '../../../hooks/useProject';
 import { computeMapNavigation, type MapNavigation } from '../../../lib/navigationPath';
 import { indexObjects, type ObjectIndex } from '../../../lib/mapObjects';
 import { planWorldRoute, routeLength, type WorldLeg } from '../../../lib/worldGraph';
-import { goalRuns, resolvePlace } from '../../../lib/routines';
+import { goalRuns, mapEntities, resolvePlace } from '../../../lib/routines';
 import { timeLegs, walkMinutes } from '../../../lib/routineTiming';
 import {
   DEFAULT_WALK_SPEED,
@@ -97,9 +97,15 @@ export function useRoutineLegs(
     const allMaps = maps.map((map) => (currentMap?.id === map.id ? currentMap : map));
     if (currentMap && !maps.some((map) => map.id === currentMap.id)) allMaps.push(currentMap);
     const mapById = (id: string) => allMaps.find((map) => map.id === id);
-    const anchor = (place: RoutinePlace): Point | null =>
-      mapById(place.map)?.spatialPrimitives?.anchors?.find((entry) => entry.id === place.anchor)
-        ?.position ?? null;
+    // An entity is drawn where it stands; the character really stands at its slot, so this is only close.
+    const anchor = (place: RoutinePlace): Point | null => {
+      const map = mapById(place.map);
+      if (!map) return null;
+      return place.entity
+        ? (mapEntities(map).find((entity) => entity.id === place.entity)?.position ?? null)
+        : (map.spatialPrimitives?.anchors?.find((entry) => entry.id === place.anchor)?.position ??
+            null);
+    };
 
     const legs: Omit<RoutineLeg, 'arriveMinute' | 'problem'>[] = [];
     let from = routine.home;
@@ -157,7 +163,7 @@ export function useRoutineLegs(
       ...timings[i],
       problem:
         timings[i].problem ??
-        (anchor(leg.from) && anchor(leg.to) && !leg.found
+        (anchor(leg.from) && anchor(leg.to) && !leg.found && !leg.from.entity && !leg.to.entity
           ? leg.from.map === leg.to.map
             ? 'No walkable route: check collisions around both anchors.'
             : `No walkable route to ${leg.to.map}: check the doors on the way and the collisions around them.`

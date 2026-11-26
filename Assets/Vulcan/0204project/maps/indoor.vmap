@@ -1032,6 +1032,17 @@
           "layerId": "layer-1793949256895"
         }
       ]
+    },
+    {
+      "id": "layer-1795335589180",
+      "name": "My Objects",
+      "kind": "object",
+      "visible": true,
+      "locked": false,
+      "opacity": 1,
+      "zOrder": 5,
+      "sortingLayer": "ground",
+      "objectInstances": []
     }
   ],
   "entities": [],

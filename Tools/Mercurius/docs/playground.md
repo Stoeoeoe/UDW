@@ -10,15 +10,18 @@ Copy reference places the study name, palette, border, frame, and current link o
 
 ## Studies
 
-01 Dependency; 02 Sequence; 03 State machine; 04 Data transformation; 05 Timeline; 06 Before/after; 07 Spatial overlay; 08 Type/colour; 09 Code/callout. Examples are illustrative design content. They do not assert that the sample Delivery class, quest states, or map exist in the game.
+01 Dependency; 02 Sequence; 03 State machine; 04 Data transformation; 05 Timeline; 06 Before/after; 07 Spatial overlay; 08 Type/colour; 09 Code/callout; 10 Curtain intro. Examples are illustrative design content. They do not assert that the sample Delivery class, quest states, or map exist in the game.
 
 Each scene is rendered at 1080×1920, 30 FPS, for 270 frames. `src/playground/studies.ts` owns the catalogue/timing; StudyScene composes the shared components; DiagramStudy contains custom SVG explanations. The browser controls never appear in rendered output. All visible motion uses Remotion frames.
+
+The curtain intro is the exception: its Studio composition is **30 frames / one second**. The browser loops a two-second preview, including a one-second hold after the curtain clears. Closed/Pull/Parting/Clear checkpoints replace the diagram checkpoints. It reveals only the Roemer wordmark and selected border. The reusable CurtainIntro component overlays its caller's scene; its fixed ochre cloth is independent of the selected scene palette. It now uses a cannon-es cloth simulation rendered with Three.js, replacing the striped SVG prototype. The first preview bakes the motion locally; WebGL is required.
 
 The Studio Playground folder registers every study/palette combination. For example:
 
 ```sh
 npx remotion still src/index.ts Study-dependency-terracotta out/dependency.png --frame=168
 npx remotion render src/index.ts Study-sequence-terracotta out/sequence.mp4
+npx remotion render src/index.ts Study-intro-parchment out/curtain-intro.mp4
 ```
 
 ## Portrait review

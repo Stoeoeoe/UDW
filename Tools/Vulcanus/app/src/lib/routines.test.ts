@@ -127,6 +127,32 @@ describe('validateRoutine', () => {
     ]);
   });
 
+  it('lets a goal use a placed entity, which supplies the animation', () => {
+    const withBench = {
+      ...map,
+      entities: [{ id: 'ent-1', typeId: 'base:bench_1', position: [336, 64] }],
+      layers: [],
+    } as unknown as GameMap;
+    const refs = { ...references, maps: [withBench] };
+    const routine = fabia();
+    routine.variants[0].goals![0] = {
+      id: 'sit',
+      departAt: '06:10',
+      destination: { map: 'base:map-1', entity: 'ent-1' },
+    };
+    expect(messages(routine, refs)).toEqual([]);
+
+    routine.variants[0].goals![0].destination = { map: 'base:map-1', entity: 'ent-9' };
+    routine.variants[0].goals![0].activity = { animation: 'base:wave2' };
+    expect(messages(routine, refs)).toEqual([
+      'sit uses the entity ent-9, which Map 1 does not have.',
+      'sit sits at a slot, which supplies the animation: remove its activity.',
+    ]);
+
+    routine.home = { map: 'base:map-1', entity: 'ent-1' };
+    expect(messages(routine, refs)[0]).toBe('Home needs a map and an anchor.');
+  });
+
   it('asks for a condition on a goal marked as only on some days', () => {
     const routine = fabia();
     routine.variants[0].goals![0].condition = ' ';

@@ -14,7 +14,59 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Core.Tile.Vulcan.VulcanWorldCatalog
   project: {fileID: -1814933055721424766, guid: 970770d7999d5f945b71ec98f97650ba, type: 3}
   entityPrefabMappings:
-  - entityTypeId: torch
+  - entityTypeId: base:bed
+    entityDisplayName: Bed
+    entityDefinition: {fileID: 936352032444259862, guid: 7c67f10473b92e346b927641fdf72a43, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/Bed.prefab
+  - entityTypeId: base:bench_1
+    entityDisplayName: Bench 1
+    entityDefinition: {fileID: 936352032444259862, guid: 067735e516c255648aac8d1c055cde98, type: 3}
+    prefab: {fileID: 3409456539024407961, guid: e933a3f386d505b44b79882ec972239a, type: 3}
+    candidatePrefabPaths: []
+  - entityTypeId: base:chest
+    entityDisplayName: Player Chest
+    entityDefinition: {fileID: 936352032444259862, guid: 3c0119d9c6c980f4dac9c5b436d9d0ce, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths: []
+  - entityTypeId: base:fabia
+    entityDisplayName: Fabia
+    entityDefinition: {fileID: 936352032444259862, guid: fc467ea4e7653a74ea56775ad36db59a, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/Fabia.prefab
+  - entityTypeId: base:forage-fig
+    entityDisplayName: Forage Fig
+    entityDefinition: {fileID: 936352032444259862, guid: d9f8d3f1edfc06245ab96cd5b116d04a, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/ForageFig.prefab
+  - entityTypeId: base:foraging-spot
+    entityDisplayName: Foraging Spot
+    entityDefinition: {fileID: 936352032444259862, guid: aa3f5ac7f1c082048a474dcc1f2e0626, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/ForagingSpot.prefab
+  - entityTypeId: base:market_stall_bread
+    entityDisplayName: Bread Stall
+    entityDefinition: {fileID: 936352032444259862, guid: 906056480e84f9c49b33466d0a56a94f, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/MarketStall_bread.prefab
+  - entityTypeId: base:market_stall_cheese
+    entityDisplayName: Cheese Stall
+    entityDefinition: {fileID: 936352032444259862, guid: b288c202a70320944a1525977b0a7638, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/MarketStall_cheese.prefab
+  - entityTypeId: base:market_stall_fish
+    entityDisplayName: Fish Stall
+    entityDefinition: {fileID: 936352032444259862, guid: a502a488fb55b424aaabad848d0c5ff9, type: 3}
+    prefab: {fileID: 0}
+    candidatePrefabPaths:
+    - Assets/Content/Spawnables/MarketStall_fish.prefab
+  - entityTypeId: base:torch
     entityDisplayName: Torch
     entityDefinition: {fileID: 936352032444259862, guid: 9de1a446e326c8149bcbdb3caefea596, type: 3}
     prefab: {fileID: 5775923001401589703, guid: 9853aa2db08ba664d8684cf8fa37d0ec, type: 3}

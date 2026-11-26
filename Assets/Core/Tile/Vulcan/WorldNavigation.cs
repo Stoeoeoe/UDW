@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Core.Routines;
+using Interaction;
 using UnityEngine;
 
 namespace Core.Tile.Vulcanus
@@ -13,21 +15,32 @@ namespace Core.Tile.Vulcanus
     public sealed class NavigationMap
     {
         private readonly IReadOnlyDictionary<string, Vector2> _anchors;
+        private readonly IReadOnlyDictionary<string, Vector2> _slotExits;
 
         public string MapId { get; }
         public NavigationCostGrid Grid { get; }
 
-        public NavigationMap(string mapId, NavigationCostGrid grid, IReadOnlyDictionary<string, Vector2> anchors)
+        /// <param name="slotExits">Where the first interaction slot of each placed entity lets its occupant out, by entity ID.</param>
+        public NavigationMap(string mapId, NavigationCostGrid grid, IReadOnlyDictionary<string, Vector2> anchors,
+            IReadOnlyDictionary<string, Vector2> slotExits = null)
         {
             MapId = mapId;
             Grid = grid ?? throw new ArgumentNullException(nameof(grid), $"Map '{mapId}' has no baked navigation grid; reimport it.");
             _anchors = new Dictionary<string, Vector2>(anchors, StringComparer.Ordinal);
+            _slotExits = new Dictionary<string, Vector2>(slotExits ?? new Dictionary<string, Vector2>(), StringComparer.Ordinal);
         }
 
         public Vector2 Anchor(string anchorId) =>
             _anchors.TryGetValue(anchorId, out var position)
                 ? position
                 : throw new InvalidOperationException($"Map '{MapId}' has no anchor '{anchorId}'.");
+
+        /// <summary>Where a character stands for a place: its anchor, or beside the slots of its entity.</summary>
+        public Vector2 Position(RoutinePlace place) =>
+            !place.IsEntity ? Anchor(place.Anchor)
+            : _slotExits.TryGetValue(place.Entity, out var exit)
+                ? exit
+                : throw new InvalidOperationException($"Map '{MapId}' has no entity '{place.Entity}' with an interaction slot.");
 
         /// <summary>The cell whose drawn tile contains a local position.</summary>
         public static Vector2Int CellAt(Vector2 position)
@@ -93,7 +106,12 @@ namespace Core.Tile.Vulcanus
                         .ToDictionary(anchor => anchor.AnchorId, anchor => (Vector2)root.InverseTransformPoint(anchor.transform.position),
                             StringComparer.Ordinal);
                     var grid = binding.MapPrefab.GetComponentInChildren<VulcanusImportedMap>(true).NavigationCosts;
-                    return new NavigationMap(binding.MapId, grid, anchors);
+                    var slotExits = binding.MapPrefab.GetComponentsInChildren<VulcanusMapEntity>(true)
+                        .Select(entity => (entity.EntityId, Slot: entity.GetComponentInChildren<InteractionSlot>(true)))
+                        .Where(entity => entity.Slot)
+                        .ToDictionary(entity => entity.EntityId, entity => (Vector2)root.InverseTransformPoint(entity.Slot.ExitPoint.position),
+                            StringComparer.Ordinal);
+                    return new NavigationMap(binding.MapId, grid, anchors, slotExits);
                 });
             return new WorldNavigation(maps, MapLinkGraph.Build(worlds));
         }

@@ -102,9 +102,12 @@
     {
       "key": "musicCue",
       "label": "Music Cue",
-      "type": "string",
+      "type": "reference",
       "required": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "constraints": {
+        "referenceType": "music"
+      }
     },
     {
       "key": "musicPreset",

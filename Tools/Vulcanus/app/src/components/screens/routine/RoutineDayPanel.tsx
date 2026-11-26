@@ -26,6 +26,7 @@ import {
   goalDialogues,
   routineLabel,
   goalRuns,
+  placeName,
   type GoalDialogues,
   minutesOf,
   timeOf,
@@ -236,7 +237,7 @@ export const RoutineDayPanel: React.FC<{
 const routineHomeLabel = (routine: Routine) => `stays home at ${routine.home.anchor || 'home'}`;
 
 const destinationLabel = (goal: RoutineGoal) =>
-  goal.destination === 'home' ? 'home' : goal.destination.anchor || '?';
+  goal.destination === 'home' ? 'home' : placeName(goal.destination) || '?';
 
 /** The day as a strip: home until the first departure, then each goal until the next one. */
 const DayTimeline: React.FC<{
@@ -401,16 +402,31 @@ const GoalCard: React.FC<{
             variant="compact"
             w="96px"
             aria-label="Destination"
-            value={goal.destination === 'home' ? 'home' : 'place'}
-            onChange={(event) =>
-              onChange({
-                ...goal,
-                destination: event.target.value === 'home' ? 'home' : { map: home.map, anchor: '' },
-              })
+            value={
+              goal.destination === 'home'
+                ? 'home'
+                : goal.destination.entity !== undefined
+                  ? 'slot'
+                  : 'place'
             }
+            onChange={(event) => {
+              const kind = event.target.value;
+              // A slot supplies its own animation, so the activity goes with the switch.
+              if (kind === 'slot')
+                onChange({
+                  ...without(goal, 'activity'),
+                  destination: { map: home.map, entity: '' },
+                });
+              else
+                onChange({
+                  ...goal,
+                  destination: kind === 'home' ? 'home' : { map: home.map, anchor: '' },
+                });
+            }}
           >
             <option value="home">home</option>
             <option value="place">a place</option>
+            <option value="slot">a seat or other slot</option>
           </Select>
           {skipped && <Badge>skipped</Badge>}
           <Box flex={1} />
@@ -424,19 +440,28 @@ const GoalCard: React.FC<{
             onPick={onPick}
           />
         )}
-        <HStack spacing={2}>
-          <Text fontSize="xs" color="editorMutedText" flexShrink={0}>
-            then
+        {goal.destination !== 'home' && goal.destination.entity !== undefined ? (
+          <Text fontSize="xs" color="editorMutedText">
+            Takes a free slot and stays until the next departure. If all are taken, they wait and
+            look annoyed.
           </Text>
-          <ManifestResourceSelect
-            resourceType="animation"
-            placeholder="just stand there"
-            value={goal.activity?.animation}
-            onChange={(animation) =>
-              onChange(animation ? { ...goal, activity: { animation } } : without(goal, 'activity'))
-            }
-          />
-        </HStack>
+        ) : (
+          <HStack spacing={2}>
+            <Text fontSize="xs" color="editorMutedText" flexShrink={0}>
+              then
+            </Text>
+            <ManifestResourceSelect
+              resourceType="animation"
+              placeholder="just stand there"
+              value={goal.activity?.animation}
+              onChange={(animation) =>
+                onChange(
+                  animation ? { ...goal, activity: { animation } } : without(goal, 'activity'),
+                )
+              }
+            />
+          </HStack>
+        )}
         <HStack spacing={2}>
           <Text fontSize="xs" color="editorMutedText" flexShrink={0}>
             busy with
